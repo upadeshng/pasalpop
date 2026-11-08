@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="PasalPop: turn product photos into TikTok videos and photo slides, with a shop link and order book for Nepali sellers.">
+<meta name="description" content="WallTok: turn product photos into TikTok videos and photo slides, with a shop link and order book for Nepali sellers.">
 <meta name="theme-color" content="#2f3a8f">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e9a21b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%235a3a00' font-family='sans-serif'%3E%E0%A4%AA%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e9a21b'/%3E%3Ctext x='32' y='44' font-size='36' font-weight='700' text-anchor='middle' fill='%235a3a00' font-family='sans-serif'%3EW%3C/text%3E%3C/svg%3E">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>PasalPop</title>
+<title>WallTok</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Hind:wght@400;500;600&display=swap">
@@ -213,7 +213,7 @@ textarea{resize:vertical;min-height:84px}
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand"><i>प</i>PasalPop <span class="sync" id="syncState" hidden></span></div>
+    <div class="brand"><i>W</i>WallTok <span class="sync" id="syncState" hidden></span></div>
     <button class="btn small" id="btnSettings" type="button">Shop settings</button>
   </header>
 
@@ -2375,7 +2375,7 @@ function billImage(o){
   g.font = '700 54px "Bricolage Grotesque", sans-serif'; g.fillStyle = ink; g.fillText(npr(orderTotal(o)), 70, 746);
   g.textAlign = 'center'; g.font = '600 28px Hind, sans-serif'; g.fillStyle = ink; g.fillText('Dhanyabad! 🙏', W/2, 850);
   g.font = '500 24px Hind, sans-serif'; g.fillStyle = mute; g.fillText(`Order again: ${shopUrl()}`, W/2, 892);
-  g.font = '500 20px Hind, sans-serif'; g.fillText('Made with PasalPop', W/2, 960);
+  g.font = '500 20px Hind, sans-serif'; g.fillText('Made with WallTok', W/2, 960);
   return c;
 }
 function billMessage(o){
