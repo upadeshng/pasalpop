@@ -45,8 +45,38 @@ p{margin:0}
 .muted{color:var(--muted)} .small{font-size:.85rem}
 .stack{display:flex;flex-direction:column;gap:16px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+button.stat{font:inherit;color:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+button.stat:hover{border-color:var(--indigo)}
+button.stat span::after{content:" ›";color:var(--indigo)}
+.code{font-family:var(--f-display);font-weight:700;font-size:.75rem;background:var(--indigo-soft);color:var(--indigo);border-radius:6px;padding:1px 7px;white-space:nowrap;display:inline-block}
+.vrow{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.vrow:hover{border-color:var(--indigo)}
+.vrow img{width:48px;height:48px;border-radius:8px;object-fit:cover}
+.vrow .t{min-width:0;display:flex;flex-direction:column;gap:4px}
+.vrow .t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.vbar i{display:block;height:100%;background:var(--accent)}
+.vcount{font-family:var(--f-display);font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums;text-align:right}
+.vcount small{display:block;font-family:var(--f-body);font-weight:400;font-size:.72rem;color:var(--muted)}
+.pcard{cursor:pointer}
+.vchart{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 8px}
+.vbars{display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:8px}
+.vbars .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0;position:relative}
+.vbars .bar i{display:block;width:100%;max-width:28px;background:var(--indigo);border-radius:4px 4px 0 0;min-height:2px}
+.vbars .bar.today i{background:var(--accent)}
+.vbars .bar em{font-style:normal;font-size:.66rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:2px}
+.vaxis{display:flex;gap:3px;margin-top:4px}
+.vaxis span{flex:1;text-align:center;font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;min-width:0}
+.vrange-custom{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.vrange-custom>div{flex:1;min-width:130px}
+.delta.up{color:var(--good)} .delta.down{color:var(--warn)}
+.pdetail{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.pdetail .gallery,.pdetail>img{width:100%;aspect-ratio:1}
+.pdetail>img{object-fit:cover;display:block}
+.pdetail .b{padding:16px;display:flex;flex-direction:column;gap:10px}
 .stat b{display:block;font-family:var(--f-display);font-size:1.3rem;font-variant-numeric:tabular-nums}
 .stat span{font-size:.78rem;color:var(--muted)}
 .btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
@@ -95,6 +125,10 @@ textarea{resize:vertical;min-height:84px}
 .item img{width:56px;height:56px;border-radius:8px;object-fit:cover}
 .item .t{min-width:0}
 .item .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item.order{grid-template-columns:56px 1fr;align-items:start}
+.item.order .t{display:flex;flex-direction:column;gap:3px}
+.item.order .t .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.item.order .acts{grid-column:1/-1;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px}
 .price{font-family:var(--f-display);font-weight:700;font-variant-numeric:tabular-nums}
 .pill{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
 .pill.new{background:var(--indigo-soft);color:var(--indigo)}
@@ -182,9 +216,10 @@ textarea{resize:vertical;min-height:84px}
       <h1>Namaste, <span id="hShop">Sita Fashion</span></h1>
     </div>
     <div class="stats">
-      <div class="stat"><b id="stSales">रु 0</b><span>Sales today</span></div>
-      <div class="stat"><b id="stCod">0</b><span>COD to collect</span></div>
-      <div class="stat"><b id="stProducts">0</b><span>Products live</span></div>
+      <button class="stat" type="button" data-go="orders" data-filter="today"><b id="stSales">रु 0</b><span id="stSalesL">Sales today</span></button>
+      <button class="stat" type="button" data-go="orders" data-filter="cod"><b id="stCod">रु 0</b><span id="stCodL">COD to collect</span></button>
+      <button class="stat" type="button" data-go="shop"><b id="stProducts">0</b><span>Products live</span></button>
+      <button class="stat" type="button" data-go="views"><b id="stViews">0</b><span id="stViewsL">Views today</span></button>
     </div>
     <button class="btn primary big" type="button" data-go="studio">+ New product (take photo)</button>
     <div class="tip" id="festTip"></div>
@@ -364,7 +399,7 @@ textarea{resize:vertical;min-height:84px}
     <button class="btn primary big vm" id="btnMakeV" type="button" hidden>Make my TikTok video</button>
 
     <div class="card stack" id="resultV" hidden>
-      <h3>5. Ready to post</h3>
+      <div class="section-h"><h3>5. Ready to post</h3><span class="small muted">Product code <span class="code" id="codeOutV"></span></span></div>
       <div class="video-wrap">
         <div>
           <div class="phone" id="phoneV">
@@ -403,7 +438,7 @@ textarea{resize:vertical;min-height:84px}
     <button class="btn primary big" id="btnMake" type="button">Make video and caption</button>
 
     <div class="card stack" id="result" hidden>
-      <h3>3. Ready to post</h3>
+      <div class="section-h"><h3>3. Ready to post</h3><span class="small muted">Product code <span class="code" id="codeOut"></span></span></div>
       <div class="video-wrap">
         <div>
           <div class="phone" id="phone">
@@ -490,8 +525,29 @@ textarea{resize:vertical;min-height:84px}
       <p id="pubMeta" style="opacity:.85"></p>
       <div class="chips" id="catChips"></div>
     </div>
-    <div class="pgrid" id="pubGrid"></div>
+    <div id="shopBrowse" class="stack">
+      <input id="shopSearch" type="search" placeholder="Search, or type a product code like K12" aria-label="Search products or type a product code">
+      <div class="pgrid" id="pubGrid"></div>
+    </div>
+    <div id="pubProduct" class="stack" hidden></div>
     <p class="muted small" style="text-align:center">Pay with eSewa, Khalti or cash on delivery.</p>
+  </section>
+
+  <!-- VIEWS REPORT -->
+  <section id="view-views" class="stack" hidden>
+    <div class="section-h"><h1>Product views</h1><button class="btn small" type="button" data-go="home">Back</button></div>
+    <div class="chips" id="vRanges"></div>
+    <div class="vrange-custom" id="vCustom" hidden>
+      <div><label for="vFrom">From</label><input type="date" id="vFrom"></div>
+      <div><label for="vTo">To</label><input type="date" id="vTo"></div>
+    </div>
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat"><b id="vTotal">0</b><span style="font-size:.78rem;color:var(--muted)" id="vTotalL">Views</span></div>
+      <div class="stat"><b id="vTop" style="font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">–</b><span style="font-size:.78rem;color:var(--muted)">Most viewed</span></div>
+    </div>
+    <div class="vchart" id="vChart"></div>
+    <div class="list" id="viewsList"></div>
+    <p class="small muted">A view is counted each time someone opens a product's page on your shop link. Tap a product to see its page. In this test version, views are counted on this phone only; the full version will count every customer.</p>
   </section>
 
   <!-- ORDERS -->
@@ -516,6 +572,12 @@ textarea{resize:vertical;min-height:84px}
         <div><label for="oSize">Size</label><input id="oSize" placeholder="L"></div>
         <div><label for="oPay">Payment</label><select id="oPay"><option>COD</option><option>eSewa</option><option>Khalti</option></select></div>
       </div>
+      <div class="grid2">
+        <div><label for="oPrice">Selling price (रु)</label><input id="oPrice" type="number" inputmode="numeric" min="0"></div>
+        <div><label for="oDelivery">Delivery charge (रु)</label><input id="oDelivery" type="number" inputmode="numeric" min="0" placeholder="0"></div>
+      </div>
+      <label class="small" id="oReceivedRow" style="display:flex;gap:8px;align-items:center" hidden><input type="checkbox" id="oReceived" checked style="width:auto"> Money already received</label>
+      <p class="small muted" id="oTotal"></p>
       <p class="small" id="orderErr" style="color:var(--warn)" hidden></p>
       <div class="row"><button class="btn indigo" id="btnSaveOrder" type="button">Save order</button><button class="btn" id="btnCancelOrder" type="button">Cancel</button></div>
     </div>
@@ -589,16 +651,44 @@ function seed(){
     shop:{name:'Sita Fashion',whatsapp:'9800000000',location:'New Road, Kathmandu'},
     products:p,
     orders:[
-      {id:uid(),productId:p[0].id,customer:'Ram (example)',place:'Baneshwor',size:'L',pay:'COD',status:'new',created:now-3600000,example:true},
-      {id:uid(),productId:p[1].id,customer:'Gita (example)',place:'Lalitpur',size:'M',pay:'COD',status:'sent',created:now-7200000,example:true},
-      {id:uid(),productId:p[2].id,customer:'Hari (example)',place:'Bhaktapur',size:'Free size',pay:'eSewa',status:'paid',created:now-9000000,example:true}
+      {id:uid(),productId:p[0].id,customer:'Ram (example)',place:'Baneshwor',size:'L',pay:'COD',status:'new',price:2200,delivery:100,created:now-3600000,example:true},
+      {id:uid(),productId:p[1].id,customer:'Gita (example)',place:'Lalitpur',size:'M',pay:'COD',status:'sent',price:3100,delivery:150,created:now-86400000-7200000,example:true},
+      {id:uid(),productId:p[2].id,customer:'Hari (example)',place:'Bhaktapur',size:'Free size',pay:'eSewa',status:'paid',price:1800,delivery:100,created:now-9000000,paidAt:now-9000000,example:true}
     ]
   };
 }
 let S;
 try{ S = JSON.parse(localStorage.getItem(KEY)); }catch(e){ S = null; }
-if(!S || !S.shop) S = seed();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save in this browser. Try a smaller photo.'); } }
+if(!S || !S.shop) S = seed();
+/* every product gets a short code, like K12, that customers use to find it from TikTok */
+const CODE_LETTER = {'Kurta':'K','Saree':'S','Clothes':'C','Shoes':'F','Bags':'B','Jewellery':'J','Cosmetics':'M','Cups & kitchen':'H','Plants':'P','Food':'D','Other':'X'};
+function nextCode(cat){ return (CODE_LETTER[cat] || 'X') + (S.nextNum || 11); }
+if(!S.nextNum) S.nextNum = 11;
+S.products.forEach(p => { if(!p.code){ p.code = nextCode(p.category); S.nextNum++; } });
+/* orders keep the price agreed at the time, plus delivery, and the day the money came in */
+S.orders.forEach(o => {
+  if(o.price == null){ const pr = S.products.find(x => x.id === o.productId); o.price = pr ? pr.price : 0; }
+  if(o.delivery == null) o.delivery = 0;
+  if(o.status === 'paid' && !o.paidAt) o.paidAt = o.created;
+});
+const orderTotal = o => (o.price || 0) + (o.delivery || 0);
+const sameDay = (t, d = new Date()) => !!t && new Date(t).toDateString() === d.toDateString();
+const codDue = o => o.pay === 'COD' && !o.paidAt;
+const paidToday = o => sameDay(o.paidAt);
+const productUrl = p => `${shopUrl()}/${String(p.code || '').toLowerCase()}`;
+/* views are logged per day so sellers can see today, this week or any dates */
+function dayKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function viewsIn(p, from, to){ let n = 0; const log = p.viewLog || {}; for(const k in log) if(k >= from && k <= to) n += log[k]; return n; }
+S.products.forEach(p => {
+  if(p.viewLog) return;
+  p.viewLog = {};
+  if(p.example && p.views){ /* spread the example views over the last two weeks */
+    let left = p.views; const days = 14;
+    for(let d = days - 1; d >= 0 && left > 0; d--){ const n = d === 0 ? left : Math.min(left, Math.round(p.views / days * (0.4 + ((p.views * 7 + d * 13) % 10) / 8))); if(n > 0){ p.viewLog[dayKey(addDays(new Date(), -d))] = n; left -= n; } }
+  }
+});
 
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(()=>t.hidden=true, 2200); }
 async function copyText(txt){
@@ -610,13 +700,14 @@ const prodById = id => S.products.find(p=>p.id===id);
 
 /* ---------- navigation ---------- */
 function go(view){
-  ['home','studio','shop','orders','settings'].forEach(v => $('#view-'+v).hidden = v !== view);
+  ['home','studio','shop','orders','settings','views'].forEach(v => $('#view-'+v).hidden = v !== view);
+  if(view === 'shop') shopOpen = null;
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab===view ? 'page' : 'false'));
   render(view); window.scrollTo(0,0);
 }
 $$('[data-tab]').forEach(b => b.onclick = () => go(b.dataset.tab));
 document.addEventListener('click', e => {
-  const g = e.target.closest('[data-go]'); if(g) go(g.dataset.go);
+  const g = e.target.closest('[data-go]'); if(g){ if(g.dataset.filter) orderFilter = g.dataset.filter; go(g.dataset.go); }
   if(e.target.closest('[data-copy-url]')) copyText('https://' + shopUrl());
 });
 $('#btnSettings').onclick = () => go('settings');
@@ -627,15 +718,21 @@ function render(view){
   if(view==='home') renderHome();
   if(view==='shop') renderShop();
   if(view==='orders') renderOrders();
+  if(view==='views') renderViews();
   if(view==='settings'){ $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); }
 }
 function renderHome(){
   $('#hShop').textContent = S.shop.name;
   $('#todayLabel').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
   const today = new Date().toDateString();
-  const sales = S.orders.filter(o=>o.status==='paid' && new Date(o.created).toDateString()===today).reduce((a,o)=>a+(prodById(o.productId)?.price||0),0);
-  const cod = S.orders.filter(o=>o.pay==='COD' && o.status!=='paid').length;
-  $('#stSales').textContent = npr(sales); $('#stCod').textContent = cod; $('#stProducts').textContent = S.products.length;
+  const paid = S.orders.filter(paidToday), due = S.orders.filter(codDue);
+  $('#stSales').textContent = npr(paid.reduce((a,o) => a + (o.price||0), 0));
+  $('#stSalesL').textContent = `Sales today · ${paid.length} order${paid.length===1?'':'s'}`;
+  $('#stCod').textContent = npr(due.reduce((a,o) => a + orderTotal(o), 0));
+  $('#stCodL').textContent = `COD to collect · ${due.length} order${due.length===1?'':'s'}`; $('#stProducts').textContent = S.products.length;
+  const vToday = S.products.reduce((a, p) => a + viewsIn(p, dayKey(new Date()), dayKey(new Date())), 0);
+  $('#stViews').textContent = vToday.toLocaleString('en-IN');
+  $('#stViewsL').textContent = `Views today · ${S.products.reduce((a, p) => a + (p.views || 0), 0).toLocaleString('en-IN')} total`;
   const top = [...S.products].sort((a,b)=>(b.views||0)-(a.views||0))[0];
   $('#festTip').innerHTML = top ? `<b>Tip:</b> Tihar and wedding season are busy. Your <b>${esc(top.name)}</b> is getting the most views. Make an offer video for it?` : '<b>Tip:</b> Add your first product to get your shop link ready.';
   const list = $('#homeProducts'); list.innerHTML = '';
@@ -645,30 +742,140 @@ function renderHome(){
 }
 function itemRow(p, right){
   const d = document.createElement('div'); d.className = 'item';
-  d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><b>${esc(p.name)}</b><span class="small muted">${esc(p.sizes.join(', '))} · ${p.stock} in stock ${p.example?'<span class="pill ex">Example</span>':''}</span></div><div>${right}</div>`;
+  d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><b>${esc(p.name)}</b><span class="small muted"><span class="code">${esc(p.code)}</span> ${esc(p.sizes.join(', '))} · ${p.stock} in stock ${p.example?'<span class="pill ex">Example</span>':''}</span></div><div>${right}</div>`;
   return d;
 }
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let shopCat = 'All';
+let shopCat = 'All', shopOpen = null, shopQuery = '';
+const waNumber = () => '977' + String(S.shop.whatsapp).replace(/\D/g,'').replace(/^977/,'');
+function orderLink(p){
+  const msg = `Namaste! I want to order:\n${p.name} (${p.code}) – ${npr(p.price)}\nhttps://${productUrl(p)}\nSize: ___\nAddress: ___`;
+  return `https://wa.me/${waNumber()}?text=${encodeURIComponent(msg)}`;
+}
+function galleryHtml(p){
+  return p.imgs && p.imgs.length > 1
+    ? `<div class="gallery">${p.imgs.map((src, k) => `<img alt="${esc(p.name)} photo ${k+1}" src="${src}">`).join('')}</div><span class="gcount">1/${p.imgs.length}</span>`
+    : `<img alt="${esc(p.name)}" src="${p.img}">`;
+}
+function wireGallery(el, p){
+  const gal = el.querySelector('.gallery');
+  if(gal) gal.addEventListener('scroll', () => { el.querySelector('.gcount').textContent = `${Math.round(gal.scrollLeft / Math.max(1, gal.clientWidth)) + 1}/${p.imgs.length}`; });
+}
+const priceHtml = p => { const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
+  return `<span><span class="price">${npr(p.price)}</span>${pct ? `<span class="was">${npr(p.oldPrice)}</span><span class="disc">-${pct}%</span>` : ''}</span>`; };
+const findByCode = q => S.products.find(p => (p.code || '').toLowerCase() === q.trim().toLowerCase().replace(/^#/, ''));
 function renderShop(){
   $('#pubName').textContent = S.shop.name;
   $('#pubMeta').textContent = `${S.shop.location} · Order on WhatsApp`;
   const cats = ['All', ...new Set(S.products.map(p=>p.category))];
   const cc = $('#catChips'); cc.innerHTML = '';
-  cats.forEach(c => { const b = document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=c; b.setAttribute('aria-pressed', c===shopCat); b.onclick=()=>{shopCat=c; renderShop();}; cc.append(b); });
+  cats.forEach(c => { const b = document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=c; b.setAttribute('aria-pressed', c===shopCat); b.onclick=()=>{shopCat=c; shopOpen=null; renderShop();}; cc.append(b); });
+  if(shopOpen && prodById(shopOpen)){ renderProductPage(prodById(shopOpen)); return; }
+  $('#pubProduct').hidden = true; $('#shopBrowse').hidden = false;
   const grid = $('#pubGrid'); grid.innerHTML = '';
-  const wa = '977' + String(S.shop.whatsapp).replace(/\D/g,'').replace(/^977/,'');
-  S.products.filter(p=>shopCat==='All'||p.category===shopCat).sort((a,b)=>b.created-a.created).forEach(p => {
-    const msg = encodeURIComponent(`Namaste! I want to order: ${p.name} (${npr(p.price)}). Size: ___. Address: ___`);
-    const el = document.createElement('div'); el.className='pcard';
-    const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
-    el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${p.imgs && p.imgs.length > 1 ? `<div class="gallery">${p.imgs.map((src, k) => `<img alt="${esc(p.name)} photo ${k+1}" src="${src}">`).join('')}</div><span class="gcount">1/${p.imgs.length}</span>` : `<img alt="${esc(p.name)}" src="${p.img}">`}<div class="b"><b>${esc(p.name)}</b><span><span class="price">${npr(p.price)}</span>${pct ? `<span class="was">${npr(p.oldPrice)}</span><span class="disc">-${pct}%</span>` : ''}</span><p>${esc(p.desc||'')}</p><span class="small muted">${esc(p.sizes.join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="https://wa.me/${wa}?text=${msg}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
-    const gal = el.querySelector('.gallery');
-    if(gal) gal.addEventListener('scroll', () => { el.querySelector('.gcount').textContent = `${Math.round(gal.scrollLeft / Math.max(1, gal.clientWidth)) + 1}/${p.imgs.length}`; });
-    grid.append(el);
+  const q = shopQuery.trim().toLowerCase();
+  const list = S.products.filter(p => (shopCat==='All' || p.category===shopCat) &&
+    (!q || p.name.toLowerCase().includes(q) || (p.code||'').toLowerCase().includes(q) || p.category.toLowerCase().includes(q))).sort((a,b)=>b.created-a.created);
+  list.forEach(p => {
+    const el = document.createElement('div'); el.className='pcard'; el.dataset.open = p.id;
+    el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc(p.sizes.join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
+    wireGallery(el, p); grid.append(el);
   });
   if(!S.products.length) grid.innerHTML = '<p class="muted">No products yet.</p>';
+  else if(!list.length) grid.innerHTML = `<p class="muted">No product matches “${esc(shopQuery)}”.</p>`;
 }
+function renderProductPage(p){
+  $('#shopBrowse').hidden = true;
+  const box = $('#pubProduct'); box.hidden = false;
+  box.innerHTML = `<button class="btn small" type="button" id="pBack" style="align-self:flex-start">‹ All products</button>
+    <div class="pdetail" style="position:relative">${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${galleryHtml(p)}
+      <div class="b">
+        <div class="section-h"><h2>${esc(p.name)}</h2><span class="code">${esc(p.code)}</span></div>
+        ${priceHtml(p)}
+        <p class="muted">${esc(p.desc || '')}</p>
+        <p class="small"><b>Sizes:</b> ${esc(p.sizes.join(' · '))}${p.stock<=3 && p.stock>0 ? ` · <b style="color:var(--warn)">Only ${p.stock} left</b>` : ''}${p.stock===0 ? ' · <b style="color:var(--warn)">Sold out</b>' : ''}</p>
+        <p class="small muted">Cash on delivery · eSewa · Khalti · 1-day delivery inside the valley</p>
+        <a class="btn primary big" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
+        <button class="btn" type="button" id="pCopyLink">Copy product link</button>
+      </div>
+    </div>`;
+  wireGallery(box.querySelector('.pdetail'), p);
+  $('#pBack').onclick = () => { shopOpen = null; renderShop(); window.scrollTo(0,0); };
+  $('#pCopyLink').onclick = () => copyText('https://' + productUrl(p));
+}
+function openProduct(id, count = true){
+  const p = prodById(id); if(!p) return;
+  if(count){ p.views = (p.views || 0) + 1; p.lastViewed = Date.now(); p.viewLog = p.viewLog || {}; const k = dayKey(new Date()); p.viewLog[k] = (p.viewLog[k] || 0) + 1; save(); }
+  if($('#view-shop').hidden) go('shop');
+  shopOpen = id; renderShop(); window.scrollTo(0,0);
+}
+$('#pubGrid').addEventListener('click', e => { if(e.target.closest('a')) return; const c = e.target.closest('[data-open]'); if(c) openProduct(c.dataset.open); });
+$('#shopSearch').addEventListener('input', e => { shopQuery = e.target.value; renderShop(); });
+$('#shopSearch').addEventListener('keydown', e => {
+  if(e.key !== 'Enter') return;
+  const hit = findByCode(e.target.value);
+  if(hit){ e.preventDefault(); e.target.value = ''; shopQuery = ''; openProduct(hit.id); }
+});
+
+/* ---------- views report ---------- */
+let vRange = 'thisweek', vFrom = '', vTo = '';
+const V_RANGES = { today:'Today', yesterday:'Yesterday', thisweek:'This week', week:'Last 7 days', month:'Last 30 days', all:'All time', custom:'Pick dates' };
+function rangeDates(r){
+  const t = new Date();
+  if(r === 'today') return [t, t];
+  if(r === 'yesterday') return [addDays(t,-1), addDays(t,-1)];
+  if(r === 'week') return [addDays(t,-6), t];
+  if(r === 'thisweek') return [addDays(t,-t.getDay()), t]; /* Nepal's week starts on Sunday */
+  if(r === 'month') return [addDays(t,-29), t];
+  if(r === 'custom'){ const f = vFrom ? new Date(vFrom + 'T00:00') : addDays(t,-6), e = vTo ? new Date(vTo + 'T00:00') : t; return f <= e ? [f, e] : [e, f]; }
+  return null;
+}
+function renderViews(){
+  const rc = $('#vRanges'); rc.innerHTML = '';
+  Object.keys(V_RANGES).forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = V_RANGES[r]; b.setAttribute('aria-pressed', r === vRange); b.onclick = () => { vRange = r; renderViews(); }; rc.append(b); });
+  $('#vCustom').hidden = vRange !== 'custom';
+  const rd = rangeDates(vRange), fmt = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const from = rd ? dayKey(rd[0]) : '0000', to = rd ? dayKey(rd[1]) : '9999';
+  if(vRange === 'custom'){ $('#vFrom').value = from; $('#vTo').value = to; }
+  const count = p => rd ? viewsIn(p, from, to) : (p.views || 0);
+  const list = [...S.products].map(p => ({p, n: count(p)})).sort((a,b) => b.n - a.n);
+  const total = list.reduce((a,x) => a + x.n, 0), max = Math.max(1, ...list.map(x => x.n));
+  $('#vTotal').textContent = total.toLocaleString('en-IN');
+  /* compare with the same length of time just before */
+  let label = rd ? (from === to ? `Views · ${fmt(rd[0])}` : `Views · ${fmt(rd[0])} – ${fmt(rd[1])}`) : 'Views · all time';
+  if(rd){
+    const len = Math.round((rd[1] - rd[0]) / 864e5) + 1, pf = dayKey(addDays(rd[0], -len)), pt = dayKey(addDays(rd[0], -1));
+    const prev = S.products.reduce((a,p) => a + viewsIn(p, pf, pt), 0);
+    if(prev){ const pct = Math.round((total - prev) / prev * 100); label += ` · <span class="delta ${pct>=0?'up':'down'}">${pct>=0?'▲':'▼'} ${Math.abs(pct)}% vs ${len===1?'day before':`previous ${len} days`}</span>`; }
+  }
+  $('#vTotalL').innerHTML = label;
+  $('#vTop').textContent = list[0] && list[0].n ? list[0].p.name : '–';
+  /* daily chart: the chosen dates, or the last 30 days for all time; hidden for a single day */
+  const chart = $('#vChart');
+  let cs = rd ? rd[0] : addDays(new Date(), -29), ce = rd ? rd[1] : new Date();
+  let nDays = Math.round((ce - cs) / 864e5) + 1;
+  if(nDays > 31){ cs = addDays(ce, -30); nDays = 31; }
+  if(nDays <= 1){ chart.hidden = true; }
+  else {
+    chart.hidden = false;
+    const days = Array.from({length:nDays}, (_, i) => addDays(cs, i)), todayK = dayKey(new Date());
+    const vals = days.map(d => { const k = dayKey(d); return S.products.reduce((a,p) => a + ((p.viewLog||{})[k] || 0), 0); });
+    const vmax = Math.max(1, ...vals), every = nDays > 14 ? Math.ceil(nDays / 7) : 1;
+    chart.innerHTML = `<div class="small" style="display:flex;justify-content:space-between"><b>Views per day</b><span class="muted">Best day: ${Math.max(...vals)}</span></div>
+      <div class="vbars" role="img" aria-label="Views per day">${days.map((d,i) => `<div class="bar${dayKey(d)===todayK?' today':''}" title="${fmt(d)}: ${vals[i]} views">${nDays<=14 && vals[i] ? `<em>${vals[i]}</em>` : ''}<i style="height:${Math.round(vals[i]/vmax*82)}%"></i></div>`).join('')}</div>
+      <div class="vaxis">${days.map((d,i) => `<span>${i % every === 0 ? (nDays<=7 ? d.toLocaleDateString('en-GB',{weekday:'short'}) : d.getDate()) : ''}</span>`).join('')}</div>`;
+  }
+  const box = $('#viewsList'); box.innerHTML = '';
+  list.forEach(({p, n}) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'vrow';
+    b.innerHTML = `<img alt="" src="${p.img}"><span class="t"><b>${esc(p.name)}</b><span class="small muted"><span class="code">${esc(p.code)}</span> ${npr(p.price)} · ${(p.views||0).toLocaleString('en-IN')} all time${p.example ? ' <span class="pill ex">Example</span>' : ''}</span><span class="vbar"><i style="width:${Math.round(n/max*100)}%"></i></span></span><span class="vcount">${n.toLocaleString('en-IN')}<small>views</small></span>`;
+    b.onclick = () => openProduct(p.id, false);
+    box.append(b);
+  });
+  if(!list.length) box.innerHTML = '<p class="muted">No products yet. Views appear here once customers open your products.</p>';
+}
+$('#vFrom').addEventListener('change', e => { vFrom = e.target.value; renderViews(); });
+$('#vTo').addEventListener('change', e => { vTo = e.target.value; renderViews(); });
 
 /* ---------- studio ---------- */
 let draft = {sizes:['M','L'], backdrop:BACKDROPS[0][1]};
@@ -1273,10 +1480,11 @@ function drawFrame(g, t, comp, info, T = 8){
   g.fillStyle = band; g.fillRect(0,0,W,560);
   g.textAlign = 'center';
   // shop name pill
-  g.font = '700 30px "Bricolage Grotesque", sans-serif';
-  const sw = Math.min(600, g.measureText(info.shop).width + 52);
+  const head = info.code ? `${info.shop}  ·  Code ${info.code}` : info.shop;
+  fitFont(g, head, 700, 30, '"Bricolage Grotesque", sans-serif', 560);
+  const sw = Math.min(620, g.measureText(head).width + 52);
   g.fillStyle = dark ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.8)'; roundRect(g, (W-sw)/2, 112, sw, 56, 28); g.fill();
-  g.fillStyle = ink; g.fillText(info.shop, W/2, 150);
+  g.fillStyle = ink; g.fillText(head, W/2, 150);
   // name + second line
   const a1 = ease((t-0.4)/0.5);
   if(a1 > 0){
@@ -1303,7 +1511,7 @@ function drawFrame(g, t, comp, info, T = 8){
   const c = ease((t-(T-2.8))/0.4);
   if(c > 0){
     g.globalAlpha = c; g.font = '700 32px "Bricolage Grotesque", sans-serif';
-    const label = 'Order now · link in bio', cw = g.measureText(label).width + 60;
+    const label = info.code ? `Link in bio → code ${info.code}` : 'Order now · link in bio', cw = g.measureText(label).width + 60;
     g.fillStyle = dark ? '#ffffff' : '#1b1d3a'; roundRect(g, (W-cw)/2, 446 + (1-c)*16, cw, 62, 31); g.fill();
     g.fillStyle = dark ? '#1b1d3a' : '#ffffff'; g.fillText(label, W/2, 488 + (1-c)*16); g.globalAlpha = 1;
   }
@@ -1354,14 +1562,15 @@ function templateCaption(info){
     nepali: `नयाँ ${info.name} आयो ✨ ${deal}\nसाइज: ${info.sizes}। उपत्यकाभित्र १ दिनमा डेलिभरी, क्यास अन डेलिभरी उपलब्ध।${low ? `\nस्टक ${info.stock} वटा मात्र बाँकी!` : ''}\nअर्डर गर्न बायोको लिङ्कमा क्लिक गर्नुहोस् 🛍️`,
     english: `New ${n} just in ✨ ${deal}\nSizes: ${info.sizes}. Delivery in 1 day inside the valley, cash on delivery available.${low ? `\nOnly ${info.stock} left!` : ''}\nTap the link in bio to order 🛍️`
   }[info.lang||'roman'];
-  return body + '\n\n' + tags.map(t=>'#'+t.replace(/\s+/g,'')).join(' ');
+  const codeLine = info.code ? `\n${{roman:'Product code', nepali:'प्रोडक्ट कोड', english:'Product code'}[info.lang||'roman']}: ${info.code}` : '';
+  return body + codeLine + '\n\n' + tags.map(t=>'#'+t.replace(/\s+/g,'')).join(' ');
 }
 async function aiCaption(info, fresh, image){
   const sample = samplePromise ? await samplePromise : null;
   if(!sample || !image) return null;
   const prompt = `You write TikTok captions for a small online clothing and goods shop in Nepal. Look at the product photo.
 Shop: ${info.shop} (${info.loc}). Price: ${info.price}. Sizes: ${info.sizes}. Category: ${info.category}. Seller's product name (may be empty): "${info.rawName}". What's special, from the seller (may be empty): "${info.notes||''}".${info.script ? `\nThe seller's spoken script in the video: "${info.script}"` : ''}
-${info.oldPrice || info.offer ? `Offer: ${info.offer || 'discount'}${info.oldPrice ? `, old price ${info.oldPrice}, now ${info.price} (${info.pct}% off)` : ''}. Make the offer the first thing people read.\n` : ''}${info.stock > 0 && info.stock <= 3 ? `Only ${info.stock} left in stock: mention it to create urgency.\n` : ''}Caption language: ${LANG_RULE[info.lang||'roman']}
+${info.oldPrice || info.offer ? `Offer: ${info.offer || 'discount'}${info.oldPrice ? `, old price ${info.oldPrice}, now ${info.price} (${info.pct}% off)` : ''}. Make the offer the first thing people read.\n` : ''}${info.stock > 0 && info.stock <= 3 ? `Only ${info.stock} left in stock: mention it to create urgency.\n` : ''}${info.code ? `Product code: ${info.code}. Customers type this code on the shop link in bio to find the product, so end the caption with "Code ${info.code}".\n` : ''}Caption language: ${LANG_RULE[info.lang||'roman']}
 Reply with only JSON: {"name": short English product name, max 4 words, describing what you see; "caption": 2-3 short lines in the caption language above, include the price and sizes, mention cash on delivery and the link in bio, 1-2 emoji, no hashtags; "hashtags": array of 6 lowercase hashtags without #, mixing Nepal shopping tags and the product; "description": one plain English sentence for the shop page, max 20 words}.`;
   try{
     const r = await sample.json(prompt, {images:[image], modelTier:'quick', cache: fresh ? false : true});
@@ -1436,6 +1645,7 @@ function slideTop(g, info){
   band.addColorStop(0, hexA(tone,.9)); band.addColorStop(1, hexA(tone,0)); g.fillStyle = band; g.fillRect(0,0,720,330);
   pill(g, 32, 112, 56, info.shop, '700 28px "Bricolage Grotesque", sans-serif', dark ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.85)', dark ? '#ffffff' : '#1b1d3a');
   pricePill(g, 32, 196, 76, info);
+  if(info.code) pill(g, 32, 286, 50, `Code ${info.code}`, '700 26px "Bricolage Grotesque", sans-serif', '#1b1d3a', '#ffffff');
 }
 function orderSlide(g, comp, info){
   const small = document.createElement('canvas'); small.width = 36; small.height = 64;
@@ -1450,9 +1660,9 @@ function orderSlide(g, comp, info){
   pricePill(g, 360, 510, 100, info, 'center');
   g.textAlign = 'center'; g.font = '500 30px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.88)';
   g.fillText(infoLine(info), 360, 670); g.fillText('Cash on delivery · eSewa · Khalti', 360, 714);
-  pill(g, 360, 760, 72, 'Tap the link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
+  pill(g, 360, 760, 72, info.code ? `Link in bio → code ${info.code}` : 'Tap the link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
   g.textAlign = 'center'; g.font = '500 28px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)';
-  g.fillText(shopUrl(), 360, 880); g.fillText(`${info.shop} · ${info.loc}`, 360, 922);
+  g.fillText(info.code ? productUrl(info) : shopUrl(), 360, 880); g.fillText(`${info.shop} · ${info.loc}`, 360, 922);
 }
 function makeSlides(info, comps){
   const total = comps.length + 1;
@@ -1500,7 +1710,8 @@ $('#btnMake').onclick = async () => {
   if(!srcImage) problems.push('add a photo'); if(!(f.price>0)) problems.push('enter a price'); if(!draft.sizes.length) problems.push('pick at least one size');
   if(problems.length){ err.textContent = 'Please ' + problems.join(', ') + '.'; err.hidden=false; return; }
   err.hidden = true;
-  const info = { shop:S.shop.name, loc:S.shop.location, price:npr(f.price), sizes:draft.sizes.join(', '), category:f.category, rawName:f.rawName, notes:f.notes, name: f.rawName || f.category, ...offerInfo(f) };
+  const info = { shop:S.shop.name, loc:S.shop.location, price:npr(f.price), sizes:draft.sizes.join(', '), category:f.category, rawName:f.rawName, notes:f.notes, name: f.rawName || f.category, code: nextCode(f.category), ...offerInfo(f) };
+  $('#codeOut').textContent = info.code;
   lastInfo = info; [1,2,3,'Pin'].forEach(n=>markStep(n,false));
   $('#result').hidden = false; $('#result').scrollIntoView({behavior:'smooth', block:'start'});
   $('#btnMake').disabled = true;
@@ -1562,7 +1773,8 @@ $('#btnPublish').onclick = () => {
   const name = f.rawName || draft.aiName || f.category;
   const cover = withPhoto(0, () => enhanced(640).toDataURL('image/jpeg', .82));
   const imgs = photos.length > 1 ? [cover, ...photos.slice(1).map((_, i) => withPhoto(i+1, () => enhanced(480).toDataURL('image/jpeg', .78)))] : null;
-  S.products.push({ id:uid(), name, price:f.price, oldPrice:f.oldPrice, offer:f.offer, stock:f.stock, sizes:[...draft.sizes], category:f.category, img:cover, imgs,
+  const code = (lastInfo && lastInfo.code) || nextCode(f.category); S.nextNum++;
+  S.products.push({ id:uid(), code, name, price:f.price, oldPrice:f.oldPrice, offer:f.offer, stock:f.stock, sizes:[...draft.sizes], category:f.category, img:cover, imgs,
     desc: draft.desc || `${name} from ${S.shop.name}. Sizes ${draft.sizes.join(', ')}.`, caption:$('#captionOut').innerText, created:Date.now(), views:0 });
   save();
   // reset studio
@@ -1626,7 +1838,7 @@ syncStickers();
 function vInfo(){
   const f = readForm();
   return { shop:S.shop.name, loc:S.shop.location, price: f.price>0 ? npr(f.price) : '', sizes:draft.sizes.join(', '), category:f.category,
-    rawName:f.rawName, notes:f.notes, name: f.rawName || f.category, script: $('#scriptOut').innerText.trim(), ...offerInfo(f) };
+    rawName:f.rawName, notes:f.notes, name: f.rawName || f.category, code: nextCode(f.category), script: $('#scriptOut').innerText.trim(), ...offerInfo(f) };
 }
 function templateScript(i){
   const n = (i.rawName || i.category).toLowerCase(), app = APPAREL.includes(i.category);
@@ -1635,19 +1847,19 @@ function templateScript(i){
     i.notes ? `${i.notes}, really good quality.` : 'Really good quality, and a brand new design.',
     app ? `Sizes ${i.sizes} are all available.` : 'Stock is limited, so order soon.',
     i.oldPrice ? `It was ${i.oldPrice}, now only ${i.price}!` : `Price is only ${i.price}!`,
-    'Tap the link in bio to order. Cash on delivery available 🙏' ];
+    i.code ? `Tap the link in bio and find code ${i.code}. Cash on delivery available 🙏` : 'Tap the link in bio to order. Cash on delivery available 🙏' ];
   if(i.lang === 'nepali') return [
     i.offer ? `${i.offer}! हेर्नुस् त यो नयाँ ${i.rawName || i.category} 😍` : `नमस्ते! हेर्नुस् त यो नयाँ ${i.rawName || i.category} 😍`,
     i.notes ? `${i.notes}, एकदम राम्रो क्वालिटी छ।` : 'क्वालिटी एकदम राम्रो छ, डिजाइन पनि नयाँ।',
     app ? `साइज ${i.sizes} सबै उपलब्ध छ।` : 'स्टक सीमित छ, छिटो अर्डर गर्नुस्।',
     i.oldPrice ? `${i.oldPrice} को अहिले ${i.price} मात्र!` : `मूल्य ${i.price} मात्र!`,
-    'अर्डर गर्न बायोको लिङ्क थिच्नुस्। क्यास अन डेलिभरी पनि छ 🙏' ];
+    i.code ? `अर्डर गर्न बायोको लिङ्कमा कोड ${i.code} खोज्नुस्। क्यास अन डेलिभरी पनि छ 🙏` : 'अर्डर गर्न बायोको लिङ्क थिच्नुस्। क्यास अन डेलिभरी पनि छ 🙏' ];
   return [
     i.offer ? `${i.offer}! Hernus ta yo naya ${n} 😍` : `Namaste! Hernus ta yo naya ${n} 😍`,
     i.notes ? `${i.notes} — ekdam ramro quality cha.` : 'Quality ekdam ramro cha, design pani ekdam naya.',
     app ? `Sizes ${i.sizes} sabai available cha.` : 'Stock limited cha, chado order garnus.',
     i.oldPrice ? `${i.oldPrice} ko ahile ${i.price} matra!` : (i.price ? `Price chai ${i.price} matra!` : 'Price chai ekdam reasonable cha!'),
-    'Order garna bio ko link click garnus. Cash on delivery pani cha 🙏'
+    i.code ? `Order garna bio ko link ma code ${i.code} khojnus. Cash on delivery pani cha 🙏` : 'Order garna bio ko link click garnus. Cash on delivery pani cha 🙏'
   ];
 }
 $('#btnScript').onclick = async () => {
@@ -1661,7 +1873,7 @@ $('#btnScript').onclick = async () => {
       const r = await sample.json(`Write a 20-second TikTok selling script for a shop owner in Nepal who holds the product on camera and talks to viewers.
 ${LANG_RULE[i.lang||'roman']} Warm and natural, the way a friendly Kathmandu shopkeeper talks. No stage directions.${i.oldPrice || i.offer ? `\nOffer: ${i.offer || 'discount'}${i.oldPrice ? `, was ${i.oldPrice}, now ${i.price} (${i.pct}% off)` : ''}. Open with the offer.` : ''}
 Shop: ${i.shop}. Product: ${i.rawName || i.category} (${i.category}). Price: ${i.price}. Sizes: ${i.sizes}. What's special: ${i.notes || 'not given'}.
-Reply with only JSON {"lines": [5 to 6 short lines]}. Line 1 is a hook that stops people scrolling. Then 2 or 3 lines on what is special. One line says the price${APPAREL.includes(i.category)?' and sizes':''}. The last line asks them to order from the link in bio and says cash on delivery is available.`, {modelTier:'quick', cache:false});
+Reply with only JSON {"lines": [5 to 6 short lines]}. Line 1 is a hook that stops people scrolling. Then 2 or 3 lines on what is special. ${i.code ? `Mention the product code ${i.code} once near the end, telling viewers to find it on the link in bio. ` : ''}One line says the price${APPAREL.includes(i.category)?' and sizes':''}. The last line asks them to order from the link in bio and says cash on delivery is available.`, {modelTier:'quick', cache:false});
       if(r && Array.isArray(r.lines) && r.lines.length) lines = r.lines.map(String);
     }catch(e){}
   }
@@ -1787,7 +1999,7 @@ function drawSource(g, v, small, bright){
 function drawStickers(g, t, info){
   const ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
   const st = vState.st, top = vState.pos === 'top';
-  if(st.shop) pill(g, 32, 118, 52, info.shop, '700 28px "Bricolage Grotesque", sans-serif', 'rgba(255,255,255,.88)', '#1b1d3a');
+  if(st.shop) pill(g, 32, 118, 52, info.code ? `${info.shop} · Code ${info.code}` : info.shop, '700 28px "Bricolage Grotesque", sans-serif', 'rgba(255,255,255,.88)', '#1b1d3a');
   const py = top ? 196 : 846;
   if(st.price && info.price){
     const p = ease((t - vState.priceAt)/0.35);
@@ -1828,9 +2040,9 @@ function drawEndCard(g, et, info, still, small){
   const ol = offerLabel(info);
   if(ol) pill(g, W/2, 314, 58, ol, '700 30px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff', 'center');
   if(info.price) pricePill(g, W/2, 530, 100, info, 'center');
-  pill(g, W/2, 668, 72, 'Order now · link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
+  pill(g, W/2, 668, 72, info.code ? `Link in bio → code ${info.code}` : 'Order now · link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
   g.font = '500 28px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'center';
-  g.fillText(shopUrl(), W/2, 800); g.fillText('COD · eSewa · Khalti', W/2, 842);
+  g.fillText(info.code ? productUrl(info) : shopUrl(), W/2, 800); g.fillText('COD · eSewa · Khalti', W/2, 842);
   g.restore();
 }
 
@@ -1898,7 +2110,7 @@ $('#btnMakeV').onclick = async () => {
   if(problems.length){ err.textContent = 'Please ' + problems.join(', ') + '.'; err.hidden = false; toast('Please ' + problems.join(', ')); return; }
   err.hidden = true;
   const actx = AC ? new AC() : null;
-  lastVInfo = i; vState.made = true; [1,2,3,'Pin'].forEach(n => $('#vt'+n).classList.remove('done'));
+  lastVInfo = i; vState.made = true; $('#codeOutV').textContent = i.code; [1,2,3,'Pin'].forEach(n => $('#vt'+n).classList.remove('done'));
   $('#resultV').hidden = false; $('#resultV').scrollIntoView({behavior:'smooth', block:'start'});
   const btn = $('#btnMakeV'); btn.disabled = true;
   const fr = await grabFrame(Math.min(vState.start + 1, vState.end - 0.2));
@@ -1929,14 +2141,15 @@ $('#btnSaveStatus').onclick = () => {
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
   const g = c.getContext('2d'); g.scale(1.5, 1.5);
   drawFrame(g, 4.2, photos.length ? withPhoto(0, composeVertical) : composeVertical(), {...lastInfo, name: $('#fName').value.trim() || lastInfo.name});
-  pill(g, 360, 1150, 60, shopUrl(), '600 28px Hind, sans-serif', 'rgba(27,29,58,.9)', '#ffffff', 'center');
+  pill(g, 360, 1150, 60, lastInfo.code ? productUrl(lastInfo) : shopUrl(), '600 28px Hind, sans-serif', 'rgba(27,29,58,.9)', '#ffffff', 'center');
   c.toBlob(b => b && saveFile(`${slugify(S.shop.name)}-${slugify($('#fName').value || 'product')}-status.jpg`, b, 'Status image saved'), 'image/jpeg', .9);
 };
 $('#btnPublishV').onclick = () => {
   const f = readForm();
   if(!vState.frameImg || !(f.price > 0)){ toast('Make the video first'); return; }
   const name = f.rawName || draft.aiName || f.category;
-  S.products.push({ id:uid(), name, price:f.price, oldPrice:f.oldPrice, offer:f.offer, stock:f.stock, sizes:[...draft.sizes], category:f.category, img:vState.frameImg,
+  const code = (lastVInfo && lastVInfo.code) || nextCode(f.category); S.nextNum++;
+  S.products.push({ id:uid(), code, name, price:f.price, oldPrice:f.oldPrice, offer:f.offer, stock:f.stock, sizes:[...draft.sizes], category:f.category, img:vState.frameImg,
     desc: draft.desc || f.notes || `${name} from ${S.shop.name}.`, caption:$('#captionV').innerText, created:Date.now(), views:0 });
   save();
   ['#fPrice','#fStock','#fName','#fNotes','#fOldPrice','#fOffer'].forEach(s => $(s).value = '');
@@ -1952,15 +2165,15 @@ $('#btnPublishV').onclick = () => {
 /* ---------- pinned comment and product details ---------- */
 function pinnedComment(i){
   const app = APPAREL.includes(i.category), low = i.stock > 0 && i.stock <= 3;
-  if(i.lang === 'nepali') return `📌 मूल्य: ${i.price}${i.oldPrice ? ` (पहिले ${i.oldPrice}, ${i.pct}% छुट)` : ''}${app ? ` · साइज: ${i.sizes}` : ''} · क्यास अन डेलिभरी · उपत्यकाभित्र १ दिनमा डेलिभरी${low ? ` · ${i.stock} वटा मात्र बाँकी!` : ''} · अर्डर: बायोको लिङ्क 🛍️`;
-  if(i.lang === 'english') return `📌 Price: ${i.price}${i.oldPrice ? ` (was ${i.oldPrice}, ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · Cash on delivery · 1-day delivery in the valley${low ? ` · Only ${i.stock} left!` : ''} · Order: link in bio 🛍️`;
-  return `📌 Price: ${i.price}${i.oldPrice ? ` (${i.oldPrice} bata ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · COD available · Valley bhitra 1 din ma delivery${low ? ` · ${i.stock} piece matra baki!` : ''} · Order: link in bio 🛍️`;
+  if(i.lang === 'nepali') return `📌 ${i.code ? `कोड ${i.code} · ` : ''}मूल्य: ${i.price}${i.oldPrice ? ` (पहिले ${i.oldPrice}, ${i.pct}% छुट)` : ''}${app ? ` · साइज: ${i.sizes}` : ''} · क्यास अन डेलिभरी · उपत्यकाभित्र १ दिनमा डेलिभरी${low ? ` · ${i.stock} वटा मात्र बाँकी!` : ''} · अर्डर: बायोको लिङ्क${i.code ? ` → ${i.code}` : ''} 🛍️`;
+  if(i.lang === 'english') return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (was ${i.oldPrice}, ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · Cash on delivery · 1-day delivery in the valley${low ? ` · Only ${i.stock} left!` : ''} · Order: link in bio${i.code ? ` → ${i.code}` : ''} 🛍️`;
+  return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (${i.oldPrice} bata ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · COD available · Valley bhitra 1 din ma delivery${low ? ` · ${i.stock} piece matra baki!` : ''} · Order: link in bio${i.code ? ` → ${i.code}` : ''} 🛍️`;
 }
 function productDetails(p){
   const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
-  return `${p.name}\nPrice: ${npr(p.price)}${pct ? ` (was ${npr(p.oldPrice)}, ${pct}% off)` : ''}${APPAREL.includes(p.category) ? `\nSizes: ${p.sizes.join(', ')}` : ''}\nCash on delivery · eSewa · Khalti\nOrder here: https://${shopUrl()}`;
+  return `${p.name} (${p.code})\nPrice: ${npr(p.price)}${pct ? ` (was ${npr(p.oldPrice)}, ${pct}% off)` : ''}${APPAREL.includes(p.category) ? `\nSizes: ${p.sizes.join(', ')}` : ''}\nCash on delivery · eSewa · Khalti\nOrder here: https://${productUrl(p)}`;
 }
-function fillProductSelect(sel){ const v = sel.value; sel.innerHTML = S.products.map(p=>`<option value="${p.id}">${esc(p.name)} · ${npr(p.price)}</option>`).join(''); if(v && prodById(v)) sel.value = v; }
+function fillProductSelect(sel){ const v = sel.value; sel.innerHTML = S.products.map(p=>`<option value="${p.id}">${esc(p.code)} · ${esc(p.name)} · ${npr(p.price)}</option>`).join(''); if(v && prodById(v)) sel.value = v; }
 $('#homeProducts').addEventListener('click', e => { const b = e.target.closest('[data-details]'); if(b){ const p = prodById(b.dataset.details); if(p) copyText(productDetails(p)); } });
 
 /* ---------- orders ---------- */
@@ -1968,14 +2181,30 @@ let orderFilter = 'all';
 function renderOrders(){
   fillProductSelect($('#oProduct'));
   const f = $('#orderFilter'); f.innerHTML='';
-  ['all',...STATUSES].forEach(s => { const n = s==='all'?S.orders.length:S.orders.filter(o=>o.status===s).length; const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=`${s[0].toUpperCase()+s.slice(1)} (${n})`; b.setAttribute('aria-pressed', s===orderFilter); b.onclick=()=>{orderFilter=s; renderOrders();}; f.append(b); });
+  const FILTERS = { all:['All', () => true], today:['Paid today', paidToday], cod:['COD to collect', codDue] };
+  STATUSES.forEach(st => FILTERS[st] = [st==='paid' ? 'Completed' : st[0].toUpperCase()+st.slice(1), o => o.status === st]);
+  if(!FILTERS[orderFilter]) orderFilter = 'all';
+  Object.keys(FILTERS).forEach(s => { const n = S.orders.filter(FILTERS[s][1]).length; const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=`${FILTERS[s][0]} (${n})`; b.setAttribute('aria-pressed', s===orderFilter); b.onclick=()=>{orderFilter=s; renderOrders();}; f.append(b); });
   const list = $('#orderList'); list.innerHTML='';
-  const rows = S.orders.filter(o=>orderFilter==='all'||o.status===orderFilter).sort((a,b)=>b.created-a.created);
+  const rows = S.orders.filter(FILTERS[orderFilter][1]).sort((a,b)=>b.created-a.created);
+  const sum = document.createElement('p'); sum.className = 'small muted';
+  if(orderFilter === 'today') sum.innerHTML = `<b>${npr(rows.reduce((a,o)=>a+(o.price||0),0))}</b> sales today from ${rows.length} order${rows.length===1?'':'s'} (delivery charges not included).`;
+  if(orderFilter === 'cod') sum.innerHTML = `<b>${npr(rows.reduce((a,o)=>a+orderTotal(o),0))}</b> to collect from ${rows.length} order${rows.length===1?'':'s'}, including delivery. Tap <b>Collected ✓</b> when the rider hands over the cash.`;
+  if(sum.innerHTML) list.append(sum);
   rows.forEach(o => {
     const p = prodById(o.productId) || {name:'Removed product', price:0, img:'', sizes:[], stock:0};
     const next = STATUSES[STATUSES.indexOf(o.status)+1];
-    const d = document.createElement('div'); d.className='item';
-    d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><b>${esc(o.customer)} · ${esc(p.name)}</b><span class="small muted">${esc(o.size)} · ${esc(o.place)} · ${o.pay} · <span class="price">${npr(p.price)}</span></span></div><div class="stack" style="gap:6px;align-items:flex-end"><span class="pill ${o.status}">${o.status[0].toUpperCase()+o.status.slice(1)}</span><div class="row" style="gap:6px;justify-content:flex-end"><button class="btn small" type="button" data-bill="${o.id}">Slip</button>${next?`<button class="btn small" type="button" data-adv="${o.id}">Mark ${next}</button>`:''}</div></div>`;
+    const when = d => new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    const money = `<span class="price">${npr(orderTotal(o))}</span>${o.delivery ? ` <span class="muted">(${npr(o.price)} + ${npr(o.delivery)} delivery)</span>` : ''}`;
+    const payTxt = o.paidAt ? `<span style="color:var(--good)">${o.pay==='COD'?'Collected':'Paid'} ${when(o.paidAt)}</span>` : o.pay==='COD' ? `<span style="color:var(--warn)">COD due</span>` : `<span style="color:var(--warn)">${o.pay} not received</span>`;
+    const pillTxt = o.status==='paid' ? (o.pay==='COD' ? 'Collected' : 'Done') : o.status[0].toUpperCase()+o.status.slice(1);
+    let act = '';
+    if(!o.paidAt && o.pay!=='COD') act += `<button class="btn small indigo" type="button" data-collect="${o.id}">Received ✓</button>`;
+    if(o.pay==='COD' && !o.paidAt && o.status==='sent') act += `<button class="btn small indigo" type="button" data-collect="${o.id}">Collected ✓</button>`;
+    else if(next==='paid') act += `<button class="btn small" type="button" data-adv="${o.id}">Delivered ✓</button>`;
+    else if(next) act += `<button class="btn small" type="button" data-adv="${o.id}">Mark ${next}</button>`;
+    const d = document.createElement('div'); d.className='item order';
+    d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><div class="top"><b>${esc(o.customer)} · ${esc(p.name)}</b><span class="pill ${o.status}">${pillTxt}</span></div><span class="small muted"><span class="code">${esc(p.code || '')}</span> ${esc(o.size)} · ${esc(o.place)} · ${o.pay} · ordered ${when(o.created)}</span><span class="small">${money}</span><span class="small">${payTxt}</span></div><div class="acts"><button class="btn small" type="button" data-bill="${o.id}">Slip</button>${act}</div>`;
     list.append(d);
   });
   if(!rows.length) list.innerHTML = '<p class="muted">No orders here yet.</p>';
@@ -2002,14 +2231,14 @@ function billImage(o){
   rule(262);
   row(310, 'Customer', o.customer); row(354, 'Deliver to', o.place);
   rule(386);
-  row(434, 'Item', p.name.length > 30 ? p.name.slice(0,29) + '…' : p.name); row(478, 'Size', o.size || '-'); row(522, 'Quantity', '1');
-  if(p.oldPrice) row(566, 'Price', `${npr(p.oldPrice)} → ${npr(p.price)}`); else row(566, 'Price', npr(p.price));
-  rule(598);
-  const paid = o.pay !== 'COD' || o.status === 'paid';
+  const itemTxt = (p.code ? p.code + ' · ' : '') + p.name; row(434, 'Item', itemTxt.length > 32 ? itemTxt.slice(0,31) + '…' : itemTxt); row(478, 'Size', o.size || '-'); row(522, 'Quantity', '1');
+  row(566, 'Price', npr(o.price)); if(o.delivery) row(600, 'Delivery', npr(o.delivery));
+  rule(o.delivery ? 622 : 598);
+  const paid = !!o.paidAt;
   g.fillStyle = paid ? '#dcf2e6' : '#fdf0d4'; roundRect(g, 40, 630, W-80, 140, 16); g.fill();
   g.textAlign = 'left'; g.font = '600 26px Hind, sans-serif'; g.fillStyle = paid ? '#1f7a4d' : '#a15c00';
-  g.fillText(paid ? (o.pay === 'COD' ? 'Paid in cash' : `Paid by ${o.pay}`) : 'Cash on delivery — collect', 70, 684);
-  g.font = '700 54px "Bricolage Grotesque", sans-serif'; g.fillStyle = ink; g.fillText(npr(p.price), 70, 746);
+  g.fillText(paid ? (o.pay === 'COD' ? 'Paid in cash' : `Paid by ${o.pay}`) : (o.pay === 'COD' ? 'Cash on delivery — collect' : `To pay by ${o.pay}`), 70, 684);
+  g.font = '700 54px "Bricolage Grotesque", sans-serif'; g.fillStyle = ink; g.fillText(npr(orderTotal(o)), 70, 746);
   g.textAlign = 'center'; g.font = '600 28px Hind, sans-serif'; g.fillStyle = ink; g.fillText('Dhanyabad! 🙏', W/2, 850);
   g.font = '500 24px Hind, sans-serif'; g.fillStyle = mute; g.fillText(`Order again: ${shopUrl()}`, W/2, 892);
   g.font = '500 20px Hind, sans-serif'; g.fillText('Made with PasalPop', W/2, 960);
@@ -2017,8 +2246,8 @@ function billImage(o){
 }
 function billMessage(o){
   const p = prodById(o.productId) || {name:'Product', price:0};
-  const pay = o.pay === 'COD' ? `Cash on delivery: ${npr(p.price)} tirnu hola` : `Payment: ${o.pay} ✓`;
-  return `Namaste ${o.customer.replace(/\s*\(example\)/,'')} 🙏\n${S.shop.name} bata tapai ko order:\n• ${p.name} (${o.size || '-'}) — ${npr(p.price)}\n${pay}\nDelivery: ${o.place}\nDhanyabad! Feri order garna: ${shopUrl()}`;
+  const pay = o.paidAt ? `Payment: ${o.pay} ✓ received` : o.pay === 'COD' ? `Cash on delivery: ${npr(orderTotal(o))} tirnu hola` : `${o.pay} ma ${npr(orderTotal(o))} pathaunu hola`;
+  return `Namaste ${o.customer.replace(/\s*\(example\)/,'')} 🙏\n${S.shop.name} bata tapai ko order:\n• ${p.name}${p.code ? ` [${p.code}]` : ''} (${o.size || '-'}) — ${npr(o.price)}${o.delivery ? `\n• Delivery — ${npr(o.delivery)}` : ''}\n${pay}\nDelivery: ${o.place}\nDhanyabad! Feri order garna: ${shopUrl()}`;
 }
 $('#btnBillClose').onclick = () => { $('#billBox').hidden = true; billFor = null; };
 $('#btnBillCopy').onclick = () => billFor && copyText(billMessage(billFor));
@@ -2026,17 +2255,32 @@ $('#btnBillSave').onclick = () => { if(!billFor) return; billImage(billFor).toBl
 $('#orderList').addEventListener('click', e => {
   const sb = e.target.closest('[data-bill]');
   if(sb){ billFor = S.orders.find(x => x.id === sb.dataset.bill); $('#billImg').src = billImage(billFor).toDataURL('image/jpeg', .9); $('#billBox').hidden = false; $('#billBox').scrollIntoView({behavior:'smooth', block:'start'}); return; }
+  const c = e.target.closest('[data-collect]');
+  if(c){ const o = S.orders.find(x=>x.id===c.dataset.collect); o.paidAt = Date.now();
+    if(o.pay==='COD') o.status = 'paid';
+    save(); renderOrders(); toast(`${npr(o.pay==='COD' ? orderTotal(o) : o.price)} added to today's sales`); return; }
   const b = e.target.closest('[data-adv]'); if(!b) return;
   const o = S.orders.find(x=>x.id===b.dataset.adv); o.status = STATUSES[STATUSES.indexOf(o.status)+1];
-  if(o.status==='paid') o.created = Date.now();
-  save(); renderOrders(); toast(`Marked ${o.status}`);
+  if(o.status==='paid' && !o.paidAt) o.paidAt = Date.now();
+  save(); renderOrders(); toast(o.status==='paid' ? 'Order complete' : `Marked ${o.status}`);
 });
-$('#btnAddOrder').onclick = () => { $('#orderForm').hidden = false; fillProductSelect($('#oProduct')); $('#oName').focus(); };
+function syncOrderForm(fromProduct){
+  const p = prodById($('#oProduct').value);
+  if(fromProduct && p) $('#oPrice').value = p.price;
+  $('#oReceivedRow').hidden = $('#oPay').value === 'COD';
+  const t = (+$('#oPrice').value||0) + (+$('#oDelivery').value||0);
+  $('#oTotal').textContent = t ? `Customer pays ${npr(t)}${$('#oPay').value==='COD' ? ' in cash on delivery' : ''}.` : '';
+}
+$('#oProduct').addEventListener('change', () => syncOrderForm(true));
+['#oPay','#oPrice','#oDelivery'].forEach(id => $(id).addEventListener('input', () => syncOrderForm(false)));
+$('#btnAddOrder').onclick = () => { $('#orderForm').hidden = false; fillProductSelect($('#oProduct')); $('#oDelivery').value = S.lastDelivery || ''; syncOrderForm(true); $('#oName').focus(); };
 $('#btnCancelOrder').onclick = () => { $('#orderForm').hidden = true; $('#orderErr').hidden = true; };
 $('#btnSaveOrder').onclick = () => {
   const name = $('#oName').value.trim(), place = $('#oPlace').value.trim();
   if(!$('#oProduct').value || !name || !place){ $('#orderErr').textContent='Add a product, the customer name and the address.'; $('#orderErr').hidden=false; return; }
-  S.orders.push({id:uid(), productId:$('#oProduct').value, customer:name, place, size:$('#oSize').value.trim()||'-', pay:$('#oPay').value, status:'new', created:Date.now()});
+  const pay = $('#oPay').value, price = Math.max(0, +$('#oPrice').value || prodById($('#oProduct').value)?.price || 0), delivery = Math.max(0, +$('#oDelivery').value || 0);
+  S.lastDelivery = delivery || '';
+  S.orders.push({id:uid(), productId:$('#oProduct').value, customer:name, place, size:$('#oSize').value.trim()||'-', pay, price, delivery, status:'new', created:Date.now(), paidAt: pay !== 'COD' && $('#oReceived').checked ? Date.now() : null});
   const p = prodById($('#oProduct').value); if(p && p.stock>0) p.stock--;
   save(); ['#oName','#oPlace','#oSize'].forEach(s=>$(s).value=''); $('#orderForm').hidden = true; $('#orderErr').hidden = true; renderOrders(); toast('Order saved');
 };
