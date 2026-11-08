@@ -1,0 +1,2572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="PasalPop: turn product photos into TikTok videos and photo slides, with a shop link and order book for Nepali sellers.">
+<meta name="theme-color" content="#2f3a8f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e9a21b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%235a3a00' font-family='sans-serif'%3E%E0%A4%AA%3C/text%3E%3C/svg%3E">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>PasalPop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Hind:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-column phone app, max 560px, bottom tab bar; seller private side + public shop preview */
+:root{
+  --bg:#f3f4f8; --surface:#ffffff; --ink:#1b1d3a; --muted:#5d6080; --line:#dcdfeb;
+  --accent:#e9a21b; --accent-ink:#5a3a00; --accent-soft:#fdf0d4;
+  --indigo:#2f3a8f; --indigo-soft:#e5e8f8;
+  --good:#1f7a4d; --good-soft:#dcf2e6; --warn:#a15c00; --warn-soft:#fbead0;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Hind", "Noto Sans Devanagari", system-ui, sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12132a; --surface:#1c1e3c; --ink:#eceefa; --muted:#a3a7c8; --line:#30335a;
+  --accent:#f2b23a; --accent-ink:#2a1a00; --accent-soft:#3a2d12;
+  --indigo:#9aa6ff; --indigo-soft:#262b5a;
+  --good:#5fd39a; --good-soft:#163a2a; --warn:#f2b45c; --warn-soft:#3a2a12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12132a; --surface:#1c1e3c; --ink:#eceefa; --muted:#a3a7c8; --line:#30335a;
+  --accent:#f2b23a; --accent-ink:#2a1a00; --accent-soft:#3a2d12;
+  --indigo:#9aa6ff; --indigo-soft:#262b5a;
+  --good:#5fd39a; --good-soft:#163a2a; --warn:#f2b45c; --warn-soft:#3a2a12; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.app{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 110px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.6rem}h2{font-size:1.25rem}h3{font-size:1.05rem}
+p{margin:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-style:normal;font-size:.9rem}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+.stack{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+button.stat{font:inherit;color:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+button.stat:hover{border-color:var(--indigo)}
+button.stat span::after{content:" ›";color:var(--indigo)}
+.code{font-family:var(--f-display);font-weight:700;font-size:.75rem;background:var(--indigo-soft);color:var(--indigo);border-radius:6px;padding:1px 7px;white-space:nowrap;display:inline-block}
+.vrow{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.vrow:hover{border-color:var(--indigo)}
+.vrow img{width:48px;height:48px;border-radius:8px;object-fit:cover}
+.vrow .t{min-width:0;display:flex;flex-direction:column;gap:4px}
+.vrow .t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.vbar i{display:block;height:100%;background:var(--accent)}
+.vcount{font-family:var(--f-display);font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums;text-align:right}
+.vcount small{display:block;font-family:var(--f-body);font-weight:400;font-size:.72rem;color:var(--muted)}
+.pcard{cursor:pointer}
+.sync{font-family:var(--f-body);font-weight:500;font-size:.72rem;color:var(--muted);margin-left:6px}
+.claim{border-color:var(--accent);background:var(--accent-soft)}
+html.public .tabs, html.public #btnSettings, html.public #view-shop > .tip, html.public #view-shop > .urlbar, html.public #view-home{display:none!important}
+html.public .app{padding-bottom:24px}
+.pubmsg{text-align:center;padding:48px 16px}
+.vchart{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 8px}
+.vbars{display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:8px}
+.vbars .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0;position:relative}
+.vbars .bar i{display:block;width:100%;max-width:28px;background:var(--indigo);border-radius:4px 4px 0 0;min-height:2px}
+.vbars .bar.today i{background:var(--accent)}
+.vbars .bar em{font-style:normal;font-size:.66rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:2px}
+.vaxis{display:flex;gap:3px;margin-top:4px}
+.vaxis span{flex:1;text-align:center;font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;min-width:0}
+.vrange-custom{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.vrange-custom>div{flex:1;min-width:130px}
+.delta.up{color:var(--good)} .delta.down{color:var(--warn)}
+.pdetail{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.pdetail .gallery,.pdetail>img{width:100%;aspect-ratio:1}
+.pdetail>img{object-fit:cover;display:block}
+.pdetail .b{padding:16px;display:flex;flex-direction:column;gap:10px}
+.stat b{display:block;font-family:var(--f-display);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.78rem;color:var(--muted)}
+.btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.indigo{background:var(--indigo);border-color:var(--indigo);color:var(--surface)}
+.btn.big{width:100%;padding:16px;font-size:1.05rem}
+.btn.small{padding:6px 10px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.tip{background:var(--indigo-soft);border-radius:var(--r);padding:12px 14px;font-size:.92rem}
+label{font-size:.85rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
+input,select,textarea{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+textarea{resize:vertical;min-height:84px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--indigo);border-color:var(--indigo);color:var(--surface)}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:28px 16px;text-align:center;cursor:pointer;background:var(--surface)}
+.drop:hover{border-color:var(--accent)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.compare figure{margin:0}
+.compare img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+.compare figcaption{font-size:.78rem;color:var(--muted);margin-top:4px}
+.video-wrap{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start}
+@media (max-width:440px){.video-wrap{grid-template-columns:1fr}.phone{max-width:240px;margin:0 auto}}
+.phone{position:relative;aspect-ratio:9/16;border-radius:18px;overflow:hidden;background:#000;border:4px solid var(--ink);max-width:100%}
+.phone video,.phone canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+.tt{position:absolute;inset:0;pointer-events:none;color:#fff;font-size:11px;line-height:1.35;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.tt .side{position:absolute;right:6px;bottom:24%;display:flex;flex-direction:column;gap:14px;align-items:center;font-size:17px}
+.tt .cap{position:absolute;left:8px;right:40px;bottom:10px;display:flex;flex-direction:column;gap:2px}
+.tt .cap b{font-size:12px}
+.tt .cap span:first-of-type{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.checks{margin:0;padding-left:18px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.post{background:var(--bg);border-radius:var(--r);padding:16px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center}
+.steps li>div{min-width:0;display:flex;flex-direction:column}
+.steps li::before{counter-increment:s;content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--indigo-soft);color:var(--indigo);display:grid;place-items:center;font-weight:700}
+.steps li.done::before{content:"✓";background:var(--good-soft);color:var(--good)}
+@media (max-width:440px){.steps li{grid-template-columns:30px 1fr}.steps li>.btn{grid-column:2;justify-self:start}}
+.caption-box{white-space:pre-wrap;background:var(--bg);border-radius:10px;padding:12px;font-size:.95rem;min-height:84px}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.item img{width:56px;height:56px;border-radius:8px;object-fit:cover}
+.item .t{min-width:0}
+.item .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item.order{grid-template-columns:56px 1fr;align-items:start}
+.item.order .t{display:flex;flex-direction:column;gap:3px}
+.item.order .t .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.item.order .acts{grid-column:1/-1;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px}
+.price{font-family:var(--f-display);font-weight:700;font-variant-numeric:tabular-nums}
+.pill{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.pill.new{background:var(--indigo-soft);color:var(--indigo)}
+.pill.packed{background:var(--accent-soft);color:var(--warn)}
+.pill.sent{background:var(--warn-soft);color:var(--warn)}
+.pill.paid{background:var(--good-soft);color:var(--good)}
+.pill.ex{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);z-index:5}
+.tabs nav{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs button{font:inherit;font-size:.75rem;font-weight:600;background:none;border:0;color:var(--muted);padding:10px 4px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs button span{font-size:1.15rem;line-height:1}
+.tabs button[aria-current="page"]{color:var(--indigo)}
+.tabs button.plus span{background:var(--accent);color:var(--accent-ink);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:1.4rem;margin-top:-6px}
+/* public shop */
+.shop-head{background:var(--indigo);color:var(--surface);border-radius:var(--r);padding:20px 16px}
+.shop-head h1{color:var(--surface)}
+.urlbar{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.85rem;min-width:0}
+.urlbar code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:inherit}
+.pgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.pcard img{width:100%;aspect-ratio:1;object-fit:cover}
+.pcard .b{padding:10px;display:flex;flex-direction:column;gap:6px;flex:1}
+.pcard .b p{font-size:.85rem;color:var(--muted)}
+.pcard a{margin-top:auto;font-size:.85rem;padding:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:9;max-width:90vw}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .1s linear}
+.adjust summary{cursor:pointer;font-weight:600;font-size:.9rem;color:var(--indigo)}
+.thumbs{display:flex;gap:8px;overflow-x:auto;padding-block:4px}
+.thumb{position:relative;flex:0 0 72px}
+.thumb .tsel{font:inherit;display:block;width:72px;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);cursor:pointer;color:var(--ink)}
+.thumb[aria-current="true"] .tsel{border-color:var(--indigo)}
+.thumb .tsel img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.thumb .tsel span{display:block;font-size:.7rem;font-weight:600;padding:2px 0}
+.thumb .tdel{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);font-weight:700;cursor:pointer;line-height:1}
+.carousel{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.carousel::-webkit-scrollbar{display:none}
+.carousel img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:start}
+.dots{position:absolute;left:0;right:0;bottom:64px;display:flex;justify-content:center;gap:5px;pointer-events:none}
+.dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5)}
+.dots i.on{background:#fff}
+.gallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;aspect-ratio:1}
+.gallery::-webkit-scrollbar{display:none}
+.gallery img{flex:0 0 100%;scroll-snap-align:start}
+.gcount{position:absolute;top:8px;right:8px;background:rgba(27,29,58,.75);color:#fff;font-size:.72rem;font-weight:600;border-radius:999px;padding:2px 8px}
+.offer-box{border:1px dashed var(--line);border-radius:10px;padding:12px}
+.bill{width:100%;max-width:360px;border-radius:10px;border:1px solid var(--line);align-self:center}
+.was{color:var(--muted);text-decoration:line-through;font-size:.85rem;margin-left:6px;font-weight:400}
+.was,.disc{white-space:nowrap;display:inline-block}
+.disc{background:var(--warn-soft);color:var(--warn);font-size:.72rem;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:6px}
+.offer-tag{position:absolute;top:8px;left:8px;background:var(--accent);color:var(--accent-ink);font-size:.72rem;font-weight:700;border-radius:999px;padding:2px 10px}
+.pcard{position:relative}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{font:inherit;text-align:left;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.seg button span{font-size:.8rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{border-color:var(--indigo);background:var(--indigo-soft)}
+#srcPreview{width:100%;max-height:360px;border-radius:10px;background:#000}
+.prompter{position:fixed;inset:0;z-index:20;background:#000;color:#fff;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.pbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding-block:12px;flex-wrap:wrap}
+.pspeed{color:#fff;display:flex;align-items:center;gap:8px;margin:0;font-size:.9rem}
+.pspeed input{width:120px}
+.ptext{flex:1;overflow-y:auto;font-family:var(--f-display);font-size:clamp(1.8rem,7vw,3rem);line-height:1.45;padding-block:30vh 80vh;white-space:pre-wrap;text-align:center;max-width:760px;margin:0 auto;width:100%}
+.scenes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media (max-width:460px){.scenes{grid-template-columns:repeat(3,1fr)}}
+.scene{font:inherit;font-size:.78rem;font-weight:600;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:10px;padding:4px;cursor:pointer;display:flex;flex-direction:column;gap:4px;position:relative;text-align:center}
+.scene img{width:100%;aspect-ratio:1;border-radius:7px;display:block}
+.scene[aria-pressed="true"]{border-color:var(--indigo)}
+.scene .sug{position:absolute;top:8px;left:8px;background:var(--accent);color:var(--accent-ink);font-size:.65rem;border-radius:999px;padding:0 6px}
+.section-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><i>प</i>PasalPop <span class="sync" id="syncState" hidden></span></div>
+    <button class="btn small" id="btnSettings" type="button">Shop settings</button>
+  </header>
+
+  <!-- HOME -->
+  <section id="view-home" class="stack">
+    <div>
+      <p class="muted small" id="todayLabel">Today</p>
+      <h1>Namaste, <span id="hShop">Sita Fashion</span></h1>
+    </div>
+    <div class="stats">
+      <button class="stat" type="button" data-go="orders" data-filter="today"><b id="stSales">रु 0</b><span id="stSalesL">Sales today</span></button>
+      <button class="stat" type="button" data-go="orders" data-filter="cod"><b id="stCod">रु 0</b><span id="stCodL">COD to collect</span></button>
+      <button class="stat" type="button" data-go="shop"><b id="stProducts">0</b><span>Products live</span></button>
+      <button class="stat" type="button" data-go="views"><b id="stViews">0</b><span id="stViewsL">Views today</span></button>
+    </div>
+    <button class="btn primary big" type="button" data-go="studio">+ New product (take photo)</button>
+    <div class="tip" id="festTip"></div>
+    <div class="card stack claim" id="claimCard" hidden>
+      <h3>Make your shop link live</h3>
+      <p class="small">Right now your shop is only on this phone. Make <b id="claimUrl"></b> live so customers from TikTok can see your products and order, and you see real views.</p>
+      <button class="btn primary" type="button" data-claim>Sign in with Google · free</button>
+      <p class="small muted">Takes 10 seconds. Your products and orders come with you.</p>
+    </div>
+    <div class="card stack">
+      <div class="section-h"><h3>Your shop link</h3><span class="muted small" id="linkState">Put it in your TikTok bio</span></div>
+      <div class="urlbar"><code id="homeUrl"></code><button class="btn small" type="button" data-copy-url>Copy</button></div>
+    </div>
+    <div class="stack">
+      <div class="section-h"><h3>Recent products</h3><button class="btn small" type="button" data-go="shop">View shop</button></div>
+      <div class="list" id="homeProducts"></div>
+    </div>
+    <p class="muted small" id="exampleNote">Examples are shown so you can see how it works. <button class="btn small" type="button" id="btnClearEx">Remove examples</button></p>
+  </section>
+
+  <!-- STUDIO -->
+  <section id="view-studio" class="stack" hidden>
+    <div><h1>New product</h1><p class="muted" id="studioSub">Photo in, TikTok video and caption out.</p></div>
+    <div class="seg" id="modeSeg">
+      <button type="button" data-mode="photo" aria-pressed="true"><b>From a photo</b><span>Studio scene video</span></button>
+      <button type="button" data-mode="video" aria-pressed="false"><b>From my video</b><span>You holding the product</span></button>
+    </div>
+
+    <div class="card stack" id="stepPhoto">
+      <div class="section-h"><h3>1. Product photos</h3><span class="small muted">Up to 8</span></div>
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      <div class="drop" id="drop" role="button" tabindex="0">
+        <p><b>Tap to choose photos</b></p>
+        <p class="muted small">Front, back, close-up, colours. Choose several at once. Phone photos are fine.</p>
+      </div>
+      <div class="thumbs" id="thumbs" hidden></div>
+      <p class="small muted" id="photoCount"></p>
+      <div class="compare" id="compare" hidden>
+        <figure><img id="imgBefore" alt="Original photo"><figcaption>Your photo</figcaption></figure>
+        <figure><img id="imgAfter" alt="Cleaned up photo"><figcaption>Studio look</figcaption></figure>
+      </div>
+      <div id="backdropRow" class="stack" hidden>
+        <div class="stack" style="gap:8px">
+          <label style="margin:0">Rotate this photo</label>
+          <div class="row">
+            <button class="btn small" type="button" id="rotL" aria-label="Rotate left 90 degrees">↺ Left</button>
+            <button class="btn small" type="button" id="rotR" aria-label="Rotate right 90 degrees">↻ Right</button>
+          </div>
+          <div>
+            <label for="tilt">Straighten <span class="muted" id="tiltVal">0°</span></label>
+            <input type="range" id="tilt" min="-15" max="15" step="0.5" value="0">
+          </div>
+        </div>
+        <div>
+          <label>Filter <span class="muted" style="font-weight:400">· applies to all photos</span></label>
+          <div class="chips" id="filterChips"></div>
+        </div>
+        <details class="adjust">
+          <summary>Adjust light and colour</summary>
+          <div class="stack" style="gap:8px;margin-top:10px">
+            <div><label for="adjB">Brightness <span class="muted" id="adjBVal"></span></label><input type="range" id="adjB" min="70" max="140" value="100"></div>
+            <div><label for="adjC">Contrast <span class="muted" id="adjCVal"></span></label><input type="range" id="adjC" min="70" max="140" value="100"></div>
+            <div><label for="adjS">Colour <span class="muted" id="adjSVal"></span></label><input type="range" id="adjS" min="0" max="170" value="100"></div>
+            <div><label for="adjW">Warmth <span class="muted" id="adjWVal"></span></label><input type="range" id="adjW" min="-100" max="100" value="0"></div>
+            <button class="btn small" type="button" id="adjReset" style="align-self:flex-start">Reset adjustments</button>
+          </div>
+        </details>
+        <div>
+          <label>Background</label>
+          <div class="chips" id="bgMode">
+            <button type="button" class="chip" data-mode="remove">Remove background</button>
+            <button type="button" class="chip" data-mode="keep">Keep original</button>
+          </div>
+        </div>
+        <div id="bgTools" class="stack" style="gap:8px">
+          <div>
+            <label for="tol">How much to remove <span class="muted" id="tolVal"></span></label>
+            <input type="range" id="tol" min="12" max="95" value="42">
+            <div class="row small muted" style="justify-content:space-between"><span>Less</span><span>More</span></div>
+          </div>
+          <button class="btn indigo small" type="button" id="btnAiBox" style="align-self:flex-start">✨ AI: find the product</button>
+          <p class="small muted" id="aiBoxNote">Best for busy backgrounds like patterned bed covers.</p>
+          <div>
+            <label>When I tap either photo</label>
+            <div class="chips" id="tapMode">
+              <button type="button" class="chip" data-tap="remove">Remove that part</button>
+              <button type="button" class="chip" data-tap="keep">Bring it back</button>
+            </div>
+          </div>
+          <div class="row"><button class="btn small" type="button" id="btnUndoBg" disabled>Undo tap</button><button class="btn small" type="button" id="btnResetBg">Start again</button></div>
+        </div>
+        <div>
+          <label>Scene <span class="muted" id="sceneHint" style="font-weight:400"></span></label>
+          <div class="scenes" id="scenes"></div>
+        </div>
+        <div id="plainRow" hidden>
+          <label>Backdrop colour</label>
+          <div class="chips" id="backdrops"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card stack">
+      <h3 id="detailsH">2. Price and details</h3>
+      <div class="grid2">
+        <div><label for="fPrice">Price (रु)</label><input id="fPrice" type="number" inputmode="numeric" min="0" placeholder="2200"></div>
+        <div><label for="fStock">In stock</label><input id="fStock" type="number" inputmode="numeric" min="0" placeholder="12"></div>
+      </div>
+      <div><label for="fName">Product name</label><input id="fName" placeholder="Cotton kurta (AI can fill this)"></div>
+      <div>
+        <label>Sizes</label>
+        <div class="chips" id="sizeChips"></div>
+      </div>
+      <div><label for="fCat">Category</label>
+        <select id="fCat"><option>Kurta</option><option>Saree</option><option>Clothes</option><option>Shoes</option><option>Bags</option><option>Jewellery</option><option>Cosmetics</option><option>Cups &amp; kitchen</option><option>Plants</option><option>Food</option><option>Other</option></select>
+      </div>
+      <div><label for="fNotes">What's special? (optional)</label><input id="fNotes" placeholder="Pure cotton, new design, easy to wash"></div>
+      <div class="offer-box stack" style="gap:10px">
+        <div class="section-h"><label style="margin:0">Offer (optional)</label><span class="small muted">Shows the old price crossed out</span></div>
+        <div class="grid2">
+          <div><label for="fOldPrice">Old price (रु)</label><input id="fOldPrice" type="number" inputmode="numeric" min="0" placeholder="2500"></div>
+          <div><label for="fOffer">Offer label</label>
+            <select id="fOffer"><option value="">No label</option><option>Dashain offer</option><option>Tihar offer</option><option>Teej special</option><option>New Year offer</option><option>Wedding season</option><option>Sale</option><option>Today only</option><option>New arrival</option></select>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label>Caption and script language</label>
+        <div class="chips" id="langChips">
+          <button type="button" class="chip" data-lang="roman">Roman Nepali</button>
+          <button type="button" class="chip" data-lang="nepali">नेपाली</button>
+          <button type="button" class="chip" data-lang="english">English</button>
+        </div>
+      </div>
+      <p class="small" id="formErr" style="color:var(--warn)" hidden></p>
+    </div>
+
+    <!-- talking-video mode -->
+    <div class="card stack vm" id="vmScript" hidden>
+      <div class="section-h"><h3>2. Script (optional)</h3><span class="small muted">So you never forget the price</span></div>
+      <p class="small muted">AI writes a short script in Romanized Nepali from your details. Practise it once, then record with your camera.</p>
+      <div class="caption-box" id="scriptOut" contenteditable="true" aria-label="Script, editable">Fill in the price and details above, then tap “Write my script”.</div>
+      <div class="row"><button class="btn indigo" id="btnScript" type="button">Write my script</button><button class="btn" id="btnPrompter" type="button" disabled>Practise with teleprompter</button></div>
+    </div>
+
+    <div class="card stack vm" id="vmUpload" hidden>
+      <h3>3. Your video</h3>
+      <input type="file" id="vidInput" accept="video/*" hidden>
+      <div class="drop" id="vdrop" role="button" tabindex="0">
+        <p><b>Tap to choose your video</b></p>
+        <p class="muted small">Record yourself holding the product with your phone camera, then choose it here. 15–60 seconds works best.</p>
+      </div>
+      <div id="trimBox" class="stack" hidden>
+        <video id="srcPreview" playsinline muted controls></video>
+        <div class="grid2">
+          <div><label for="trimStart">Start at <span class="muted" id="tsVal"></span></label><input type="range" id="trimStart" min="0" max="10" step="0.1" value="0"></div>
+          <div><label for="trimEnd">End at <span class="muted" id="teVal"></span></label><input type="range" id="trimEnd" min="0" max="10" step="0.1" value="10"></div>
+        </div>
+        <p class="small muted" id="trimLen"></p>
+      </div>
+    </div>
+
+    <div class="card stack vm" id="vmStickers" hidden>
+      <h3>4. Stickers on your video</h3>
+      <div class="chips" id="stickerChips">
+        <button type="button" class="chip" data-st="price">Price tag</button>
+        <button type="button" class="chip" data-st="info">Sizes / COD</button>
+        <button type="button" class="chip" data-st="shop">Shop name</button>
+        <button type="button" class="chip" data-st="end">Order end card</button>
+        <button type="button" class="chip" data-st="bright">Brighten</button>
+      </div>
+      <div><label for="priceAt">Show price from <span class="muted" id="paVal"></span></label><input type="range" id="priceAt" min="0" max="10" step="0.5" value="1"></div>
+      <div>
+        <label>Sticker position</label>
+        <div class="chips" id="posChips">
+          <button type="button" class="chip" data-pos="bottom">Lower (keeps your face clear)</button>
+          <button type="button" class="chip" data-pos="top">Top</button>
+        </div>
+      </div>
+      <p class="small muted">Coming in the full version: subtitles from your voice, and price picked up automatically when you say it.</p>
+    </div>
+
+    <button class="btn primary big vm" id="btnMakeV" type="button" hidden>Make my TikTok video</button>
+
+    <div class="card stack" id="resultV" hidden>
+      <div class="section-h"><h3>5. Ready to post</h3><span class="small muted">Product code <span class="code" id="codeOutV"></span></span></div>
+      <div class="video-wrap">
+        <div>
+          <div class="phone" id="phoneV">
+            <canvas id="stageV" width="720" height="1280"></canvas>
+            <video id="vidOutV" playsinline loop hidden></video>
+            <div class="tt" aria-hidden="true">
+              <div class="side"><span>♥</span><span>💬</span><span>↗</span></div>
+              <div class="cap"><b class="ttUser">@sitafashion</b><span id="ttCapV"></span><span>♫ original sound</span></div>
+            </div>
+          </div>
+          <p class="small muted" style="margin-top:6px;text-align:center">How customers see it on TikTok</p>
+        </div>
+        <div class="stack">
+          <div class="progress" id="recProgV"><i></i></div>
+          <p class="small muted" id="recNoteV">Making your video…</p>
+          <p class="small muted">Your voice is kept. Making the video takes about as long as the video itself, so keep this screen open.</p>
+          <button class="btn small" id="btnSaveStatusV" type="button" disabled>Save status image</button>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="section-h"><label style="margin:0">Caption</label><span class="small muted" id="capSourceV"></span></div>
+        <div class="caption-box" id="captionV" contenteditable="true" aria-label="Caption, editable"></div>
+        <div class="row"><button class="btn" id="btnCopyCapV" type="button">Copy caption</button><button class="btn" id="btnRegenV" type="button">Write another</button></div>
+      </div>
+      <div class="post stack">
+        <div><h3>Post to TikTok</h3><p class="small muted">Three taps. Your shop link updates too.</p></div>
+        <ol class="steps">
+          <li id="vt1"><div><b>Save video and copy caption</b><span class="small muted">One tap does both</span></div><div class="row" style="justify-content:flex-end"><button class="btn primary" id="btnShareV" type="button" hidden disabled>Share to TikTok</button><button class="btn indigo" id="btnSaveVidV" type="button" disabled>Save + copy</button></div></li>
+          <li id="vt2"><div><b>Open TikTok and post</b><span class="small muted">Tap +, pick the video, paste the caption</span></div><a class="btn primary" id="lnkTikTokV" href="https://www.tiktok.com/upload" target="_blank" rel="noopener">Open TikTok</a></li>
+          <li id="vtPin"><div><b>Pin a comment with all details</b><span class="small muted">Post it as the first comment and pin it. Fewer “price kati?” questions.</span></div><button class="btn" id="btnPinV" type="button">Copy comment</button></li>
+          <li id="vt3"><div><b>Put the product on your shop link</b><span class="small muted">A still from your video is used as the photo</span></div><button class="btn" id="btnPublishV" type="button">Add to shop</button></li>
+        </ol>
+      </div>
+    </div>
+
+    <button class="btn primary big" id="btnMake" type="button">Make video and caption</button>
+
+    <div class="card stack" id="result" hidden>
+      <div class="section-h"><h3>3. Ready to post</h3><span class="small muted">Product code <span class="code" id="codeOut"></span></span></div>
+      <div class="video-wrap">
+        <div>
+          <div class="phone" id="phone">
+            <canvas id="stage" width="720" height="1280"></canvas>
+            <video id="vidOut" playsinline loop muted hidden></video>
+            <div class="tt" aria-hidden="true">
+              <div class="side"><span>♥</span><span>💬</span><span>↗</span></div>
+              <div class="cap"><b id="ttUser">@sitafashion</b><span id="ttCap"></span><span>♫ trending sound</span></div>
+            </div>
+          </div>
+          <p class="small muted" style="margin-top:6px;text-align:center">How customers see it on TikTok</p>
+        </div>
+        <div class="stack">
+          <div class="progress" id="recProg"><i></i></div>
+          <p class="small muted" id="recNote">Recording your 8-second video…</p>
+          <ul class="checks small">
+            <li>Full-screen vertical, sized for TikTok</li>
+            <li>Price and name kept clear of TikTok's buttons</li>
+            <li>“Order now · link in bio” at the end</li>
+          </ul>
+          <div class="row">
+            <button class="btn small" id="btnSaveStatus" type="button">Save status image</button>
+            <button class="btn small" id="btnSavePhoto" type="button">Save square photo</button>
+          </div>
+          <p class="small muted">The status image is for WhatsApp, Viber and Facebook stories.</p>
+        </div>
+      </div>
+      <div class="stack" id="slidesBox" hidden>
+        <div class="section-h"><h3>Photo slides</h3><span class="small muted" id="slidesInfo"></span></div>
+        <div class="video-wrap">
+          <div>
+            <div class="phone">
+              <div class="carousel" id="carousel" tabindex="0" aria-label="Photo slides, swipe to see each"></div>
+              <div class="dots" id="dots" aria-hidden="true"></div>
+              <div class="tt" aria-hidden="true">
+                <div class="side"><span>♥</span><span>💬</span><span>↗</span></div>
+                <div class="cap"><b class="ttUser">@sitafashion</b><span id="ttCapS"></span><span>♫ trending sound</span></div>
+              </div>
+            </div>
+            <p class="small muted" style="margin-top:6px;text-align:center">Swipe, like your customers will</p>
+          </div>
+          <div class="stack">
+            <p class="small muted">A TikTok photo post lets customers swipe through every photo: a cover with the price, each product photo, then an order card.</p>
+            <div class="row">
+              <button class="btn small" id="btnSaveSlide" type="button">Save this slide</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="section-h"><label style="margin:0">Caption</label><span class="small muted" id="capSource"></span></div>
+        <div class="caption-box" id="captionOut" contenteditable="true" aria-label="Caption, editable"></div>
+        <div class="row">
+          <button class="btn" id="btnCopyCap" type="button">Copy caption</button>
+          <button class="btn" id="btnRegen" type="button">Write another</button>
+        </div>
+      </div>
+      <div class="post stack" id="postBox">
+        <div><h3>Post to TikTok</h3><p class="small muted">Three taps. Your shop link updates too.</p></div>
+        <div id="postAsRow">
+          <label>Post as</label>
+          <div class="chips" id="postAs">
+            <button type="button" class="chip" data-as="video">Video</button>
+            <button type="button" class="chip" data-as="photos">Photo slides</button>
+          </div>
+        </div>
+        <ol class="steps">
+          <li id="st1"><div><b>Save video and copy caption</b><span class="small muted">One tap does both</span></div><div class="row" style="justify-content:flex-end"><button class="btn primary" id="btnShare" type="button" hidden disabled>Share to TikTok</button><button class="btn indigo" id="btnSaveVid" type="button" disabled>Save + copy</button></div></li>
+          <li id="st2"><div><b>Open TikTok and post</b><span class="small muted">Tap +, pick the video, paste the caption, add a trending sound</span></div><a class="btn primary" id="lnkTikTok" href="https://www.tiktok.com/upload" target="_blank" rel="noopener">Open TikTok</a></li>
+          <li id="stPin"><div><b>Pin a comment with all details</b><span class="small muted">Post it as the first comment and pin it. Fewer “price kati?” questions.</span></div><button class="btn" id="btnPin" type="button">Copy comment</button></li>
+          <li id="st3"><div><b>Put the product on your shop link</b><span class="small muted">So customers from TikTok can order it</span></div><button class="btn" id="btnPublish" type="button">Add to shop</button></li>
+        </ol>
+        <p class="small muted">Tip: post in the evening when your customers are scrolling, and keep your shop link in your TikTok bio.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHOP (public) -->
+  <section id="view-shop" class="stack" hidden>
+    <div class="tip">This is what customers see when they tap the link in your TikTok bio.</div>
+    <div class="urlbar"><code id="shopUrl"></code><button class="btn small" type="button" data-copy-url>Copy</button></div>
+    <div class="shop-head stack">
+      <h1 id="pubName">Sita Fashion</h1>
+      <p id="pubMeta" style="opacity:.85"></p>
+      <div class="chips" id="catChips"></div>
+    </div>
+    <div id="shopBrowse" class="stack">
+      <input id="shopSearch" type="search" placeholder="Search, or type a product code like K12" aria-label="Search products or type a product code">
+      <div class="pgrid" id="pubGrid"></div>
+    </div>
+    <div id="pubProduct" class="stack" hidden></div>
+    <p class="muted small" style="text-align:center">Pay with eSewa, Khalti or cash on delivery.</p>
+  </section>
+
+  <!-- VIEWS REPORT -->
+  <section id="view-views" class="stack" hidden>
+    <div class="section-h"><h1>Product views</h1><button class="btn small" type="button" data-go="home">Back</button></div>
+    <div class="chips" id="vRanges"></div>
+    <div class="vrange-custom" id="vCustom" hidden>
+      <div><label for="vFrom">From</label><input type="date" id="vFrom"></div>
+      <div><label for="vTo">To</label><input type="date" id="vTo"></div>
+    </div>
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat"><b id="vTotal">0</b><span style="font-size:.78rem;color:var(--muted)" id="vTotalL">Views</span></div>
+      <div class="stat"><b id="vTop" style="font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">–</b><span style="font-size:.78rem;color:var(--muted)">Most viewed</span></div>
+    </div>
+    <div class="vchart" id="vChart"></div>
+    <div class="list" id="viewsList"></div>
+    <p class="small muted" id="viewsNote">A view is counted each time someone opens a product's page on your shop link. Tap a product to see its page. In this test version, views are counted on this phone only; the full version will count every customer.</p>
+  </section>
+
+  <!-- ORDERS -->
+  <section id="view-orders" class="stack" hidden>
+    <div class="section-h"><h1>Orders</h1><button class="btn primary" id="btnAddOrder" type="button">+ Add order</button></div>
+    <div class="card stack" id="billBox" hidden>
+      <div class="section-h"><h3>Order slip</h3><button class="btn small" id="btnBillClose" type="button">Close</button></div>
+      <p class="small muted">Send it to the customer and give a copy to the delivery rider.</p>
+      <img id="billImg" alt="Order slip" class="bill">
+      <div class="row">
+        <button class="btn indigo" id="btnBillSave" type="button">Save slip image</button>
+        <button class="btn" id="btnBillCopy" type="button">Copy WhatsApp message</button>
+      </div>
+    </div>
+    <div class="card stack" id="orderForm" hidden>
+      <div><label for="oProduct">Product</label><select id="oProduct"></select></div>
+      <div class="grid2">
+        <div><label for="oName">Customer</label><input id="oName" placeholder="Ram"></div>
+        <div><label for="oPlace">Address</label><input id="oPlace" placeholder="Baneshwor"></div>
+      </div>
+      <div class="grid2">
+        <div><label for="oSize">Size</label><input id="oSize" placeholder="L"></div>
+        <div><label for="oPay">Payment</label><select id="oPay"><option>COD</option><option>eSewa</option><option>Khalti</option></select></div>
+      </div>
+      <div class="grid2">
+        <div><label for="oPrice">Selling price (रु)</label><input id="oPrice" type="number" inputmode="numeric" min="0"></div>
+        <div><label for="oDelivery">Delivery charge (रु)</label><input id="oDelivery" type="number" inputmode="numeric" min="0" placeholder="0"></div>
+      </div>
+      <label class="small" id="oReceivedRow" style="display:flex;gap:8px;align-items:center" hidden><input type="checkbox" id="oReceived" checked style="width:auto"> Money already received</label>
+      <p class="small muted" id="oTotal"></p>
+      <p class="small" id="orderErr" style="color:var(--warn)" hidden></p>
+      <div class="row"><button class="btn indigo" id="btnSaveOrder" type="button">Save order</button><button class="btn" id="btnCancelOrder" type="button">Cancel</button></div>
+    </div>
+    <div class="chips" id="orderFilter"></div>
+    <div class="list" id="orderList"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" class="stack" hidden>
+    <h1>Shop settings</h1>
+    <div class="card stack">
+      <div><label for="sName">Shop name</label><input id="sName"></div>
+      <div><label for="sWa">WhatsApp number for orders</label><input id="sWa" inputmode="tel" placeholder="98XXXXXXXX"></div>
+      <div><label for="sLoc">Location</label><input id="sLoc" placeholder="New Road, Kathmandu"></div>
+      <div id="slugRow" hidden><label for="sSlug">Shop link</label><div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><span class="small muted">walltok.com/</span><input id="sSlug" autocapitalize="off" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"></div><p class="small muted">Letters and numbers only. If you change it, update the link in your TikTok bio too.</p></div>
+      <p class="small muted">Shop link: <b id="slugPreview"></b></p>
+      <button class="btn indigo" id="btnSaveSettings" type="button">Save</button>
+    </div>
+    <div class="card stack" id="acctCard">
+      <h3>Your account</h3>
+      <p class="small muted" id="acctText">Your shop is saved on this phone only. Make it live so customers can open your shop link and you see real views.</p>
+      <button class="btn primary" type="button" data-claim id="btnClaim2">Make my shop link live</button>
+      <button class="btn" type="button" id="btnSignOut" hidden>Sign out</button>
+    </div>
+  </section>
+</div>
+
+<div class="tabs"><nav>
+  <button type="button" data-tab="home"><span>⌂</span>Home</button>
+  <button type="button" data-tab="shop"><span>▦</span>Shop</button>
+  <button type="button" data-tab="studio" class="plus"><span>+</span>New</button>
+  <button type="button" data-tab="orders"><span>☰</span>Orders</button>
+</nav></div>
+<div class="toast" id="toast" hidden></div>
+<div class="prompter" id="prompter" hidden role="dialog" aria-label="Teleprompter">
+  <div class="pbar">
+    <button class="btn primary" id="pPlay" type="button">Start</button>
+    <label class="pspeed" for="pSpeed">Speed <input type="range" id="pSpeed" min="1" max="8" value="3"></label>
+    <button class="btn" id="pClose" type="button">Close</button>
+  </div>
+  <div class="ptext" id="pText"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.79.0/dist/umd/supabase.js"></script>
+<script>
+/* ---------- where the app lives ---------- */
+const DOMAIN = 'walltok.com';
+const CLOUD = { url: 'https://scyqeqdldpdlwsppqoae.supabase.co', key: 'sb_publishable_DXRL9GlaU7YbDOvvB3CB3w_EPyBGtcR' };   /* Supabase project URL and anon/publishable key */
+const IN_CLAUDE = !!(window.claude && window.claude.use);
+const ON_SITE = /(^|\.)walltok\.com$/.test(location.hostname);
+const QS = new URLSearchParams(location.search);
+const PATHPARTS = location.pathname.split('/').filter(x => x && x !== 'index.html' && x !== '404.html');
+/* a customer opening walltok.com/sitafashion or walltok.com/sitafashion/k12 sees only that shop */
+const PUB_SLUG = (QS.get('shop') || (ON_SITE ? PATHPARTS[0] : '') || '').toLowerCase().replace(/[^a-z0-9]/g,'');
+const PUB_CODE = (QS.get('p') || (ON_SITE ? PATHPARTS[1] : '') || '').toLowerCase();
+if(PUB_SLUG) document.documentElement.classList.add('public');
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const KEY = 'pasal-studio-v1';
+const SIZES = ['Free size','S','M','L','XL','XXL'];
+const BACKDROPS = [['Marigold','#f6d38a'],['Sky','#cfe0f5'],['Blush','#f3d3d8'],['Mint','#cfeedd'],['Stone','#e4e2dc']];
+const STATUSES = ['new','packed','sent','paid'];
+const npr = n => 'रु ' + Number(n||0).toLocaleString('en-IN');
+const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g,'').slice(0,16) : Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+const slugify = s => (s||'myshop').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,30) || 'myshop';
+
+/* ---------- example images (drawn, clearly examples) ---------- */
+function exampleImg(bg, cloth, label){
+  const c = document.createElement('canvas'); c.width = c.height = 480;
+  const g = c.getContext('2d');
+  g.fillStyle = bg; g.fillRect(0,0,480,480);
+  g.fillStyle = cloth;
+  g.beginPath(); g.moveTo(170,90); g.lineTo(215,70); g.quadraticCurveTo(240,105,265,70); g.lineTo(310,90);
+  g.lineTo(380,150); g.lineTo(345,185); g.lineTo(315,160); g.lineTo(330,410); g.lineTo(150,410); g.lineTo(165,160);
+  g.lineTo(135,185); g.lineTo(100,150); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.35)';
+  for(let i=0;i<14;i++){ g.beginPath(); g.arc(180+ (i%4)*40, 190 + Math.floor(i/4)*55, 7, 0, 7); g.fill(); }
+  g.fillStyle = 'rgba(0,0,0,.45)'; g.font = '600 20px sans-serif'; g.fillText(label, 20, 456);
+  return c.toDataURL('image/jpeg', .8);
+}
+function seed(){
+  const now = Date.now();
+  const p = [
+    {id:uid(),name:'Cotton floral kurta',price:2200,stock:12,sizes:['S','M','L','XL'],category:'Kurta',img:exampleImg('#cfe0f5','#c2407a','Example'),desc:'Light cotton kurta with a small floral print, good for daily wear and Tihar.',caption:'',example:true,created:now-86400000*2,views:41},
+    {id:uid(),name:'Party wear kurta',price:3100,oldPrice:3600,offer:'Tihar offer',stock:2,sizes:['M','L'],category:'Kurta',img:exampleImg('#f6d38a','#2f3a8f','Example'),desc:'Soft georgette kurta with dotted detail for weddings and parties.',caption:'',example:true,created:now-86400000,views:63},
+    {id:uid(),name:'Everyday mint kurta',price:1800,stock:20,sizes:['Free size'],category:'Kurta',img:exampleImg('#e4e2dc','#1f7a4d','Example'),desc:'Breathable everyday kurta in mint green, one size fits most.',caption:'',example:true,created:now-3600000*5,views:18}
+  ];
+  return {
+    shop:{name:'Sita Fashion',whatsapp:'9800000000',location:'New Road, Kathmandu'},
+    products:p,
+    orders:[
+      {id:uid(),productId:p[0].id,customer:'Ram (example)',place:'Baneshwor',size:'L',pay:'COD',status:'new',price:2200,delivery:100,created:now-3600000,example:true},
+      {id:uid(),productId:p[1].id,customer:'Gita (example)',place:'Lalitpur',size:'M',pay:'COD',status:'sent',price:3100,delivery:150,created:now-86400000-7200000,example:true},
+      {id:uid(),productId:p[2].id,customer:'Hari (example)',place:'Bhaktapur',size:'Free size',pay:'eSewa',status:'paid',price:1800,delivery:100,created:now-9000000,paidAt:now-9000000,example:true}
+    ]
+  };
+}
+let S;
+try{ S = PUB_SLUG ? null : JSON.parse(localStorage.getItem(KEY)); }catch(e){ S = null; }
+function saveLocal(){ if(PUB_SLUG) return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save in this browser. Try a smaller photo.'); } }
+function save(){ saveLocal(); if(window.Cloud) Cloud.schedule(); }
+if(!S || !S.shop) S = seed();
+/* every product gets a short code, like K12, that customers use to find it from TikTok */
+const CODE_LETTER = {'Kurta':'K','Saree':'S','Clothes':'C','Shoes':'F','Bags':'B','Jewellery':'J','Cosmetics':'M','Cups & kitchen':'H','Plants':'P','Food':'D','Other':'X'};
+function nextCode(cat){ return (CODE_LETTER[cat] || 'X') + (S.nextNum || 11); }
+if(!S.nextNum) S.nextNum = 11;
+S.products.forEach(p => { if(!p.code){ p.code = nextCode(p.category); S.nextNum++; } });
+/* orders keep the price agreed at the time, plus delivery, and the day the money came in */
+S.orders.forEach(o => {
+  if(o.price == null){ const pr = S.products.find(x => x.id === o.productId); o.price = pr ? pr.price : 0; }
+  if(o.delivery == null) o.delivery = 0;
+  if(o.status === 'paid' && !o.paidAt) o.paidAt = o.created;
+});
+const orderTotal = o => (o.price || 0) + (o.delivery || 0);
+const sameDay = (t, d = new Date()) => !!t && new Date(t).toDateString() === d.toDateString();
+const codDue = o => o.pay === 'COD' && !o.paidAt;
+const paidToday = o => sameDay(o.paidAt);
+const productUrl = p => `${shopUrl()}/${String(p.code || '').toLowerCase()}`;
+/* views are logged per day so sellers can see today, this week or any dates */
+function dayKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function viewsIn(p, from, to){ let n = 0; const log = p.viewLog || {}; for(const k in log) if(k >= from && k <= to) n += log[k]; return n; }
+S.products.forEach(p => {
+  if(p.viewLog) return;
+  p.viewLog = {};
+  if(p.example && p.views){ /* spread the example views over the last two weeks */
+    let left = p.views; const days = 14;
+    for(let d = days - 1; d >= 0 && left > 0; d--){ const n = d === 0 ? left : Math.min(left, Math.round(p.views / days * (0.4 + ((p.views * 7 + d * 13) % 10) / 8))); if(n > 0){ p.viewLog[dayKey(addDays(new Date(), -d))] = n; left -= n; } }
+  }
+});
+
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(()=>t.hidden=true, 2200); }
+async function copyText(txt){
+  try{ await navigator.clipboard.writeText(txt); toast('Copied'); }
+  catch(e){ toast('Select the text and copy it'); }
+}
+const shopUrl = () => DOMAIN + '/' + (S.shop.slug || slugify(S.shop.name));
+const prodById = id => S.products.find(p=>p.id===id);
+
+/* ---------- navigation ---------- */
+function go(view){
+  ['home','studio','shop','orders','settings','views'].forEach(v => $('#view-'+v).hidden = v !== view);
+  if(view === 'shop') shopOpen = null;
+  $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab===view ? 'page' : 'false'));
+  render(view); window.scrollTo(0,0);
+}
+$$('[data-tab]').forEach(b => b.onclick = () => go(b.dataset.tab));
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-go]'); if(g){ if(g.dataset.filter) orderFilter = g.dataset.filter; go(g.dataset.go); }
+  if(e.target.closest('[data-copy-url]')) copyText('https://' + shopUrl());
+});
+$('#btnSettings').onclick = () => go('settings');
+
+/* ---------- render ---------- */
+function render(view){
+  $('#homeUrl').textContent = shopUrl(); $('#shopUrl').textContent = shopUrl();
+  if(view==='home') renderHome();
+  if(view==='shop') renderShop();
+  if(view==='orders') renderOrders();
+  if(view==='views') renderViews();
+  if(view==='settings'){ $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; }
+  if(window.Cloud) Cloud.paint(view);
+}
+function renderHome(){
+  $('#hShop').textContent = S.shop.name;
+  $('#todayLabel').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  const today = new Date().toDateString();
+  const paid = S.orders.filter(paidToday), due = S.orders.filter(codDue);
+  $('#stSales').textContent = npr(paid.reduce((a,o) => a + (o.price||0), 0));
+  $('#stSalesL').textContent = `Sales today · ${paid.length} order${paid.length===1?'':'s'}`;
+  $('#stCod').textContent = npr(due.reduce((a,o) => a + orderTotal(o), 0));
+  $('#stCodL').textContent = `COD to collect · ${due.length} order${due.length===1?'':'s'}`; $('#stProducts').textContent = S.products.length;
+  const vToday = S.products.reduce((a, p) => a + viewsIn(p, dayKey(new Date()), dayKey(new Date())), 0);
+  $('#stViews').textContent = vToday.toLocaleString('en-IN');
+  $('#stViewsL').textContent = `Views today · ${S.products.reduce((a, p) => a + (p.views || 0), 0).toLocaleString('en-IN')} total`;
+  const top = [...S.products].sort((a,b)=>(b.views||0)-(a.views||0))[0];
+  $('#festTip').innerHTML = top ? `<b>Tip:</b> Tihar and wedding season are busy. Your <b>${esc(top.name)}</b> is getting the most views. Make an offer video for it?` : '<b>Tip:</b> Add your first product to get your shop link ready.';
+  const list = $('#homeProducts'); list.innerHTML = '';
+  [...S.products].sort((a,b)=>b.created-a.created).slice(0,5).forEach(p => list.append(itemRow(p, `<div class="stack" style="gap:6px;align-items:flex-end"><span class="price">${npr(p.price)}</span><button class="btn small" type="button" data-details="${p.id}">Copy details</button></div>`)));
+  if(!S.products.length) list.innerHTML = '<p class="muted">No products yet. Tap “New product” to add your first one.</p>';
+  $('#exampleNote').hidden = !S.products.some(p=>p.example) && !S.orders.some(o=>o.example);
+}
+function itemRow(p, right){
+  const d = document.createElement('div'); d.className = 'item';
+  d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><b>${esc(p.name)}</b><span class="small muted"><span class="code">${esc(p.code)}</span> ${esc(p.sizes.join(', '))} · ${p.stock} in stock ${p.example?'<span class="pill ex">Example</span>':''}</span></div><div>${right}</div>`;
+  return d;
+}
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let shopCat = 'All', shopOpen = null, shopQuery = '';
+const waNumber = () => '977' + String(S.shop.whatsapp).replace(/\D/g,'').replace(/^977/,'');
+function orderLink(p){
+  const msg = `Namaste! I want to order:\n${p.name} (${p.code}) – ${npr(p.price)}\nhttps://${productUrl(p)}\nSize: ___\nAddress: ___`;
+  return `https://wa.me/${waNumber()}?text=${encodeURIComponent(msg)}`;
+}
+function galleryHtml(p){
+  return p.imgs && p.imgs.length > 1
+    ? `<div class="gallery">${p.imgs.map((src, k) => `<img alt="${esc(p.name)} photo ${k+1}" src="${src}">`).join('')}</div><span class="gcount">1/${p.imgs.length}</span>`
+    : `<img alt="${esc(p.name)}" src="${p.img}">`;
+}
+function wireGallery(el, p){
+  const gal = el.querySelector('.gallery');
+  if(gal) gal.addEventListener('scroll', () => { el.querySelector('.gcount').textContent = `${Math.round(gal.scrollLeft / Math.max(1, gal.clientWidth)) + 1}/${p.imgs.length}`; });
+}
+const priceHtml = p => { const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
+  return `<span><span class="price">${npr(p.price)}</span>${pct ? `<span class="was">${npr(p.oldPrice)}</span><span class="disc">-${pct}%</span>` : ''}</span>`; };
+const findByCode = q => S.products.find(p => (p.code || '').toLowerCase() === q.trim().toLowerCase().replace(/^#/, ''));
+function renderShop(){
+  $('#pubName').textContent = S.shop.name;
+  $('#pubMeta').textContent = `${S.shop.location} · Order on WhatsApp`;
+  const cats = ['All', ...new Set(S.products.map(p=>p.category))];
+  const cc = $('#catChips'); cc.innerHTML = '';
+  cats.forEach(c => { const b = document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=c; b.setAttribute('aria-pressed', c===shopCat); b.onclick=()=>{shopCat=c; shopOpen=null; renderShop();}; cc.append(b); });
+  if(shopOpen && prodById(shopOpen)){ renderProductPage(prodById(shopOpen)); return; }
+  $('#pubProduct').hidden = true; $('#shopBrowse').hidden = false;
+  const grid = $('#pubGrid'); grid.innerHTML = '';
+  const q = shopQuery.trim().toLowerCase();
+  const list = S.products.filter(p => (shopCat==='All' || p.category===shopCat) &&
+    (!q || p.name.toLowerCase().includes(q) || (p.code||'').toLowerCase().includes(q) || p.category.toLowerCase().includes(q))).sort((a,b)=>b.created-a.created);
+  list.forEach(p => {
+    const el = document.createElement('div'); el.className='pcard'; el.dataset.open = p.id;
+    el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc(p.sizes.join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
+    wireGallery(el, p); grid.append(el);
+  });
+  if(!S.products.length) grid.innerHTML = '<p class="muted">No products yet.</p>';
+  else if(!list.length) grid.innerHTML = `<p class="muted">No product matches “${esc(shopQuery)}”.</p>`;
+}
+function renderProductPage(p){
+  $('#shopBrowse').hidden = true;
+  const box = $('#pubProduct'); box.hidden = false;
+  box.innerHTML = `<button class="btn small" type="button" id="pBack" style="align-self:flex-start">‹ All products</button>
+    <div class="pdetail" style="position:relative">${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${galleryHtml(p)}
+      <div class="b">
+        <div class="section-h"><h2>${esc(p.name)}</h2><span class="code">${esc(p.code)}</span></div>
+        ${priceHtml(p)}
+        <p class="muted">${esc(p.desc || '')}</p>
+        <p class="small"><b>Sizes:</b> ${esc(p.sizes.join(' · '))}${p.stock<=3 && p.stock>0 ? ` · <b style="color:var(--warn)">Only ${p.stock} left</b>` : ''}${p.stock===0 ? ' · <b style="color:var(--warn)">Sold out</b>' : ''}</p>
+        <p class="small muted">Cash on delivery · eSewa · Khalti · 1-day delivery inside the valley</p>
+        <a class="btn primary big" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
+        <button class="btn" type="button" id="pCopyLink">Copy product link</button>
+      </div>
+    </div>`;
+  wireGallery(box.querySelector('.pdetail'), p);
+  $('#pBack').onclick = () => { shopOpen = null; if(PUB_SLUG && ON_SITE) history.pushState({}, '', `/${PUB_SLUG}`); renderShop(); window.scrollTo(0,0); };
+  $('#pCopyLink').onclick = () => copyText('https://' + productUrl(p));
+}
+function openProduct(id, count = true){
+  const p = prodById(id); if(!p) return;
+  if(count && PUB_SLUG){ if(window.Cloud) Cloud.recordView(id); }
+  else if(count && !(window.Cloud && Cloud.signedIn())){ p.views = (p.views || 0) + 1; p.lastViewed = Date.now(); p.viewLog = p.viewLog || {}; const k = dayKey(new Date()); p.viewLog[k] = (p.viewLog[k] || 0) + 1; save(); }
+  if(PUB_SLUG && ON_SITE && p.code) history.pushState({p:id}, '', `/${PUB_SLUG}/${p.code.toLowerCase()}`);
+  if($('#view-shop').hidden) go('shop');
+  shopOpen = id; renderShop(); window.scrollTo(0,0);
+}
+$('#pubGrid').addEventListener('click', e => { if(e.target.closest('a')) return; const c = e.target.closest('[data-open]'); if(c) openProduct(c.dataset.open); });
+$('#shopSearch').addEventListener('input', e => { shopQuery = e.target.value; renderShop(); });
+$('#shopSearch').addEventListener('keydown', e => {
+  if(e.key !== 'Enter') return;
+  const hit = findByCode(e.target.value);
+  if(hit){ e.preventDefault(); e.target.value = ''; shopQuery = ''; openProduct(hit.id); }
+});
+
+/* ---------- views report ---------- */
+let vRange = 'thisweek', vFrom = '', vTo = '';
+const V_RANGES = { today:'Today', yesterday:'Yesterday', thisweek:'This week', week:'Last 7 days', month:'Last 30 days', all:'All time', custom:'Pick dates' };
+function rangeDates(r){
+  const t = new Date();
+  if(r === 'today') return [t, t];
+  if(r === 'yesterday') return [addDays(t,-1), addDays(t,-1)];
+  if(r === 'week') return [addDays(t,-6), t];
+  if(r === 'thisweek') return [addDays(t,-t.getDay()), t]; /* Nepal's week starts on Sunday */
+  if(r === 'month') return [addDays(t,-29), t];
+  if(r === 'custom'){ const f = vFrom ? new Date(vFrom + 'T00:00') : addDays(t,-6), e = vTo ? new Date(vTo + 'T00:00') : t; return f <= e ? [f, e] : [e, f]; }
+  return null;
+}
+function renderViews(){
+  const rc = $('#vRanges'); rc.innerHTML = '';
+  Object.keys(V_RANGES).forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = V_RANGES[r]; b.setAttribute('aria-pressed', r === vRange); b.onclick = () => { vRange = r; renderViews(); }; rc.append(b); });
+  $('#vCustom').hidden = vRange !== 'custom';
+  const rd = rangeDates(vRange), fmt = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const from = rd ? dayKey(rd[0]) : '0000', to = rd ? dayKey(rd[1]) : '9999';
+  if(vRange === 'custom'){ $('#vFrom').value = from; $('#vTo').value = to; }
+  const count = p => rd ? viewsIn(p, from, to) : (p.views || 0);
+  const list = [...S.products].map(p => ({p, n: count(p)})).sort((a,b) => b.n - a.n);
+  const total = list.reduce((a,x) => a + x.n, 0), max = Math.max(1, ...list.map(x => x.n));
+  $('#vTotal').textContent = total.toLocaleString('en-IN');
+  /* compare with the same length of time just before */
+  let label = rd ? (from === to ? `Views · ${fmt(rd[0])}` : `Views · ${fmt(rd[0])} – ${fmt(rd[1])}`) : 'Views · all time';
+  if(rd){
+    const len = Math.round((rd[1] - rd[0]) / 864e5) + 1, pf = dayKey(addDays(rd[0], -len)), pt = dayKey(addDays(rd[0], -1));
+    const prev = S.products.reduce((a,p) => a + viewsIn(p, pf, pt), 0);
+    if(prev){ const pct = Math.round((total - prev) / prev * 100); label += ` · <span class="delta ${pct>=0?'up':'down'}">${pct>=0?'▲':'▼'} ${Math.abs(pct)}% vs ${len===1?'day before':`previous ${len} days`}</span>`; }
+  }
+  $('#vTotalL').innerHTML = label;
+  $('#vTop').textContent = list[0] && list[0].n ? list[0].p.name : '–';
+  /* daily chart: the chosen dates, or the last 30 days for all time; hidden for a single day */
+  const chart = $('#vChart');
+  let cs = rd ? rd[0] : addDays(new Date(), -29), ce = rd ? rd[1] : new Date();
+  let nDays = Math.round((ce - cs) / 864e5) + 1;
+  if(nDays > 31){ cs = addDays(ce, -30); nDays = 31; }
+  if(nDays <= 1){ chart.hidden = true; }
+  else {
+    chart.hidden = false;
+    const days = Array.from({length:nDays}, (_, i) => addDays(cs, i)), todayK = dayKey(new Date());
+    const vals = days.map(d => { const k = dayKey(d); return S.products.reduce((a,p) => a + ((p.viewLog||{})[k] || 0), 0); });
+    const vmax = Math.max(1, ...vals), every = nDays > 14 ? Math.ceil(nDays / 7) : 1;
+    chart.innerHTML = `<div class="small" style="display:flex;justify-content:space-between"><b>Views per day</b><span class="muted">Best day: ${Math.max(...vals)}</span></div>
+      <div class="vbars" role="img" aria-label="Views per day">${days.map((d,i) => `<div class="bar${dayKey(d)===todayK?' today':''}" title="${fmt(d)}: ${vals[i]} views">${nDays<=14 && vals[i] ? `<em>${vals[i]}</em>` : ''}<i style="height:${Math.round(vals[i]/vmax*82)}%"></i></div>`).join('')}</div>
+      <div class="vaxis">${days.map((d,i) => `<span>${i % every === 0 ? (nDays<=7 ? d.toLocaleDateString('en-GB',{weekday:'short'}) : d.getDate()) : ''}</span>`).join('')}</div>`;
+  }
+  const box = $('#viewsList'); box.innerHTML = '';
+  list.forEach(({p, n}) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'vrow';
+    b.innerHTML = `<img alt="" src="${p.img}"><span class="t"><b>${esc(p.name)}</b><span class="small muted"><span class="code">${esc(p.code)}</span> ${npr(p.price)} · ${(p.views||0).toLocaleString('en-IN')} all time${p.example ? ' <span class="pill ex">Example</span>' : ''}</span><span class="vbar"><i style="width:${Math.round(n/max*100)}%"></i></span></span><span class="vcount">${n.toLocaleString('en-IN')}<small>views</small></span>`;
+    b.onclick = () => openProduct(p.id, false);
+    box.append(b);
+  });
+  if(!list.length) box.innerHTML = '<p class="muted">No products yet. Views appear here once customers open your products.</p>';
+}
+$('#vFrom').addEventListener('change', e => { vFrom = e.target.value; renderViews(); });
+$('#vTo').addEventListener('change', e => { vTo = e.target.value; renderViews(); });
+
+/* ---------- studio ---------- */
+let draft = {sizes:['M','L'], backdrop:BACKDROPS[0][1]};
+let srcImage = null, srcFile = null;
+const sizeWrap = $('#sizeChips');
+SIZES.forEach(s => { const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=s; b.onclick=()=>{ draft.sizes = draft.sizes.includes(s) ? draft.sizes.filter(x=>x!==s) : [...draft.sizes, s]; syncSizes(); }; sizeWrap.append(b); });
+function syncSizes(){ [...sizeWrap.children].forEach(b => b.setAttribute('aria-pressed', draft.sizes.includes(b.textContent))); }
+syncSizes();
+BACKDROPS.forEach(([n,c]) => { const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.dataset.c=c; b.onclick=()=>{ draft.backdrop=c; syncBackdrops(); enhance(); }; $('#backdrops').append(b); });
+function syncBackdrops(){ [...$('#backdrops').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.c===draft.backdrop)); }
+syncBackdrops();
+
+const drop = $('#drop'), fileInput = $('#fileInput');
+drop.onclick = () => fileInput.click();
+drop.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); } };
+drop.ondragover = e => { e.preventDefault(); drop.style.borderColor='var(--accent)'; };
+drop.ondragleave = () => drop.style.borderColor='';
+drop.ondrop = e => { e.preventDefault(); drop.style.borderColor=''; loadFiles([...e.dataTransfer.files]); };
+fileInput.onchange = () => { loadFiles([...fileInput.files]); fileInput.value = ''; };
+
+/* several photos per product; the first one is the cover */
+const MAX_PHOTOS = 8;
+let photos = [], curPhoto = -1;
+function loadImage(f){ return new Promise(res => { const url = URL.createObjectURL(f), im = new Image(); im.onload = () => res({im, url}); im.onerror = () => res(null); im.src = url; }); }
+async function loadFiles(files){
+  files = files.filter(f => f.type.startsWith('image/'));
+  if(!files.length){ toast('Please choose photos'); return; }
+  const room = MAX_PHOTOS - photos.length;
+  if(room <= 0){ toast(`Up to ${MAX_PHOTOS} photos per product`); return; }
+  if(files.length > room) toast(`Added ${room} photos. Up to ${MAX_PHOTOS} per product.`);
+  const first = photos.length === 0;
+  drop.querySelector('b').textContent = 'Cleaning up your photos…';
+  for(const f of files.slice(0, room)){
+    const r = await loadImage(f); if(!r) continue;
+    savePhotoState(); curPhoto = -1;
+    srcImage = limitSize(r.im, 1600); photoTilt = 0; buildWork(); runAutoMask();
+    photos.push({file:f, url:r.url, img:srcImage, work:{...work}, mask, cut, tilt:0});
+    curPhoto = photos.length - 1;
+    await new Promise(r => setTimeout(r, 0));
+  }
+  if(!photos.length){ resetPhotos(); return; }
+  srcFile = photos[0].file;
+  $('#compare').hidden = false; $('#backdropRow').hidden = false;
+  drop.querySelector('b').textContent = photos.length >= MAX_PHOTOS ? 'Photo limit reached' : 'Add more photos';
+  const pick = curPhoto; curPhoto = -1; selectPhoto(pick);
+  if(first){ renderScenePicker(); enhance(); detectCategory(); }
+}
+function savePhotoState(){ const p = photos[curPhoto]; if(p) Object.assign(p, {work:{...work}, mask, cut, tilt:photoTilt}); }
+let photoTilt = 0;
+function limitSize(im, lim){
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, r = Math.min(1, lim/Math.max(w, h));
+  if(r === 1) return im;
+  const c = document.createElement('canvas'); c.width = Math.round(w*r); c.height = Math.round(h*r);
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c;
+}
+function selectPhoto(i){
+  savePhotoState();
+  const p = photos[i]; if(!p) return;
+  curPhoto = i; srcImage = p.img; Object.assign(work, p.work); mask = p.mask; cut = p.cut; photoTilt = p.tilt || 0;
+  maskHistory = []; $('#btnUndoBg').disabled = true;
+  $('#tilt').value = photoTilt; $('#tiltVal').textContent = `${photoTilt}°`;
+  $('#imgBefore').src = p.url; enhance(); renderThumbs();
+}
+function removePhoto(i){
+  URL.revokeObjectURL(photos[i].url); photos.splice(i, 1);
+  if(!photos.length){ resetPhotos(); return; }
+  curPhoto = -1; selectPhoto(Math.min(i, photos.length - 1)); srcFile = photos[0].file;
+  drop.querySelector('b').textContent = 'Add more photos';
+}
+function renderThumbs(){
+  const t = $('#thumbs'); t.hidden = !photos.length; t.innerHTML = '';
+  photos.forEach((p, i) => {
+    const d = document.createElement('div'); d.className = 'thumb'; d.setAttribute('aria-current', i === curPhoto);
+    d.innerHTML = `<button type="button" class="tsel" aria-label="Edit photo ${i+1}"><img alt="" src="${p.url}"><span>${i === 0 ? 'Cover' : 'Photo ' + (i+1)}</span></button><button type="button" class="tdel" aria-label="Remove photo ${i+1}">×</button>`;
+    d.querySelector('.tsel').onclick = () => selectPhoto(i);
+    d.querySelector('.tdel').onclick = () => removePhoto(i);
+    t.append(d);
+  });
+  $('#photoCount').textContent = photos.length > 1 ? `${photos.length} photos. Tap one to fix its background. The first is the cover.` : '';
+}
+function resetPhotos(){
+  photos.forEach(p => URL.revokeObjectURL(p.url));
+  photos = []; curPhoto = -1; srcImage = null; srcFile = null; mask = null; cut = null; xform = null;
+  $('#compare').hidden = true; $('#backdropRow').hidden = true; $('#thumbs').hidden = true; $('#photoCount').textContent = '';
+  drop.querySelector('b').textContent = 'Tap to choose photos';
+}
+/* run a drawing function as if photo i were selected */
+function withPhoto(i, fn){
+  savePhotoState();
+  const keep = curPhoto, prev = {srcImage, mask, cut, work:{...work}, tilt:photoTilt}, p = photos[i];
+  srcImage = p.img; mask = p.mask; cut = p.cut; Object.assign(work, p.work); photoTilt = p.tilt || 0; curPhoto = -1;
+  try{ return fn(); } finally { srcImage = prev.srcImage; mask = prev.mask; cut = prev.cut; Object.assign(work, prev.work); photoTilt = prev.tilt; curPhoto = keep; }
+}
+
+/* ---------- background removal (runs on the device) ---------- */
+const work = {w:0,h:0,px:null};
+let mask = null, maskHistory = [], cut = null, xform = null;
+draft.removeBg = true;
+function buildWork(){
+  const r = Math.min(1, 640/Math.max(srcImage.width, srcImage.height));
+  const w = Math.max(1,Math.round(srcImage.width*r)), h = Math.max(1,Math.round(srcImage.height*r));
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const g = c.getContext('2d'); g.drawImage(srcImage,0,0,w,h);
+  work.w=w; work.h=h; work.px = g.getImageData(0,0,w,h).data;
+}
+function kmeans(pts, k){
+  let cs = []; for(let i=0;i<k;i++) cs.push(pts[Math.floor(i*pts.length/k)].slice());
+  for(let it=0; it<8; it++){
+    const sum = cs.map(()=>[0,0,0,0]);
+    for(const p of pts){ let bi=0,bd=1e12; cs.forEach((c,ci)=>{const d=(p[0]-c[0])**2+(p[1]-c[1])**2+(p[2]-c[2])**2; if(d<bd){bd=d;bi=ci;}}); const s=sum[bi]; s[0]+=p[0];s[1]+=p[1];s[2]+=p[2];s[3]++; }
+    cs = cs.map((c,i)=> sum[i][3] ? [sum[i][0]/sum[i][3], sum[i][1]/sum[i][3], sum[i][2]/sum[i][3]] : c);
+  }
+  return cs;
+}
+function autoMask(tol){
+  const {w,h,px} = work, N = w*h, m = new Uint8Array(N).fill(1);
+  const border = []; const step = Math.max(1, Math.floor(2*(w+h)/500));
+  for(let x=0;x<w;x+=step){ border.push(x, (h-1)*w+x); }
+  for(let y=0;y<h;y+=step){ border.push(y*w, y*w+w-1); }
+  const centers = kmeans(border.map(i=>[px[i*4],px[i*4+1],px[i*4+2]]), 5);
+  const t2 = tol*tol, loose2 = (tol*1.8)**2, step2 = (tol*0.28)**2;
+  const near = i => { const r=px[i*4],g=px[i*4+1],b=px[i*4+2]; let best=1e12; for(const c of centers){ const d=(r-c[0])**2+(g-c[1])**2+(b-c[2])**2; if(d<best) best=d; } return best; };
+  const q = new Int32Array(N); let qh=0, qt=0;
+  const seed = i => { if(m[i] && near(i) < t2){ m[i]=0; q[qt++]=i; } };
+  for(let x=0;x<w;x++){ seed(x); seed((h-1)*w+x); }
+  for(let y=0;y<h;y++){ seed(y*w); seed(y*w+w-1); }
+  while(qh<qt){
+    const i=q[qh++], x=i%w, y=(i/w)|0;
+    for(const j of [x>0?i-1:-1, x<w-1?i+1:-1, y>0?i-w:-1, y<h-1?i+w:-1]){
+      if(j<0 || !m[j]) continue;
+      const d = near(j);
+      const dl = (px[j*4]-px[i*4])**2+(px[j*4+1]-px[i*4+1])**2+(px[j*4+2]-px[i*4+2])**2;
+      if(d < t2 || (dl < step2 && d < loose2)){ m[j]=0; q[qt++]=j; }
+    }
+  }
+  keepMain(m, w, h);
+  return refineMask(m);
+}
+/* helpers for a more accurate cut-out */
+const rgbAt = i => [work.px[i*4], work.px[i*4+1], work.px[i*4+2]];
+function nearestD(i, cs){ const px = work.px, r = px[i*4], g = px[i*4+1], b = px[i*4+2]; let best = 1e12; for(const c of cs){ const d = (r-c[0])**2 + (g-c[1])**2 + (b-c[2])**2; if(d < best) best = d; } return best; }
+function erode(m, w, h){ const o = new Uint8Array(w*h); for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){ const i = y*w+x; o[i] = m[i] && m[i-1] && m[i+1] && m[i-w] && m[i+w] ? 1 : 0; } return o; }
+function dilate(m, w, h){ const o = new Uint8Array(w*h); for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i = y*w+x; o[i] = m[i] || (x>0 && m[i-1]) || (x<w-1 && m[i+1]) || (y>0 && m[i-w]) || (y<h-1 && m[i+w]) ? 1 : 0; } return o; }
+function cleanMask(m, w, h){ let r = dilate(erode(m, w, h), w, h); r = erode(dilate(r, w, h), w, h); keepMain(r, w, h); return r; }
+/* gaps inside the product: keep real gaps (like a bag handle) that look like the background, fill the rest */
+function fillHoles(m, w, h, bgC){
+  const N = w*h, seen = new Uint8Array(N), q = new Int32Array(N);
+  for(let s0=0; s0<N; s0++){
+    if(m[s0] || seen[s0]) continue;
+    let qh=0, qt=0, edge=false, sumD=0; q[qt++] = s0; seen[s0] = 1;
+    while(qh<qt){ const i = q[qh++], x = i%w, y = (i/w)|0; if(x===0||y===0||x===w-1||y===h-1) edge = true; sumD += Math.sqrt(nearestD(i, bgC));
+      for(const j of [x>0?i-1:-1, x<w-1?i+1:-1, y>0?i-w:-1, y<h-1?i+w:-1]) if(j>=0 && !m[j] && !seen[j]){ seen[j] = 1; q[qt++] = j; } }
+    if(edge) continue;
+    if(qt < N*0.0015 || sumD/qt > 34) for(let k=0;k<qt;k++) m[q[k]] = 1;
+  }
+}
+/* a soft shadow is the background colour, just darker */
+function shadowLike(i, bgC){
+  const px = work.px, r = px[i*4]+1, g = px[i*4+1]+1, b = px[i*4+2]+1, s = r+g+b;
+  for(const c of bgC){ const cs = c[0]+c[1]+c[2]+3, ratio = s/cs;
+    if(ratio < 0.6 || ratio > 0.97) continue;
+    if(Math.abs(r/s-(c[0]+1)/cs) + Math.abs(g/s-(c[1]+1)/cs) + Math.abs(b/s-(c[2]+1)/cs) < 0.03) return true; }
+  return false;
+}
+/* look again at the pixels near the edge using colour models of product and background */
+function refineMask(m){
+  const {w, h} = work, N = w*h, step = Math.max(1, Math.floor(N/5000));
+  let inner = m, outer = m; for(let k=0;k<3;k++){ inner = erode(inner, w, h); outer = dilate(outer, w, h); }
+  const fgS = [], bgS = [];
+  for(let i=0;i<N;i+=step){ if(inner[i]) fgS.push(rgbAt(i)); else if(!outer[i]) bgS.push(rgbAt(i)); }
+  if(fgS.length < 40 || bgS.length < 40) return m;
+  const bgC = kmeans(bgS, 6);
+  const nearC = (p, cs) => { let b = 1e12; for(const c of cs){ const d = (p[0]-c[0])**2 + (p[1]-c[1])**2 + (p[2]-c[2])**2; if(d < b) b = d; } return b; };
+  const fgClean = fgS.filter(p => nearC(p, bgC) > 35*35);
+  const fgC = kmeans(fgClean.length >= 40 ? fgClean : fgS, 6), out = m.slice();
+  for(let i=0;i<N;i++) if(outer[i] && !inner[i]) out[i] = nearestD(i, fgC) < nearestD(i, bgC) ? 1 : 0;
+  /* grow the background into touching areas that clearly look like background (soft shadows, folds) */
+  const q = new Int32Array(N); let qh = 0, qt = 0;
+  for(let i=0;i<N;i++) if(!out[i]) q[qt++] = i;
+  while(qh < qt){ const i = q[qh++], x = i%w, y = (i/w)|0;
+    for(const j of [x>0?i-1:-1, x<w-1?i+1:-1, y>0?i-w:-1, y<h-1?i+w:-1]){
+      if(j < 0 || !out[j]) continue;
+      if(nearestD(j, bgC) < nearestD(j, fgC)*0.45 || shadowLike(j, bgC)){ out[j] = 0; q[qt++] = j; }
+    } }
+  /* large background-coloured areas enclosed by the product are real gaps (bag handles, between straps) */
+  const bgLike = new Uint8Array(N); for(let i=0;i<N;i++) if(out[i] && nearestD(i, bgC) < nearestD(i, fgC)*0.3) bgLike[i] = 1;
+  const seen = new Uint8Array(N);
+  for(let s0=0; s0<N; s0++){
+    if(!bgLike[s0] || seen[s0]) continue;
+    let h0 = 0, t0 = 0; q[t0++] = s0; seen[s0] = 1;
+    while(h0 < t0){ const i = q[h0++], x = i%w, y = (i/w)|0;
+      for(const j of [x>0?i-1:-1, x<w-1?i+1:-1, y>0?i-w:-1, y<h-1?i+w:-1]) if(j>=0 && bgLike[j] && !seen[j]){ seen[j] = 1; q[t0++] = j; } }
+    if(t0 > N*0.003) for(let k=0;k<t0;k++) out[q[k]] = 0;
+  }
+  const r = cleanMask(out, w, h); fillHoles(r, w, h, bgC); return r;
+}
+/* AI gives a box around the product; colour models do the fine cut inside it */
+function boxMask(b){
+  const {w, h} = work, N = w*h, mx = 0.02, step = Math.max(1, Math.floor(N/6000));
+  const x0 = Math.max(0, Math.floor((b[0]-mx)*w)), y0 = Math.max(0, Math.floor((b[1]-mx)*h)), x1 = Math.min(w-1, Math.ceil((b[2]+mx)*w)), y1 = Math.min(h-1, Math.ceil((b[3]+mx)*h));
+  const ix0 = x0+(x1-x0)*0.25, ix1 = x1-(x1-x0)*0.25, iy0 = y0+(y1-y0)*0.25, iy1 = y1-(y1-y0)*0.25;
+  const bgS = [], fgS = [];
+  for(let i=0;i<N;i+=step){ const x = i%w, y = (i/w)|0; if(x<x0||x>x1||y<y0||y>y1) bgS.push(rgbAt(i)); else if(x>=ix0 && x<=ix1 && y>=iy0 && y<=iy1) fgS.push(rgbAt(i)); }
+  if(bgS.length < 60){ for(let x=x0;x<=x1;x+=2) bgS.push(rgbAt(y0*w+x), rgbAt(y1*w+x)); for(let y=y0;y<=y1;y+=2) bgS.push(rgbAt(y*w+x0), rgbAt(y*w+x1)); }
+  if(fgS.length < 20) return null;
+  const bgC = kmeans(bgS, 8), fgC = kmeans(fgS, 6), m = new Uint8Array(N);
+  for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const i = y*w+x; m[i] = nearestD(i, fgC) < nearestD(i, bgC) ? 1 : 0; }
+  keepMain(m, w, h); fillHoles(m, w, h, bgC);
+  return refineMask(cleanMask(m, w, h));
+}
+async function aiFindProduct(){
+  const sample = samplePromise ? await samplePromise : null;
+  if(!sample){ toast('AI is not available here. Use the slider and taps.'); return; }
+  if(!srcImage || !mask) return;
+  const btn = $('#btnAiBox'); btn.disabled = true; btn.textContent = 'Finding the product…';
+  try{
+    const c = document.createElement('canvas'); c.width = work.w; c.height = work.h;
+    c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(work.px), work.w, work.h), 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .85));
+    const r = await sample.json('Find the main product being sold in this photo, such as the clothing item, bag, shoes, cup, plant or cosmetic. Ignore the background, table, bed, floor and any hands. Reply with only JSON {"box": [left, top, right, bottom]} as fractions of the image width and height between 0 and 1, covering the whole product with a small margin.', {images:[blob], modelTier:'default'});
+    const b = r && Array.isArray(r.box) ? r.box.map(Number) : null;
+    if(!b || b.length !== 4 || b.some(v => !(v >= 0 && v <= 1)) || b[2] <= b[0] || b[3] <= b[1]) throw new Error('bad box');
+    const m = boxMask(b); if(!m) throw new Error('empty');
+    maskHistory.push(mask.slice()); $('#btnUndoBg').disabled = false;
+    mask = m; makeCut(); enhance();
+    $('#aiBoxNote').textContent = 'Done. Tap any leftover bits to fix them, or Undo.';
+  }catch(e){ toast(e && e.code === 'not_granted' ? 'AI was not allowed' : 'AI could not find the product. Try the slider or taps.'); }
+  btn.disabled = false; btn.textContent = '✨ AI: find the product';
+}
+function keepMain(m, w, h){
+  const lab = new Int32Array(w*h), sizes = [0]; let id = 0; const q = new Int32Array(w*h);
+  for(let s=0;s<w*h;s++){
+    if(!m[s] || lab[s]) continue;
+    id++; let qh=0, qt=0, n=0; q[qt++]=s; lab[s]=id;
+    while(qh<qt){ const i=q[qh++]; n++; const x=i%w, y=(i/w)|0;
+      for(const j of [x>0?i-1:-1, x<w-1?i+1:-1, y>0?i-w:-1, y<h-1?i+w:-1]) if(j>=0 && m[j] && !lab[j]){ lab[j]=id; q[qt++]=j; } }
+    sizes.push(n);
+  }
+  const big = Math.max(0, ...sizes);
+  for(let i=0;i<w*h;i++) if(m[i] && sizes[lab[i]] < big*0.2) m[i]=0;
+}
+let tapKeep = false;
+function tapRemove(x, y){
+  const {w,h,px} = work; if(x<0||y<0||x>=w||y>=h) return;
+  const s = y*w+x, from = tapKeep ? 0 : 1, to = 1 - from;
+  if(mask[s] !== from){ toast(tapKeep ? 'That part is already kept' : 'That part is already removed'); return; }
+  maskHistory.push(mask.slice()); $('#btnUndoBg').disabled = false;
+  const tol = Number($('#tol').value), t2 = tol*tol, sr=px[s*4], sg=px[s*4+1], sb=px[s*4+2];
+  const q = new Int32Array(w*h); let qh=0, qt=0; q[qt++]=s; mask[s]=to;
+  while(qh<qt){ const i=q[qh++], xx=i%w, yy=(i/w)|0;
+    for(const j of [xx>0?i-1:-1, xx<w-1?i+1:-1, yy>0?i-w:-1, yy<h-1?i+w:-1]){
+      if(j<0 || mask[j] !== from) continue;
+      if((px[j*4]-sr)**2+(px[j*4+1]-sg)**2+(px[j*4+2]-sb)**2 < t2){ mask[j]=to; q[qt++]=j; }
+    } }
+  makeCut(); enhance();
+}
+function syncTapMode(){ $$('#tapMode .chip').forEach(b => b.setAttribute('aria-pressed', (b.dataset.tap === 'keep') === tapKeep)); }
+$$('#tapMode .chip').forEach(b => b.onclick = () => { tapKeep = b.dataset.tap === 'keep'; syncTapMode(); });
+syncTapMode();
+function makeCut(){
+  const {w,h,px} = work;
+  let a = new Float32Array(w*h); for(let i=0;i<w*h;i++) a[i] = mask[i]*255;
+  for(let pass=0; pass<2; pass++){ // soften edges
+    const b = new Float32Array(w*h);
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let s=0,n=0; for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const xx=x+dx, yy=y+dy; if(xx>=0&&yy>=0&&xx<w&&yy<h){ s+=a[yy*w+xx]; n++; } } b[y*w+x]=s/n; }
+    a = b;
+  }
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(mask[y*w+x]){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  if(x1<0){ cut = null; if(photos[curPhoto]){ photos[curPhoto].cut = null; photos[curPhoto].mask = mask; } return; }
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); const id = g.createImageData(w,h);
+  for(let i=0;i<w*h;i++){ id.data[i*4]=px[i*4]; id.data[i*4+1]=px[i*4+1]; id.data[i*4+2]=px[i*4+2]; id.data[i*4+3]=a[i]; }
+  g.putImageData(id,0,0);
+  cut = {canvas:c, x:x0, y:y0, w:x1-x0+1, h:y1-y0+1};
+  if(photos[curPhoto]){ photos[curPhoto].cut = cut; photos[curPhoto].mask = mask; }
+}
+function runAutoMask(){
+  const tol = Number($('#tol').value); $('#tolVal').textContent = '';
+  mask = autoMask(tol); maskHistory = []; $('#btnUndoBg').disabled = true; makeCut();
+  const left = mask.reduce((a,v)=>a+v,0) / mask.length;
+  if(left > 0.97) toast('Could not find the background. Try “More”, or tap the background.');
+}
+let tolTimer;
+$('#tol').oninput = () => { clearTimeout(tolTimer); tolTimer = setTimeout(()=>{ if(srcImage){ runAutoMask(); enhance(); } }, 180); };
+$('#btnUndoBg').onclick = () => { if(!maskHistory.length) return; mask = maskHistory.pop(); $('#btnUndoBg').disabled = !maskHistory.length; makeCut(); enhance(); };
+$('#btnResetBg').onclick = () => { if(srcImage){ runAutoMask(); enhance(); } };
+function syncBgMode(){ $$('#bgMode .chip').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.mode==='remove')===draft.removeBg)); $('#bgTools').hidden = !draft.removeBg; }
+$$('#bgMode .chip').forEach(b => b.onclick = () => { draft.removeBg = b.dataset.mode==='remove'; syncBgMode(); enhance(); });
+syncBgMode();
+$('#imgAfter').style.cursor = 'crosshair'; $('#imgBefore').style.cursor = 'crosshair';
+$('#imgAfter').onclick = e => {
+  if(!draft.removeBg || !xform || !mask || !cut) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  let px = (e.clientX - r.left) / r.width * xform.size, py = (e.clientY - r.top) / r.height * xform.size;
+  if(xform.tilt){ const cx = xform.ox + cut.w*xform.s/2, cy = xform.oy + cut.h*xform.s/2, a = -xform.tilt*Math.PI/180, dx = px-cx, dy = py-cy;
+    px = cx + dx*Math.cos(a) - dy*Math.sin(a); py = cy + dx*Math.sin(a) + dy*Math.cos(a); }
+  tapRemove(Math.round((px - xform.ox)/xform.s + cut.x), Math.round((py - xform.oy)/xform.s + cut.y));
+};
+/* the original photo is shown cropped to a square (object-fit: cover) */
+$('#imgBefore').onclick = e => {
+  if(!draft.removeBg || !mask) return;
+  const r = e.currentTarget.getBoundingClientRect(), s = Math.max(r.width/work.w, r.height/work.h);
+  const x = (e.clientX - r.left - (r.width - work.w*s)/2) / s, y = (e.clientY - r.top - (r.height - work.h*s)/2) / s;
+  tapRemove(Math.round(x), Math.round(y));
+};
+$('#btnAiBox').onclick = () => aiFindProduct();
+
+/* ---------- rotate and straighten ---------- */
+function rotateCurrent(dir){
+  const p = photos[curPhoto]; if(!p) return;
+  const src = p.img, sw = src.naturalWidth || src.width, sh = src.naturalHeight || src.height;
+  const c = document.createElement('canvas'); c.width = sh; c.height = sw; const g = c.getContext('2d');
+  g.translate(c.width/2, c.height/2); g.rotate(dir*Math.PI/2); g.drawImage(src, -sw/2, -sh/2);
+  if(p.url && p.url.startsWith('blob:')) URL.revokeObjectURL(p.url);
+  p.img = c; p.url = c.toDataURL('image/jpeg', .88);
+  srcImage = c; buildWork(); runAutoMask(); savePhotoState();
+  $('#imgBefore').src = p.url; enhance(); renderThumbs();
+  c.toBlob(b => { if(b){ p.file = new File([b], 'photo.jpg', {type:'image/jpeg'}); srcFile = photos[0].file; } }, 'image/jpeg', .88);
+}
+$('#rotL').onclick = () => rotateCurrent(-1);
+$('#rotR').onclick = () => rotateCurrent(1);
+let tiltTimer;
+$('#tilt').oninput = e => { photoTilt = Number(e.target.value); $('#tiltVal').textContent = `${photoTilt}°`; savePhotoState(); clearTimeout(tiltTimer); tiltTimer = setTimeout(enhance, 40); };
+
+/* ---------- filters (pixel based, so they look the same in every browser) ---------- */
+const FILTERS = {
+  original:{n:'Original', b:1, c:1, s:1, w:0}, natural:{n:'Natural', b:1.05, c:1.06, s:1.1, w:0},
+  bright:{n:'Bright', b:1.15, c:1.03, s:1.08, w:.1}, vivid:{n:'Vivid', b:1.05, c:1.15, s:1.4, w:0},
+  warm:{n:'Warm', b:1.06, c:1.04, s:1.12, w:.6}, cool:{n:'Cool', b:1.04, c:1.05, s:1, w:-.6},
+  soft:{n:'Soft', b:1.1, c:.9, s:.92, w:.1}, crisp:{n:'Crisp', b:1.02, c:1.2, s:1.08, w:0}, mono:{n:'Mono', b:1.05, c:1.12, s:0, w:0}
+};
+draft.filter = 'natural';
+const adj = {b:1, c:1, s:1, w:0};
+function fxParams(){ const f = FILTERS[draft.filter] || FILTERS.natural; return {b:f.b*adj.b, c:f.c*adj.c, s:f.s*adj.s, w:f.w+adj.w}; }
+let fxCache = new WeakMap();
+function fxCanvas(src){
+  const p = fxParams(), key = `${p.b}|${p.c}|${p.s}|${p.w}`, hit = fxCache.get(src);
+  if(hit && hit.key === key) return hit.c;
+  const w0 = src.naturalWidth || src.width, h0 = src.naturalHeight || src.height;
+  const c = document.createElement('canvas'); c.width = w0; c.height = h0; const g = c.getContext('2d'); g.drawImage(src, 0, 0);
+  if(!(p.b === 1 && p.c === 1 && p.s === 1 && p.w === 0)){
+    const d = g.getImageData(0, 0, w0, h0), a = d.data, wr = p.w*18, wg = p.w*4, wb = -p.w*18;
+    for(let i=0;i<a.length;i+=4){
+      if(!a[i+3]) continue;
+      let r = (a[i]*p.b-128)*p.c+128, gg = (a[i+1]*p.b-128)*p.c+128, bl = (a[i+2]*p.b-128)*p.c+128;
+      const l = .299*r + .587*gg + .114*bl;
+      a[i] = l + (r-l)*p.s + wr; a[i+1] = l + (gg-l)*p.s + wg; a[i+2] = l + (bl-l)*p.s + wb;
+    }
+    g.putImageData(d, 0, 0);
+  }
+  fxCache.set(src, {key, c}); return c;
+}
+/* draw the cut-out product with filter and straighten applied */
+function drawCut(g, x, y, dw, dh){
+  const src = fxCanvas(cut.canvas);
+  if(!photoTilt){ g.drawImage(src, cut.x, cut.y, cut.w, cut.h, x, y, dw, dh); return; }
+  g.save(); g.translate(x + dw/2, y + dh/2); g.rotate(photoTilt*Math.PI/180); g.drawImage(src, cut.x, cut.y, cut.w, cut.h, -dw/2, -dh/2, dw, dh); g.restore();
+}
+/* draw the whole photo (Keep original) filling a box, with filter and straighten */
+function drawPhotoIn(g, cx, cy, bw, bh){
+  const src = fxCanvas(srcImage), iw = src.width, ih = src.height, rad = photoTilt*Math.PI/180;
+  const k = 1 + Math.abs(Math.sin(rad))*1.2, r = Math.max(bw/iw, bh/ih)*k;
+  g.save(); g.translate(cx, cy); g.rotate(rad); g.drawImage(src, -iw*r/2, -ih*r/2, iw*r, ih*r); g.restore();
+}
+function renderFilterChips(){
+  const wrap = $('#filterChips'); wrap.innerHTML = '';
+  Object.entries(FILTERS).forEach(([id, f]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = f.n;
+    b.setAttribute('aria-pressed', id === draft.filter); b.onclick = () => { draft.filter = id; renderFilterChips(); enhance(); }; wrap.append(b); });
+}
+renderFilterChips();
+let adjTimer;
+function syncAdj(){
+  const pct = v => `${v > 0 ? '+' : ''}${v}%`;
+  $('#adjBVal').textContent = pct(Math.round(adj.b*100-100)); $('#adjCVal').textContent = pct(Math.round(adj.c*100-100));
+  $('#adjSVal').textContent = pct(Math.round(adj.s*100-100)); $('#adjWVal').textContent = adj.w === 0 ? '0' : (adj.w > 0 ? `warmer ${Math.round(adj.w*100)}` : `cooler ${Math.round(-adj.w*100)}`);
+}
+[['#adjB','b',100],['#adjC','c',100],['#adjS','s',100],['#adjW','w',100]].forEach(([sel, k, div]) => {
+  $(sel).oninput = e => { adj[k] = k === 'w' ? Number(e.target.value)/div : Number(e.target.value)/div; syncAdj(); clearTimeout(adjTimer); adjTimer = setTimeout(enhance, 60); };
+});
+$('#adjReset').onclick = () => { Object.assign(adj, {b:1, c:1, s:1, w:0}); ['#adjB','#adjC','#adjS'].forEach(s => $(s).value = 100); $('#adjW').value = 0; syncAdj(); enhance(); };
+syncAdj();
+
+/* ---------- scenes (drawn on the device, no downloads) ---------- */
+function rng(seed){ return () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function vg(g,S,y0,y1,stops){ const gr = g.createLinearGradient(0,y0*S,0,y1*S); stops.forEach(([o,c])=>gr.addColorStop(o,c)); g.fillStyle = gr; g.fillRect(0,y0*S,S,(y1-y0)*S); }
+function glow(g,S,x,y,r,col){ const gr = g.createRadialGradient(x*S,y*S,0,x*S,y*S,r*S); gr.addColorStop(0,col); gr.addColorStop(1,'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0,0,S,S); }
+function vignette(g,S,a){ const gr = g.createRadialGradient(S/2,S*0.45,S*0.35,S/2,S/2,S*0.78); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,`rgba(0,0,0,${a})`); g.fillStyle = gr; g.fillRect(0,0,S,S); }
+function noise(g,S,k,r){ const d = g.getImageData(0,0,S,S), p = d.data; for(let i=0;i<p.length;i+=4){ const n = (r()-0.5)*k; p[i]+=n; p[i+1]+=n; p[i+2]+=n; } g.putImageData(d,0,0); }
+function blurred(g,S,px,fn){ g.save(); g.filter = `blur(${Math.max(1,Math.round(px*S))}px)`; fn(); g.restore(); }
+function grainLines(g,S,y0,y1,r,col,n){ g.strokeStyle = col; for(let i=0;i<n;i++){ const y = (y0 + r()*(y1-y0))*S, a = r()*S*0.004, f = 2 + r()*5, ph = r()*6; g.lineWidth = 0.5 + r()*S*0.002; g.beginPath(); for(let x=0;x<=S;x+=S/60){ const yy = y + Math.sin(x/S*f+ph)*a; x ? g.lineTo(x,yy) : g.moveTo(x,yy); } g.stroke(); } }
+const SCENES = {
+  boutique:{name:'Boutique', tone:'#e6d8c5', surface:0.88, draw(g,S,r){
+    vg(g,S,0,0.75,[[0,'#f1e6d7'],[1,'#e2d2bd']]);
+    blurred(g,S,0.04,()=>{ for(let i=0;i<24;i++){ g.fillStyle = r()<.5?'rgba(120,90,60,.05)':'rgba(255,255,255,.08)'; g.beginPath(); g.arc(r()*S, r()*S*0.75, S*(0.05+r()*0.1), 0, 7); g.fill(); } });
+    blurred(g,S,0.012,()=>{ g.fillStyle='rgba(255,250,235,.28)'; [0.1,0.33].forEach(x=>{ g.beginPath(); g.moveTo(x*S,0); g.lineTo((x+0.17)*S,0); g.lineTo((x+0.42)*S,0.75*S); g.lineTo((x+0.25)*S,0.75*S); g.closePath(); g.fill(); }); });
+    let y = 0.75, h = 0.022; while(y < 1){ const sh = 150 + r()*30|0; g.fillStyle = `rgb(${sh},${sh*0.68|0},${sh*0.44|0})`; g.fillRect(0,y*S,S,h*S+1); g.fillStyle='rgba(60,35,15,.25)'; g.fillRect(0,y*S,S,1); let x = r()*0.3; while(x<1){ g.fillRect(x*S,y*S,1,h*S); x += 0.25 + r()*0.25; } y += h; h *= 1.28; }
+    grainLines(g,S,0.75,1,r,'rgba(70,40,15,.10)',40);
+    vg(g,S,0.735,0.752,[[0,'#e8dac6'],[1,'#cdbba3']]);
+    vg(g,S,0.75,0.80,[[0,'rgba(0,0,0,.18)'],[1,'rgba(0,0,0,0)']]);
+    blurred(g,S,0.03,()=>{ g.fillStyle='rgba(255,245,225,.18)'; g.beginPath(); g.ellipse(0.62*S,0.9*S,0.3*S,0.06*S,0,0,7); g.fill(); });
+    glow(g,S,0.25,0.15,0.7,'rgba(255,248,235,.35)'); vignette(g,S,.22); noise(g,S,8,r);
+  }},
+  studio:{name:'Studio', tone:'#e6e0d8', surface:0.82, draw(g,S,r){
+    vg(g,S,0,1,[[0,'#f5f0ea'],[0.6,'#e8e1d8'],[0.72,'#ddd5ca'],[1,'#cbc2b5']]);
+    glow(g,S,0.3,0.2,0.8,'rgba(255,255,255,.45)'); vignette(g,S,.2); noise(g,S,6,r);
+  }},
+  linen:{name:'Linen flat-lay', tone:'#e4ddd0', surface:null, draw(g,S,r){
+    g.fillStyle = '#ebe5d9'; g.fillRect(0,0,S,S);
+    const step = Math.max(2, S/220);
+    for(let y=0;y<S;y+=step){ g.fillStyle = r()<.5?'rgba(0,0,0,.035)':'rgba(255,255,255,.05)'; g.fillRect(0,y,S,1); }
+    for(let x=0;x<S;x+=step){ g.fillStyle = r()<.5?'rgba(0,0,0,.03)':'rgba(255,255,255,.04)'; g.fillRect(x,0,1,S); }
+    blurred(g,S,0.02,()=>{ for(let i=0;i<7;i++){ g.strokeStyle = i%2?'rgba(255,255,255,.18)':'rgba(90,70,50,.08)'; g.lineWidth = S*(0.02+r()*0.03); g.beginPath(); g.moveTo(r()*S,-10); g.bezierCurveTo(r()*S,S*0.3,r()*S,S*0.7,r()*S,S+10); g.stroke(); } });
+    glow(g,S,0.2,0.1,0.9,'rgba(255,255,255,.3)'); vignette(g,S,.18); noise(g,S,8,r);
+  }},
+  wood:{name:'Wooden table', tone:'#d3d7c9', surface:0.83, draw(g,S,r){
+    vg(g,S,0,0.64,[[0,'#e6e8de'],[1,'#d2d6c8']]);
+    blurred(g,S,0.014,()=>{ for(let i=0;i<16;i++){ g.save(); g.translate((0.78+r()*0.24)*S,(0.08+r()*0.5)*S); g.rotate(r()*3.14); g.fillStyle = r()<.5?'rgba(70,105,60,.55)':'rgba(95,135,75,.5)'; g.beginPath(); g.ellipse(0,0,S*0.06,S*0.022,0,0,7); g.fill(); g.restore(); } g.fillStyle='rgba(180,140,110,.5)'; g.fillRect(0.82*S,0.5*S,0.14*S,0.14*S); });
+    vg(g,S,0.64,1,[[0,'#c08c5f'],[1,'#94643f']]);
+    grainLines(g,S,0.64,1,r,'rgba(90,50,20,.14)',70);
+    g.fillStyle='rgba(60,30,10,.25)'; [0.74,0.87].forEach(y=>g.fillRect(0,y*S,S,Math.max(1,S*0.002)));
+    vg(g,S,0.62,0.645,[[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,.12)']]);
+    g.fillStyle='rgba(255,255,255,.25)'; g.fillRect(0,0.64*S,S,Math.max(1,S*0.002));
+    glow(g,S,0.2,0.1,0.9,'rgba(255,250,235,.35)'); vignette(g,S,.22); noise(g,S,7,r);
+  }},
+  marble:{name:'Marble', tone:'#e8e6e2', surface:0.82, draw(g,S,r){
+    vg(g,S,0,0.62,[[0,'#f0efec'],[1,'#e3e1dc']]);
+    vg(g,S,0.62,1,[[0,'#f7f6f3'],[1,'#e6e4df']]);
+    g.save(); g.beginPath(); g.rect(0,0.62*S,S,0.38*S); g.clip();
+    blurred(g,S,0.002,()=>{ for(let i=0;i<16;i++){ g.strokeStyle = `rgba(130,130,135,${0.06+r()*0.12})`; g.lineWidth = 0.5 + r()*S*0.004; g.beginPath(); const y = (0.6+r()*0.4)*S; g.moveTo(-10,y); g.bezierCurveTo(S*0.3,y+(r()-0.5)*S*0.3,S*0.6,y+(r()-0.5)*S*0.3,S+10,y+(r()-0.5)*S*0.2); g.stroke(); } });
+    g.restore();
+    vg(g,S,0.6,0.625,[[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,.08)']]);
+    g.fillStyle='rgba(255,255,255,.6)'; g.fillRect(0,0.62*S,S,Math.max(1,S*0.002));
+    glow(g,S,0.75,0.15,0.8,'rgba(255,255,255,.4)'); vignette(g,S,.14); noise(g,S,4,r);
+  }},
+  garden:{name:'Garden', tone:'#a3b78b', surface:0.84, draw(g,S,r){
+    vg(g,S,0,0.73,[[0,'#46663a'],[1,'#8ba96b']]);
+    blurred(g,S,0.01,()=>{ for(let i=0;i<45;i++){ g.fillStyle = ['rgba(235,240,180,.35)','rgba(140,180,100,.45)','rgba(60,95,50,.5)'][i%3]; g.beginPath(); g.arc(r()*S, r()*0.73*S, S*(0.015+r()*0.07), 0, 7); g.fill(); } });
+    blurred(g,S,0.006,()=>{ for(let i=0;i<22;i++){ const left = i%2; g.save(); g.translate((left? r()*0.18 : 0.82+r()*0.18)*S,(0.05+r()*0.62)*S); g.rotate(r()*3.14); g.fillStyle='rgba(40,70,35,.7)'; g.beginPath(); g.ellipse(0,0,S*0.07,S*0.024,0,0,7); g.fill(); g.restore(); } });
+    vg(g,S,0.73,1,[[0,'#c2bcae'],[1,'#a0998b']]);
+    g.fillStyle='rgba(255,255,255,.35)'; g.fillRect(0,0.73*S,S,Math.max(1,S*0.003));
+    vg(g,S,0.73,0.77,[[0,'rgba(0,0,0,.12)'],[1,'rgba(0,0,0,0)']]);
+    glow(g,S,0.8,0.1,0.8,'rgba(255,245,200,.35)'); vignette(g,S,.25); noise(g,S,14,r);
+  }},
+  concrete:{name:'Concrete', tone:'#cbc7c0', surface:0.86, draw(g,S,r){
+    vg(g,S,0,0.72,[[0,'#d9d6d1'],[1,'#c8c4be']]);
+    vg(g,S,0.72,1,[[0,'#bcb7af'],[1,'#a39e95']]);
+    blurred(g,S,0.03,()=>{ for(let i=0;i<30;i++){ g.fillStyle = r()<.5?'rgba(0,0,0,.05)':'rgba(255,255,255,.06)'; g.beginPath(); g.arc(r()*S,r()*S,S*(0.03+r()*0.08),0,7); g.fill(); } });
+    vg(g,S,0.72,0.76,[[0,'rgba(0,0,0,.14)'],[1,'rgba(0,0,0,0)']]);
+    glow(g,S,0.3,0.2,0.8,'rgba(255,255,255,.3)'); vignette(g,S,.25); noise(g,S,18,r);
+  }},
+  festive:{name:'Festive', tone:'#4e1825', dark:true, surface:0.87, draw(g,S,r){
+    vg(g,S,0,0.74,[[0,'#6e2535'],[1,'#47151f']]);
+    blurred(g,S,0.012,()=>{ for(let i=0;i<34;i++){ g.fillStyle = `rgba(255,${180+r()*50|0},90,${0.25+r()*0.35})`; g.beginPath(); g.arc(r()*S, r()*0.6*S, S*(0.012+r()*0.05), 0, 7); g.fill(); } });
+    for(let i=0;i<=24;i++){ const x = i/24*S, y = S*(0.08 + 0.06*Math.sin(i/24*Math.PI)); g.fillStyle='rgba(255,230,160,.95)'; g.beginPath(); g.arc(x,y,S*0.005,0,7); g.fill(); }
+    vg(g,S,0.74,1,[[0,'#5c3823'],[1,'#3a2215']]);
+    grainLines(g,S,0.74,1,r,'rgba(20,10,5,.25)',50);
+    g.fillStyle='rgba(255,210,150,.25)'; g.fillRect(0,0.74*S,S,Math.max(1,S*0.002));
+    [[0.08,0.95],[0.92,0.93],[0.15,0.88]].forEach(([x,y])=>{ for(let k=0;k<26;k++){ const a=r()*7, d=r()*S*0.04; g.fillStyle = r()<.5?'#f39a1e':'#f7b733'; g.beginPath(); g.arc(x*S+Math.cos(a)*d, y*S+Math.sin(a)*d*0.6, S*0.007, 0, 7); g.fill(); } });
+    vignette(g,S,.35); noise(g,S,8,r);
+  }},
+  plain:{name:'Plain colour', tone:null, surface:null, draw(g,S){ g.fillStyle = draft.backdrop; g.fillRect(0,0,S,S); }}
+};
+const SCENE_FOR = { 'Kurta':['boutique','studio','linen'], 'Saree':['boutique','studio','linen'], 'Clothes':['boutique','studio','linen'],
+  'Shoes':['concrete','studio','wood'], 'Bags':['boutique','concrete','marble'], 'Jewellery':['marble','linen','festive'],
+  'Cosmetics':['marble','wood','studio'], 'Cups & kitchen':['wood','marble','linen'], 'Plants':['garden','wood','concrete'],
+  'Food':['wood','linen','festive'], 'Other':['studio','wood','marble'] };
+const sceneCache = {};
+function sceneCanvas(id, S){
+  const key = id==='plain' ? `plain-${draft.backdrop}-${S}` : `${id}-${S}`;
+  if(sceneCache[key]) return sceneCache[key];
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'); SCENES[id].draw(g, S, rng(id.length*977 + 13));
+  return sceneCache[key] = c;
+}
+draft.scene = 'boutique'; draft.scenePicked = false;
+const currentScene = () => ({id:draft.scene, ...SCENES[draft.scene]});
+function renderScenePicker(){
+  const rec = SCENE_FOR[$('#fCat').value] || SCENE_FOR.Other;
+  if(!draft.scenePicked) draft.scene = rec[0];
+  const wrap = $('#scenes'); wrap.innerHTML = '';
+  [...rec, ...Object.keys(SCENES).filter(k=>!rec.includes(k))].forEach(id => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'scene';
+    b.setAttribute('aria-pressed', id===draft.scene);
+    b.innerHTML = `<img alt="" src="${sceneCanvas(id,120).toDataURL('image/jpeg',.8)}">${esc(SCENES[id].name)}${id===rec[0]?'<span class="sug">Best</span>':''}`;
+    b.onclick = () => { draft.scene = id; draft.scenePicked = true; renderScenePicker(); enhance(); };
+    wrap.append(b);
+  });
+  $('#plainRow').hidden = draft.scene !== 'plain';
+  $('#sceneHint').textContent = `· suggested for ${$('#fCat').value.toLowerCase()}`;
+}
+$('#fCat').onchange = () => { draft.scenePicked = false; renderScenePicker(); enhance(); };
+renderScenePicker();
+
+/* AI suggests the category from the photo, so the right scene is picked */
+async function detectCategory(){
+  const sample = samplePromise ? await samplePromise : null;
+  if(!sample || !srcFile) return;
+  const cats = [...$('#fCat').options].map(o=>o.value);
+  try{
+    const r = await sample.json(`This is a product photo from a small online shop in Nepal. Reply with only JSON {"category": one of ${JSON.stringify(cats)}, "name": short English product name, max 4 words}.`, {images:[srcFile], modelTier:'quick'});
+    if(r && cats.includes(r.category)){ $('#fCat').value = r.category; if(!draft.scenePicked) renderScenePicker(); enhance(); }
+    if(r && r.name && !$('#fName').value.trim()) $('#fName').placeholder = r.name + ' (suggested)';
+  }catch(e){}
+}
+
+function enhanced(size){
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d');
+  const sc = currentScene();
+  g.drawImage(sceneCanvas(sc.id, size), 0, 0);
+  if(draft.removeBg && cut){
+    let s, dw, dh, ox, oy;
+    if(sc.surface){
+      const base = sc.surface*size;
+      s = Math.min(size*0.62/cut.w, size*0.54/cut.h, (base - size*0.08)/cut.h);
+      dw = cut.w*s; dh = cut.h*s; ox = (size-dw)/2; oy = base - dh;
+      g.save(); g.filter = `blur(${Math.round(size*0.018)}px)`; g.fillStyle = `rgba(0,0,0,${sc.dark?.45:.3})`;
+      g.beginPath(); g.ellipse(size/2, base, dw*0.46, size*0.022, 0, 0, Math.PI*2); g.fill(); g.restore();
+      g.save(); g.filter = `blur(${Math.round(size*0.005)}px)`; g.fillStyle = 'rgba(0,0,0,.35)';
+      g.beginPath(); g.ellipse(size/2, base, dw*0.36, size*0.008, 0, 0, Math.PI*2); g.fill(); g.restore();
+      drawCut(g, ox, oy, dw, dh);
+    } else {
+      s = Math.min(size*0.68/cut.w, size*0.68/cut.h);
+      dw = cut.w*s; dh = cut.h*s; ox = (size-dw)/2; oy = (size-dh)/2;
+      g.save(); g.shadowColor = 'rgba(0,0,0,.28)'; g.shadowBlur = size*0.03; g.shadowOffsetY = size*0.018;
+      drawCut(g, ox, oy, dw, dh); g.restore();
+    }
+    if(size === 640) xform = {size, s, ox, oy, tilt:photoTilt};
+    return c;
+  }
+  const pad = size*0.08, box = size - pad*2;
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,.25)'; g.shadowBlur = size*0.04; g.shadowOffsetY = size*0.015;
+  roundRect(g, pad, pad, box, box, size*0.04); g.fillStyle='#fff'; g.fill();
+  g.shadowColor = 'transparent';
+  roundRect(g, pad, pad, box, box, size*0.04); g.clip();
+  drawPhotoIn(g, size/2, size/2, box, box);
+  g.restore();
+  return c;
+}
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function enhance(){ if(!srcImage) return; draft.img = enhanced(640).toDataURL('image/jpeg', .82); $('#imgAfter').src = draft.img; }
+
+/* ---------- video ---------- */
+let videoBlob = null, videoExt = 'webm';
+/* Full-screen 9:16 composition. TikTok covers the bottom ~20% (caption) and a right-hand
+   column (buttons), so text sits in the top third and the product sits above the caption area. */
+function contactShadow(g, cx, base, dw, dark){
+  g.save(); g.filter = 'blur(16px)'; g.fillStyle = `rgba(0,0,0,${dark?.45:.3})`; g.beginPath(); g.ellipse(cx, base, dw*0.46, 18, 0, 0, Math.PI*2); g.fill(); g.restore();
+  g.save(); g.filter = 'blur(4px)'; g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, base, dw*0.36, 7, 0, 0, Math.PI*2); g.fill(); g.restore();
+}
+function photoCard(g, cx, cy, box){
+  g.save(); g.shadowColor='rgba(0,0,0,.3)'; g.shadowBlur=30; g.shadowOffsetY=12; roundRect(g, cx-box/2, cy-box/2, box, box, 24); g.fillStyle='#fff'; g.fill(); g.restore();
+  g.save(); roundRect(g, cx-box/2, cy-box/2, box, box, 24); g.clip(); drawPhotoIn(g, cx, cy, box, box); g.restore();
+}
+function composeVertical(){
+  const W=720, H=1280, c = document.createElement('canvas'); c.width=W; c.height=H;
+  const g = c.getContext('2d'), sc = currentScene(), useCut = draft.removeBg && cut;
+  if(sc.surface){
+    const S2 = Math.min(2000, Math.max(1280, Math.ceil(280/(1-sc.surface))));
+    const oy = Math.min(0, Math.max(1000 - sc.surface*S2, H - S2));
+    g.drawImage(sceneCanvas(sc.id, S2), (W-S2)/2, oy);
+    const base = oy + sc.surface*S2;
+    if(useCut){
+      const s = Math.min(600/cut.w, 470/cut.h), dw = cut.w*s, dh = cut.h*s;
+      contactShadow(g, W/2, base, dw, sc.dark);
+      drawCut(g, (W-dw)/2, base-dh, dw, dh);
+    } else photoCard(g, W/2, base-250, 460);
+  } else {
+    g.drawImage(sceneCanvas(sc.id, 1280), (W-1280)/2, 0);
+    if(useCut){
+      const s = Math.min(600/cut.w, 500/cut.h), dw = cut.w*s, dh = cut.h*s;
+      g.save(); g.shadowColor='rgba(0,0,0,.28)'; g.shadowBlur=36; g.shadowOffsetY=20;
+      drawCut(g, (W-dw)/2, 790-dh/2, dw, dh); g.restore();
+    } else photoCard(g, W/2, 790, 480);
+  }
+  return c;
+}
+function hexA(hex, a){ const n = parseInt(String(hex).slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+function fitFont(g, text, weight, size, family, maxW){ let s = size; do { g.font = `${weight} ${s}px ${family}`; s -= 2; } while(g.measureText(text).width > maxW && s > 20); }
+const APPAREL = ['Kurta','Saree','Clothes','Shoes'];
+function drawFrame(g, t, comp, info, T = 8){
+  const W=720, H=1280, sc = currentScene(), dark = !!sc.dark;
+  const ink = dark ? '#ffffff' : '#1b1d3a', ink2 = dark ? 'rgba(255,255,255,.8)' : 'rgba(27,29,58,.75)';
+  const ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+  // each photo gets its turn with a slow push-in; the last one stays under the call to action
+  const comps = Array.isArray(comp) ? comp : [comp];
+  t = Math.max(0, t);
+  const seg = (T - 2.2) / comps.length, k = Math.max(0, Math.min(comps.length - 1, Math.floor(t / seg))), local = t - k*seg;
+  const span = k === comps.length - 1 ? seg + 2.2 : seg;
+  const drawComp = (c, lt, alpha) => { const z = 1 + 0.06*Math.min(1, lt/span); g.save(); g.globalAlpha = alpha; g.translate(W/2, H*0.62); g.scale(z, z); g.drawImage(c, -W/2, -H*0.62); g.restore(); };
+  drawComp(comps[k], local, 1);
+  if(k < comps.length - 1 && local > seg - 0.35) drawComp(comps[k+1], 0, (local - (seg - 0.35))/0.35);
+  if(comps.length > 1){ // slide dots
+    const n = comps.length, dx = 18, x0 = W/2 - (n-1)*dx/2;
+    for(let i = 0; i < n; i++){ g.fillStyle = i === k ? '#ffffff' : 'rgba(255,255,255,.5)'; g.beginPath(); g.arc(x0 + i*dx, 1000, i === k ? 6 : 5, 0, Math.PI*2); g.fill(); }
+  }
+  // soft band behind the top text so it reads on any scene
+  const tone = sc.tone || draft.backdrop, band = g.createLinearGradient(0,0,0,560);
+  band.addColorStop(0, hexA(tone,.92)); band.addColorStop(.7, hexA(tone,.55)); band.addColorStop(1, hexA(tone,0));
+  g.fillStyle = band; g.fillRect(0,0,W,560);
+  g.textAlign = 'center';
+  // shop name pill
+  const head = info.code ? `${info.shop}  ·  Code ${info.code}` : info.shop;
+  fitFont(g, head, 700, 30, '"Bricolage Grotesque", sans-serif', 560);
+  const sw = Math.min(620, g.measureText(head).width + 52);
+  g.fillStyle = dark ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.8)'; roundRect(g, (W-sw)/2, 112, sw, 56, 28); g.fill();
+  g.fillStyle = ink; g.fillText(head, W/2, 150);
+  // name + second line
+  const a1 = ease((t-0.4)/0.5);
+  if(a1 > 0){
+    g.globalAlpha = a1; g.fillStyle = ink;
+    fitFont(g, info.name, 700, 54, '"Bricolage Grotesque", sans-serif', 600);
+    g.fillText(info.name, W/2, 250 + (1-a1)*20);
+    g.font = '500 30px Hind, sans-serif'; g.fillStyle = ink2;
+    g.fillText(infoLine(info), W/2, 298 + (1-a1)*20);
+    g.globalAlpha = 1;
+  }
+  // price pops in (old price crossed out when there is an offer)
+  const p = ease((t-1.1)/0.45);
+  if(p > 0){
+    g.save(); g.translate(W/2, 378); g.scale(0.7 + 0.3*p, 0.7 + 0.3*p); g.globalAlpha = p;
+    pricePill(g, 0, -46, 92, info, 'center'); g.restore();
+  }
+  // offer label, then the call to action takes its place
+  const ol = offerLabel(info);
+  if(ol){
+    const oa = ease((t-1.6)/0.4) * (1 - ease((t-(T-3.2))/0.3));
+    if(oa > 0){ g.save(); g.globalAlpha = oa; pill(g, W/2, 446, 62, ol, '700 32px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff', 'center'); g.restore(); }
+  }
+  // call to action at the end
+  const c = ease((t-(T-2.8))/0.4);
+  if(c > 0){
+    g.globalAlpha = c; g.font = '700 32px "Bricolage Grotesque", sans-serif';
+    const label = info.code ? `Link in bio → code ${info.code}` : 'Order now · link in bio', cw = g.measureText(label).width + 60;
+    g.fillStyle = dark ? '#ffffff' : '#1b1d3a'; roundRect(g, (W-cw)/2, 446 + (1-c)*16, cw, 62, 31); g.fill();
+    g.fillStyle = dark ? '#1b1d3a' : '#ffffff'; g.fillText(label, W/2, 488 + (1-c)*16); g.globalAlpha = 1;
+  }
+}
+function makeVideo(info, comps){
+  const stage = $('#stage'), g = stage.getContext('2d');
+  const prod = comps && comps.length ? comps : composeVertical();
+  stage.hidden = false; $('#vidOut').hidden = true; videoBlob = null; videoReady = false; syncPostAs();
+  const bar = $('#recProg i'); $('#recProg').hidden=false;
+  const secs = Math.max(8, (Array.isArray(prod) ? prod.length : 1)*2.2 + 2.2), T = Math.round(secs*1000);
+  let rec = null, chunks = [];
+  const types = ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
+  const mime = (window.MediaRecorder && types.find(t => MediaRecorder.isTypeSupported(t))) || '';
+  if(mime && stage.captureStream){
+    try{
+      rec = new MediaRecorder(stage.captureStream(30), {mimeType:mime, videoBitsPerSecond:4_000_000});
+      videoExt = mime.includes('mp4') ? 'mp4' : 'webm';
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+      rec.onstop = () => {
+        videoBlob = new Blob(chunks, {type: mime.split(';')[0]});
+        const v = $('#vidOut'); v.src = URL.createObjectURL(videoBlob); v.hidden = false; stage.hidden = true; v.play().catch(()=>{});
+        videoReady = true; shareFiles.photoVideo = [new File([videoBlob], `${slugify(S.shop.name)}-video.${videoExt}`, {type: videoBlob.type})]; syncPostAs(); $('#recNote').textContent = `Video ready (${videoExt.toUpperCase()}, ${Math.round(secs)} seconds).`; $('#recProg').hidden=true;
+      };
+      rec.start();
+    }catch(e){ rec = null; }
+  }
+  $('#recNote').textContent = rec ? `Recording your ${Math.round(secs)}-second video…` : 'This browser cannot record video. Use the photo slides instead.';
+  const t0 = performance.now();
+  (function loop(now){
+    const el = Math.max(0, Math.min(T, now - t0));
+    drawFrame(g, el/1000, prod, info, secs); bar.style.width = (el/T*100)+'%';
+    if(el < T) requestAnimationFrame(loop);
+    else if(rec) setTimeout(()=>rec.stop(), 120);
+  })(t0);
+}
+
+/* ---------- AI caption ---------- */
+let samplePromise = null;
+if(window.claude?.use) samplePromise = window.claude.use('sample').catch(()=>null);
+function templateCaption(info){
+  const tags = ['nepalishop','kathmandu','onlineshoppingnepal', slugify(info.category), info.offer ? slugify(info.offer) : 'newarrival', slugify(info.shop)];
+  const n = info.name.toLowerCase(), low = info.stock > 0 && info.stock <= 3;
+  const deal = { roman: info.oldPrice ? `🔥 ${info.offer||'Offer'}: ${info.oldPrice} ko ${info.price} matra (${info.pct}% off)!` : `${info.price} matra!`,
+    nepali: info.oldPrice ? `🔥 ${info.offer||'अफर'}: ${info.oldPrice} को ${info.price} मात्र (${info.pct}% छुट)!` : `${info.price} मात्र!`,
+    english: info.oldPrice ? `🔥 ${info.offer||'Offer'}: was ${info.oldPrice}, now ${info.price} (${info.pct}% off)!` : `Only ${info.price}!` }[info.lang||'roman'];
+  const body = {
+    roman: `Naya ${n} aayo ✨ ${deal}\nSizes: ${info.sizes}. Valley bhitra 1 din ma delivery, COD available.${low ? `\nStock ${info.stock} piece matra baki!` : ''}\nOrder garna bio ko link click garnus 🛍️`,
+    nepali: `नयाँ ${info.name} आयो ✨ ${deal}\nसाइज: ${info.sizes}। उपत्यकाभित्र १ दिनमा डेलिभरी, क्यास अन डेलिभरी उपलब्ध।${low ? `\nस्टक ${info.stock} वटा मात्र बाँकी!` : ''}\nअर्डर गर्न बायोको लिङ्कमा क्लिक गर्नुहोस् 🛍️`,
+    english: `New ${n} just in ✨ ${deal}\nSizes: ${info.sizes}. Delivery in 1 day inside the valley, cash on delivery available.${low ? `\nOnly ${info.stock} left!` : ''}\nTap the link in bio to order 🛍️`
+  }[info.lang||'roman'];
+  const codeLine = info.code ? `\n${{roman:'Product code', nepali:'प्रोडक्ट कोड', english:'Product code'}[info.lang||'roman']}: ${info.code}` : '';
+  return body + codeLine + '\n\n' + tags.map(t=>'#'+t.replace(/\s+/g,'')).join(' ');
+}
+async function aiCaption(info, fresh, image){
+  const sample = samplePromise ? await samplePromise : null;
+  if(!sample || !image) return null;
+  const prompt = `You write TikTok captions for a small online clothing and goods shop in Nepal. Look at the product photo.
+Shop: ${info.shop} (${info.loc}). Price: ${info.price}. Sizes: ${info.sizes}. Category: ${info.category}. Seller's product name (may be empty): "${info.rawName}". What's special, from the seller (may be empty): "${info.notes||''}".${info.script ? `\nThe seller's spoken script in the video: "${info.script}"` : ''}
+${info.oldPrice || info.offer ? `Offer: ${info.offer || 'discount'}${info.oldPrice ? `, old price ${info.oldPrice}, now ${info.price} (${info.pct}% off)` : ''}. Make the offer the first thing people read.\n` : ''}${info.stock > 0 && info.stock <= 3 ? `Only ${info.stock} left in stock: mention it to create urgency.\n` : ''}${info.code ? `Product code: ${info.code}. Customers type this code on the shop link in bio to find the product, so end the caption with "Code ${info.code}".\n` : ''}Caption language: ${LANG_RULE[info.lang||'roman']}
+Reply with only JSON: {"name": short English product name, max 4 words, describing what you see; "caption": 2-3 short lines in the caption language above, include the price and sizes, mention cash on delivery and the link in bio, 1-2 emoji, no hashtags; "hashtags": array of 6 lowercase hashtags without #, mixing Nepal shopping tags and the product; "description": one plain English sentence for the shop page, max 20 words}.`;
+  try{
+    const r = await sample.json(prompt, {images:[image], modelTier:'quick', cache: fresh ? false : true});
+    if(!r || !r.caption) return null;
+    return { name: String(r.name||'').trim(), desc: String(r.description||'').trim(),
+      caption: String(r.caption).trim() + '\n\n' + (Array.isArray(r.hashtags)? r.hashtags.slice(0,8).map(t=>'#'+String(t).replace(/^#|\s+/g,'')).join(' ') : '') };
+  }catch(e){ return null; }
+}
+
+function readForm(){
+  const price = Number($('#fPrice').value), stock = Number($('#fStock').value||0), old = Number($('#fOldPrice').value||0);
+  return { price, stock, rawName: $('#fName').value.trim(), category: $('#fCat').value, notes: $('#fNotes').value.trim(),
+    oldPrice: old > price && price > 0 ? old : 0, offer: $('#fOffer').value };
+}
+/* extra fields shared by every video, caption and sticker */
+function offerInfo(f){
+  return { oldPrice: f.oldPrice ? npr(f.oldPrice) : '', pct: f.oldPrice ? Math.round((1 - f.price/f.oldPrice)*100) : 0,
+    offer: f.offer, stock: f.stock, lang: captionLang };
+}
+let captionLang = 'roman';
+function syncLang(){ $$('#langChips .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === captionLang)); }
+$$('#langChips .chip').forEach(b => b.onclick = () => { captionLang = b.dataset.lang; syncLang(); });
+syncLang();
+const LANG_RULE = {
+  roman: 'Write in Romanized Nepali mixed with simple English, the way young Nepalis type on TikTok.',
+  nepali: 'Write in Nepali using Devanagari script. Keep prices as written.',
+  english: 'Write in simple, friendly English that Nepali shoppers understand.'
+};
+function offerLine(i){
+  if(!i.oldPrice) return i.offer ? `${i.offer}!` : '';
+  return `${i.offer ? i.offer + ': ' : ''}${i.oldPrice} bata ${i.price} (${i.pct}% off)`;
+}
+async function writeCaption(info, fresh, mode='photo'){
+  const box = $(mode==='video' ? '#captionV' : '#captionOut'), src = $(mode==='video' ? '#capSourceV' : '#capSource');
+  box.textContent = 'Writing your caption…'; src.textContent = '';
+  const ai = await aiCaption(info, fresh, mode==='video' ? vState.frameBlob : srcFile);
+  if(ai){
+    box.textContent = ai.caption; src.textContent = mode==='video' ? 'Written by AI from your video' : 'Written by AI from your photo';
+    if(!$('#fName').value.trim() && ai.name){ $('#fName').value = ai.name; draft.aiName = ai.name; }
+    draft.desc = ai.desc;
+  } else {
+    box.textContent = templateCaption(info); src.textContent = 'From a template';
+  }
+  syncTikTokPreview();
+}
+function syncTikTokPreview(){
+  const u = '@' + slugify(S.shop.name);
+  $('#ttUser').textContent = u; $$('.ttUser').forEach(el => el.textContent = u);
+  $('#ttCap').textContent = $('#captionOut').innerText.replace(/\s+/g,' ').trim();
+  $('#ttCapV').textContent = $('#captionV').innerText.replace(/\s+/g,' ').trim();
+  $('#ttCapS').textContent = $('#ttCap').textContent;
+}
+$('#captionOut').addEventListener('input', syncTikTokPreview);
+$('#captionV').addEventListener('input', syncTikTokPreview);
+function markStep(n, done=true){ $('#st'+n).classList.toggle('done', done); }
+$('#lnkTikTok').addEventListener('click', () => markStep(2));
+$('#phone').addEventListener('click', () => { const v = $('#vidOut'); if(v.hidden) return; v.paused ? v.play().catch(()=>{}) : v.pause(); });
+
+/* ---------- photo slides (TikTok photo post customers swipe through) ---------- */
+let slides = [], slideIdx = 0, videoReady = false, postAs = 'video';
+function slideCanvas(draw){ const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const g = c.getContext('2d'); g.scale(1.5, 1.5); draw(g); return c; }
+function slideCounter(g, i, total, hint){
+  g.textAlign = 'center'; g.font = '700 26px "Bricolage Grotesque", sans-serif';
+  const txt = `${i}/${total}`, w = g.measureText(txt).width + 40;
+  g.fillStyle = 'rgba(27,29,58,.78)'; roundRect(g, 720-32-w, 116, w, 48, 24); g.fill();
+  g.fillStyle = '#ffffff'; g.fillText(txt, 720-32-w/2, 149);
+  if(hint){ g.font = '600 26px Hind, sans-serif'; const label = 'Swipe to see all photos  ›', hw = g.measureText(label).width + 44;
+    g.fillStyle = 'rgba(27,29,58,.82)'; roundRect(g, 360-hw/2, 1024, hw, 50, 25); g.fill(); g.fillStyle = '#ffffff'; g.fillText(label, 360, 1058); }
+}
+function slideTop(g, info){
+  const sc = currentScene(), dark = !!sc.dark, tone = sc.tone || draft.backdrop, band = g.createLinearGradient(0,0,0,330);
+  band.addColorStop(0, hexA(tone,.9)); band.addColorStop(1, hexA(tone,0)); g.fillStyle = band; g.fillRect(0,0,720,330);
+  pill(g, 32, 112, 56, info.shop, '700 28px "Bricolage Grotesque", sans-serif', dark ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.85)', dark ? '#ffffff' : '#1b1d3a');
+  pricePill(g, 32, 196, 76, info);
+  if(info.code) pill(g, 32, 286, 50, `Code ${info.code}`, '700 26px "Bricolage Grotesque", sans-serif', '#1b1d3a', '#ffffff');
+}
+function orderSlide(g, comp, info){
+  const small = document.createElement('canvas'); small.width = 36; small.height = 64;
+  small.getContext('2d').drawImage(comp, 0, 0, 36, 64);
+  g.imageSmoothingEnabled = true; g.drawImage(small, 0, 0, 720, 1280);
+  g.fillStyle = 'rgba(27,29,58,.74)'; g.fillRect(0,0,720,1280);
+  g.textAlign = 'center'; g.fillStyle = '#ffffff';
+  g.font = '700 64px "Bricolage Grotesque", sans-serif'; g.fillText('Order now', 360, 300);
+  const ol = offerLabel(info);
+  if(ol) pill(g, 360, 336, 56, ol, '700 28px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff', 'center');
+  g.fillStyle = '#ffffff'; fitFont(g, info.name, 700, 46, '"Bricolage Grotesque", sans-serif', 620); g.fillText(info.name, 360, 474);
+  pricePill(g, 360, 510, 100, info, 'center');
+  g.textAlign = 'center'; g.font = '500 30px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.88)';
+  g.fillText(infoLine(info), 360, 670); g.fillText('Cash on delivery · eSewa · Khalti', 360, 714);
+  pill(g, 360, 760, 72, info.code ? `Link in bio → code ${info.code}` : 'Tap the link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
+  g.textAlign = 'center'; g.font = '500 28px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)';
+  g.fillText(info.code ? productUrl(info) : shopUrl(), 360, 880); g.fillText(`${info.shop} · ${info.loc}`, 360, 922);
+}
+function makeSlides(info, comps){
+  const total = comps.length + 1;
+  const out = [slideCanvas(g => { drawFrame(g, 4.2, comps[0], info); slideCounter(g, 1, total, total > 1); })];
+  for(let i = 1; i < comps.length; i++) out.push(slideCanvas(g => { g.drawImage(comps[i], 0, 0); slideTop(g, info); slideCounter(g, i+1, total, false); }));
+  out.push(slideCanvas(g => { orderSlide(g, comps[0], info); slideCounter(g, total, total, false); }));
+  return out;
+}
+function showSlides(){
+  const car = $('#carousel'), dots = $('#dots');
+  car.innerHTML = ''; dots.innerHTML = ''; slideIdx = 0;
+  slides.forEach((c, i) => {
+    const im = new Image(); im.alt = `Slide ${i+1} of ${slides.length}`; im.src = c.toDataURL('image/jpeg', .82); car.append(im);
+    const d = document.createElement('i'); if(!i) d.className = 'on'; dots.append(d);
+  });
+  car.scrollLeft = 0;
+  $('#slidesInfo').textContent = `${slides.length} slides`;
+  $('#slidesBox').hidden = false;
+}
+$('#carousel').addEventListener('scroll', e => {
+  const c = e.currentTarget, i = Math.round(c.scrollLeft / Math.max(1, c.clientWidth));
+  if(i !== slideIdx){ slideIdx = i; [...$('#dots').children].forEach((d, k) => d.className = k === i ? 'on' : ''); }
+});
+$('#carousel').addEventListener('keydown', e => {
+  const c = e.currentTarget; if(e.key === 'ArrowRight') c.scrollBy({left:c.clientWidth, behavior:'smooth'}); if(e.key === 'ArrowLeft') c.scrollBy({left:-c.clientWidth, behavior:'smooth'});
+});
+const slideName = i => `${slugify(S.shop.name)}-${slugify($('#fName').value || 'product')}-${i+1}.jpg`;
+const canvasBlob = c => new Promise(r => c.toBlob(r, 'image/jpeg', .9));
+$('#btnSaveSlide').onclick = async () => { const c = slides[slideIdx]; if(c) await saveFile(slideName(slideIdx), await canvasBlob(c), `Slide ${slideIdx+1} saved`); };
+function syncPostAs(){
+  $$('#postAs .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.as === postAs));
+  const photosMode = postAs === 'photos';
+  $('#st1 b').textContent = photosMode ? `Save all ${slides.length} slides and copy caption` : 'Save video and copy caption';
+  $('#st1 span').textContent = photosMode ? 'Your phone may ask once per photo' : 'One tap does both';
+  $('#st2 span').textContent = photosMode ? `Tap +, Upload, select the ${slides.length} slides in order, paste the caption` : 'Tap +, pick the video, paste the caption, add a trending sound';
+  $('#btnSaveVid').disabled = photosMode ? !slides.length : !videoReady;
+  syncShare();
+}
+$$('#postAs .chip').forEach(b => b.onclick = () => { postAs = b.dataset.as; markStep(1, false); markStep(2, false); syncPostAs(); });
+syncPostAs();
+let lastInfo = null;
+$('#btnMake').onclick = async () => {
+  const f = readForm(), err = $('#formErr');
+  const problems = [];
+  if(!srcImage) problems.push('add a photo'); if(!(f.price>0)) problems.push('enter a price'); if(!draft.sizes.length) problems.push('pick at least one size');
+  if(problems.length){ err.textContent = 'Please ' + problems.join(', ') + '.'; err.hidden=false; return; }
+  err.hidden = true;
+  const info = { shop:S.shop.name, loc:S.shop.location, price:npr(f.price), sizes:draft.sizes.join(', '), category:f.category, rawName:f.rawName, notes:f.notes, name: f.rawName || f.category, code: nextCode(f.category), ...offerInfo(f) };
+  $('#codeOut').textContent = info.code;
+  lastInfo = info; [1,2,3,'Pin'].forEach(n=>markStep(n,false));
+  $('#result').hidden = false; $('#result').scrollIntoView({behavior:'smooth', block:'start'});
+  $('#btnMake').disabled = true;
+  const capP = writeCaption(info, false);
+  await document.fonts.ready.catch(()=>{});
+  await capP;
+  info.name = $('#fName').value.trim() || info.name;
+  $('#recNote').textContent = 'Preparing your photos…';
+  await new Promise(r => setTimeout(r, 30));
+  const comps = photos.map((_, i) => withPhoto(i, composeVertical));
+  slides = makeSlides(info, comps); showSlides(); shareFiles.slides = null; shareFiles.photoVideo = null;
+  Promise.all(slides.map((c, i) => canvasBlob(c).then(b => new File([b], slideName(i), {type:'image/jpeg'})))).then(f => { shareFiles.slides = f; syncShare(); });
+  postAs = photos.length > 1 ? 'photos' : 'video'; syncPostAs();
+  makeVideo(info, comps);
+  $('#btnMake').disabled = false; $('#btnMake').textContent = 'Make again';
+};
+$('#btnRegen').onclick = () => lastInfo && writeCaption(lastInfo, true);
+$('#btnPin').onclick = () => { if(!lastInfo) return; copyText(pinnedComment({...lastInfo, lang: captionLang})); markStep('Pin'); };
+$('#btnCopyCap').onclick = () => copyText($('#captionOut').innerText);
+
+let downloadsP = window.claude?.use ? window.claude.use('downloads').catch(()=>null) : null;
+const inClaude = !!(window.claude && window.claude.use);
+async function saveFile(filename, data, okMsg='Saved'){
+  const d = downloadsP ? await downloadsP : null;
+  if(!d){
+    if(inClaude){ toast('Saving files is not available here'); return false; }
+    const url = URL.createObjectURL(data), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000); toast(okMsg); return true;
+  }
+  try{ await d.save({filename, data}); toast(okMsg); return true; }
+  catch(e){ if(e.code!=='declined') toast(e.code==='rate_limited' ? 'One moment, then try again' : 'Could not save this file here'); return false; }
+}
+$('#btnSaveVid').onclick = async () => {
+  let copied = false;
+  const cap = navigator.clipboard ? navigator.clipboard.writeText($('#captionOut').innerText).then(() => copied = true, () => {}) : Promise.resolve();
+  if(postAs === 'photos'){
+    if(!slides.length) return;
+    await cap; let saved = 0;
+    for(let i = 0; i < slides.length; i++){
+      const ok = await saveFile(slideName(i), await canvasBlob(slides[i]), `Saved ${i+1} of ${slides.length}`);
+      if(ok) saved++;
+    }
+    if(saved === slides.length){ markStep(1); toast(copied ? 'All slides saved and caption copied. Now open TikTok.' : 'All slides saved. Copy the caption before posting.'); }
+    else if(saved) toast(`${saved} of ${slides.length} slides saved`);
+    return;
+  }
+  if(!videoBlob) return;
+  await cap;
+  const ok = await saveFile(`${slugify(S.shop.name)}-${slugify($('#fName').value||'product')}.${videoExt}`, videoBlob,
+    copied ? 'Video saved and caption copied. Now open TikTok.' : 'Video saved. Copy the caption above before posting.');
+  if(ok) markStep(1);
+};
+$('#btnSavePhoto').onclick = () => { if(!srcImage) return; enhanced(1080).toBlob(b => saveFile(`${slugify($('#fName').value||'product')}.jpg`, b), 'image/jpeg', .9); };
+
+$('#btnPublish').onclick = () => {
+  const f = readForm();
+  if(!draft.img || !(f.price>0)){ toast('Make the video first'); return; }
+  const name = f.rawName || draft.aiName || f.category;
+  const cover = withPhoto(0, () => enhanced(640).toDataURL('image/jpeg', .82));
+  const imgs = photos.length > 1 ? [cover, ...photos.slice(1).map((_, i) => withPhoto(i+1, () => enhanced(480).toDataURL('image/jpeg', .78)))] : null;
+  const code = (lastInfo && lastInfo.code) || nextCode(f.category); S.nextNum++;
+  S.products.push({ id:uid(), code, name, price:f.price, oldPrice:f.oldPrice, offer:f.offer, stock:f.stock, sizes:[...draft.sizes], category:f.category, img:cover, imgs,
+    desc: draft.desc || `${name} from ${S.shop.name}. Sizes ${draft.sizes.join(', ')}.`, caption:$('#captionOut').innerText, created:Date.now(), views:0 });
+  save();
+  // reset studio
+  resetPhotos(); slides = []; $('#slidesBox').hidden = true; videoReady = false;
+  draft = {sizes:['M','L'], backdrop:draft.backdrop, removeBg:draft.removeBg, scene:draft.scene, scenePicked:false}; syncSizes(); renderScenePicker();
+  $('#fName').placeholder = 'Cotton kurta (AI can fill this)';
+  ['#fPrice','#fStock','#fName','#fNotes','#fOldPrice','#fOffer'].forEach(s=>$(s).value=''); fileInput.value='';
+  $('#result').hidden = true; $('#btnMake').textContent='Make video and caption';
+  toast('Added to your shop link'); go('shop');
+};
+
+/* ---------- share sheet: on the website, the phone's share menu opens TikTok with the files ---------- */
+var shareFiles = {photoVideo:null, slides:null, talk:null};
+var canShareFiles = !inClaude && !!navigator.canShare && (() => { try{ return navigator.canShare({files:[new File(['x'], 'x.jpg', {type:'image/jpeg'})]}); }catch(e){ return false; } })();
+function syncShare(){
+  if(!canShareFiles) return;
+  $('#btnShare').hidden = false; $('#btnShareV').hidden = false;
+  const f = postAs === 'photos' ? shareFiles.slides : shareFiles.photoVideo;
+  $('#btnShare').disabled = !f; $('#btnShareV').disabled = !shareFiles.talk;
+}
+async function shareTo(files, caption, onDone){
+  if(!files || !files.length) return;
+  if(navigator.clipboard) navigator.clipboard.writeText(caption).catch(() => {});
+  if(!navigator.canShare({files})){ toast('This phone cannot share these files. Use Save + copy.'); return; }
+  try{ await navigator.share({files}); onDone(); toast('Caption copied. In TikTok, paste it and post.'); }
+  catch(e){ if(e.name !== 'AbortError') toast('Sharing did not work. Use Save + copy.'); }
+}
+$('#btnShare').onclick = () => shareTo(postAs === 'photos' ? shareFiles.slides : shareFiles.photoVideo, $('#captionOut').innerText, () => { markStep(1); markStep(2); });
+$('#btnShareV').onclick = () => shareTo(shareFiles.talk, $('#captionV').innerText, () => { $('#vt1').classList.add('done'); $('#vt2').classList.add('done'); });
+if(!inClaude && !window.claude){ $('#btnAiBox').hidden = true; $('#aiBoxNote').hidden = true; }
+
+/* ---------- talking-video mode ---------- */
+let studioMode = 'photo';
+const vState = { file:null, url:null, dur:0, start:0, end:0, made:false, blob:null, ext:'webm', frameBlob:null, frameImg:null,
+  st:{price:true, info:true, shop:true, end:true, bright:true}, pos:'bottom', priceAt:1, script:'' };
+function setMode(m){
+  studioMode = m;
+  $$('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode===m));
+  const photo = m==='photo';
+  $('#stepPhoto').hidden = !photo; $('#btnMake').hidden = !photo;
+  if(!photo) $('#result').hidden = true;
+  $$('.vm').forEach(el => el.hidden = photo);
+  $('#resultV').hidden = photo || !vState.made;
+  $('#detailsH').textContent = photo ? '2. Price and details' : '1. Price and details';
+  $('#studioSub').textContent = photo ? 'Photo in, TikTok video and caption out.' : 'Your own video, with price stickers, an order card and a caption added.';
+}
+$$('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+/* stickers */
+function syncStickers(){
+  $$('#stickerChips .chip').forEach(b => b.setAttribute('aria-pressed', !!vState.st[b.dataset.st]));
+  $$('#posChips .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.pos===vState.pos));
+  $('#paVal').textContent = vState.priceAt.toFixed(1) + ' s';
+}
+$$('#stickerChips .chip').forEach(b => b.onclick = () => { vState.st[b.dataset.st] = !vState.st[b.dataset.st]; syncStickers(); });
+$$('#posChips .chip').forEach(b => b.onclick = () => { vState.pos = b.dataset.pos; syncStickers(); });
+$('#priceAt').oninput = e => { vState.priceAt = Number(e.target.value); syncStickers(); };
+syncStickers();
+
+/* script + teleprompter */
+function vInfo(){
+  const f = readForm();
+  return { shop:S.shop.name, loc:S.shop.location, price: f.price>0 ? npr(f.price) : '', sizes:draft.sizes.join(', '), category:f.category,
+    rawName:f.rawName, notes:f.notes, name: f.rawName || f.category, code: nextCode(f.category), script: $('#scriptOut').innerText.trim(), ...offerInfo(f) };
+}
+function templateScript(i){
+  const n = (i.rawName || i.category).toLowerCase(), app = APPAREL.includes(i.category);
+  if(i.lang === 'english') return [
+    i.offer ? `${i.offer}! Look at this new ${n} 😍` : `Hello everyone! Look at this new ${n} 😍`,
+    i.notes ? `${i.notes}, really good quality.` : 'Really good quality, and a brand new design.',
+    app ? `Sizes ${i.sizes} are all available.` : 'Stock is limited, so order soon.',
+    i.oldPrice ? `It was ${i.oldPrice}, now only ${i.price}!` : `Price is only ${i.price}!`,
+    i.code ? `Tap the link in bio and find code ${i.code}. Cash on delivery available 🙏` : 'Tap the link in bio to order. Cash on delivery available 🙏' ];
+  if(i.lang === 'nepali') return [
+    i.offer ? `${i.offer}! हेर्नुस् त यो नयाँ ${i.rawName || i.category} 😍` : `नमस्ते! हेर्नुस् त यो नयाँ ${i.rawName || i.category} 😍`,
+    i.notes ? `${i.notes}, एकदम राम्रो क्वालिटी छ।` : 'क्वालिटी एकदम राम्रो छ, डिजाइन पनि नयाँ।',
+    app ? `साइज ${i.sizes} सबै उपलब्ध छ।` : 'स्टक सीमित छ, छिटो अर्डर गर्नुस्।',
+    i.oldPrice ? `${i.oldPrice} को अहिले ${i.price} मात्र!` : `मूल्य ${i.price} मात्र!`,
+    i.code ? `अर्डर गर्न बायोको लिङ्कमा कोड ${i.code} खोज्नुस्। क्यास अन डेलिभरी पनि छ 🙏` : 'अर्डर गर्न बायोको लिङ्क थिच्नुस्। क्यास अन डेलिभरी पनि छ 🙏' ];
+  return [
+    i.offer ? `${i.offer}! Hernus ta yo naya ${n} 😍` : `Namaste! Hernus ta yo naya ${n} 😍`,
+    i.notes ? `${i.notes} — ekdam ramro quality cha.` : 'Quality ekdam ramro cha, design pani ekdam naya.',
+    app ? `Sizes ${i.sizes} sabai available cha.` : 'Stock limited cha, chado order garnus.',
+    i.oldPrice ? `${i.oldPrice} ko ahile ${i.price} matra!` : (i.price ? `Price chai ${i.price} matra!` : 'Price chai ekdam reasonable cha!'),
+    i.code ? `Order garna bio ko link ma code ${i.code} khojnus. Cash on delivery pani cha 🙏` : 'Order garna bio ko link click garnus. Cash on delivery pani cha 🙏'
+  ];
+}
+$('#btnScript').onclick = async () => {
+  const i = vInfo(), btn = $('#btnScript');
+  if(!i.price){ toast('Add the price first, so the script can say it'); $('#fPrice').focus(); return; }
+  btn.disabled = true; $('#scriptOut').textContent = 'Writing your script…';
+  let lines = null;
+  const sample = samplePromise ? await samplePromise : null;
+  if(sample){
+    try{
+      const r = await sample.json(`Write a 20-second TikTok selling script for a shop owner in Nepal who holds the product on camera and talks to viewers.
+${LANG_RULE[i.lang||'roman']} Warm and natural, the way a friendly Kathmandu shopkeeper talks. No stage directions.${i.oldPrice || i.offer ? `\nOffer: ${i.offer || 'discount'}${i.oldPrice ? `, was ${i.oldPrice}, now ${i.price} (${i.pct}% off)` : ''}. Open with the offer.` : ''}
+Shop: ${i.shop}. Product: ${i.rawName || i.category} (${i.category}). Price: ${i.price}. Sizes: ${i.sizes}. What's special: ${i.notes || 'not given'}.
+Reply with only JSON {"lines": [5 to 6 short lines]}. Line 1 is a hook that stops people scrolling. Then 2 or 3 lines on what is special. ${i.code ? `Mention the product code ${i.code} once near the end, telling viewers to find it on the link in bio. ` : ''}One line says the price${APPAREL.includes(i.category)?' and sizes':''}. The last line asks them to order from the link in bio and says cash on delivery is available.`, {modelTier:'quick', cache:false});
+      if(r && Array.isArray(r.lines) && r.lines.length) lines = r.lines.map(String);
+    }catch(e){}
+  }
+  if(!lines) lines = templateScript(i);
+  $('#scriptOut').textContent = lines.join('\n');
+  btn.disabled = false; btn.textContent = 'Write another'; $('#btnPrompter').disabled = false;
+};
+let pTimer = null;
+function stopPrompter(){ cancelAnimationFrame(pTimer); pTimer = null; $('#pPlay').textContent = 'Start'; }
+$('#btnPrompter').onclick = () => {
+  $('#pText').textContent = $('#scriptOut').innerText; $('#prompter').hidden = false; $('#pText').scrollTop = 0; stopPrompter(); $('#pPlay').focus();
+};
+$('#pPlay').onclick = () => {
+  if(pTimer){ stopPrompter(); return; }
+  $('#pPlay').textContent = 'Pause';
+  let acc = 0;
+  (function step(){ acc += Number($('#pSpeed').value) * 0.35; const px = Math.floor(acc); if(px){ $('#pText').scrollTop += px; acc -= px; } pTimer = requestAnimationFrame(step); })();
+};
+$('#pClose').onclick = () => { stopPrompter(); $('#prompter').hidden = true; $('#btnPrompter').focus(); };
+document.addEventListener('keydown', e => { if(e.key==='Escape' && !$('#prompter').hidden) $('#pClose').click(); });
+$('#scriptOut').addEventListener('input', () => { $('#btnPrompter').disabled = !$('#scriptOut').innerText.trim(); });
+
+/* upload + trim */
+const vdrop = $('#vdrop'), vidInput = $('#vidInput');
+vdrop.onclick = () => vidInput.click();
+vdrop.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); vidInput.click(); } };
+vdrop.ondragover = e => { e.preventDefault(); vdrop.style.borderColor='var(--accent)'; };
+vdrop.ondragleave = () => vdrop.style.borderColor='';
+vdrop.ondrop = e => { e.preventDefault(); vdrop.style.borderColor=''; if(e.dataTransfer.files[0]) loadVideo(e.dataTransfer.files[0]); };
+vidInput.onchange = () => vidInput.files[0] && loadVideo(vidInput.files[0]);
+const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}.${Math.floor((s%1)*10)}`;
+function loadVideo(f){
+  if(!f.type.startsWith('video/')){ toast('Please choose a video'); return; }
+  if(vState.url) URL.revokeObjectURL(vState.url);
+  vState.file = f; vState.url = URL.createObjectURL(f);
+  const v = $('#srcPreview'); v.src = vState.url;
+  v.onloadedmetadata = () => {
+    vState.dur = isFinite(v.duration) && v.duration > 0 ? v.duration : 60;
+    vState.start = 0; vState.end = Math.min(vState.dur, 90);
+    ['#trimStart','#trimEnd'].forEach(s => $(s).max = vState.dur.toFixed(1));
+    $('#trimStart').value = 0; $('#trimEnd').value = vState.end.toFixed(1);
+    $('#priceAt').max = Math.max(1, Math.floor(vState.end));
+    $('#trimBox').hidden = false; vdrop.querySelector('b').textContent = 'Change video';
+    syncTrim();
+  };
+}
+function syncTrim(){
+  $('#tsVal').textContent = fmt(vState.start); $('#teVal').textContent = fmt(vState.end);
+  const len = vState.end - vState.start;
+  $('#trimLen').textContent = `Final video: ${len.toFixed(1)} s${vState.st.end ? ' + 2.5 s order card' : ''}.` + (len > 60 ? ' Under 60 seconds keeps more viewers watching.' : '');
+  $('#priceAt').max = Math.max(1, Math.floor(len));
+  if(vState.priceAt > len){ vState.priceAt = Math.max(0, Math.floor(len/3)); $('#priceAt').value = vState.priceAt; syncStickers(); }
+}
+$('#trimStart').oninput = e => { vState.start = Math.min(Number(e.target.value), vState.end - 1); e.target.value = vState.start; $('#srcPreview').currentTime = vState.start; syncTrim(); };
+$('#trimEnd').oninput = e => { vState.end = Math.max(Number(e.target.value), vState.start + 1); e.target.value = vState.end; $('#srcPreview').currentTime = Math.max(vState.start, vState.end - 1.5); syncTrim(); };
+$('#srcPreview').addEventListener('timeupdate', e => { const v = e.target; if(!v.paused && v.currentTime > vState.end) v.currentTime = vState.start; });
+
+function grabFrame(time){
+  return new Promise(resolve => {
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = vState.url;
+    const done = () => {
+      const c = document.createElement('canvas'); c.width = c.height = 640; const g = c.getContext('2d');
+      const vw = v.videoWidth, vh = v.videoHeight;
+      if(vw){ const s = Math.max(640/vw, 640/vh); g.filter = 'brightness(1.06) contrast(1.05) saturate(1.08)'; g.drawImage(v, (640-vw*s)/2, (640-vh*s)/2, vw*s, vh*s); }
+      const dataUrl = c.toDataURL('image/jpeg', .82);
+      c.toBlob(blob => resolve({blob, dataUrl}), 'image/jpeg', .85);
+    };
+    v.onloadeddata = () => { v.onseeked = done; v.currentTime = Math.max(0, time); };
+    v.onerror = () => resolve({blob:null, dataUrl:null});
+  });
+}
+
+/* drawing */
+function infoLine(info){
+  const low = info.stock > 0 && info.stock <= 3 ? ` · Only ${info.stock} left!` : '';
+  return (APPAREL.includes(info.category) ? `Sizes: ${info.sizes}` : 'Cash on delivery available') + low;
+}
+function offerLabel(info){
+  if(info.offer && info.pct) return `${info.offer} · ${info.pct}% off`;
+  if(info.offer) return info.offer;
+  if(info.pct) return `${info.pct}% off`;
+  return '';
+}
+function pricePill(g, x, y, h, info, align='left'){
+  const fNew = `700 ${Math.round(h*0.62)}px "Bricolage Grotesque", sans-serif`, fOld = `500 ${Math.round(h*0.34)}px Hind, sans-serif`;
+  g.font = fNew; const wNew = g.measureText(info.price).width;
+  let wOld = 0; if(info.oldPrice){ g.font = fOld; wOld = g.measureText(info.oldPrice).width + h*0.22; }
+  const w = wNew + wOld + h*0.9, left = align === 'center' ? x - w/2 : x;
+  g.fillStyle = '#e9a21b'; roundRect(g, left, y, w, h, h/2); g.fill();
+  let cx = left + h*0.45; g.textAlign = 'left';
+  if(info.oldPrice){
+    g.font = fOld; g.fillStyle = 'rgba(42,26,0,.62)'; const by = y + h*0.62;
+    g.fillText(info.oldPrice, cx, by); g.fillRect(cx - 2, by - h*0.12, wOld - h*0.22 + 4, Math.max(2, h*0.035)); cx += wOld;
+  }
+  g.font = fNew; g.fillStyle = '#2a1a00'; g.fillText(info.price, cx, y + h*0.69);
+  if(info.pct >= 1){
+    const r = h*0.36, bx = left + w - r*0.5, by = y - r*0.3;
+    g.fillStyle = '#c62828'; g.beginPath(); g.arc(bx, by, r, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#ffffff'; g.font = `700 ${Math.round(r*0.6)}px "Bricolage Grotesque", sans-serif`; g.textAlign = 'center'; g.fillText(`-${info.pct}%`, bx, by + r*0.22);
+  }
+  g.textAlign = 'center';
+  return w;
+}
+function pill(g, x, y, h, text, font, bg, fg, align='left'){
+  g.font = font; const w = g.measureText(text).width + h*0.9;
+  const left = align==='center' ? x - w/2 : x;
+  g.fillStyle = bg; roundRect(g, left, y, w, h, h/2); g.fill();
+  g.fillStyle = fg; g.textAlign = 'center'; g.fillText(text, left + w/2, y + h*0.68);
+  return w;
+}
+function drawSource(g, v, small, bright){
+  const W=720, H=1280, vw = v.videoWidth, vh = v.videoHeight; if(!vw) return;
+  const fx = bright ? 'brightness(1.08) contrast(1.05) saturate(1.08)' : 'none';
+  if(vw/vh > 0.6){
+    const sg = small.getContext('2d'), s0 = Math.max(small.width/vw, small.height/vh);
+    sg.drawImage(v, (small.width-vw*s0)/2, (small.height-vh*s0)/2, vw*s0, vh*s0);
+    g.imageSmoothingEnabled = true; g.drawImage(small, 0, 0, W, H); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(0,0,W,H);
+    const s = W/vw, dh = vh*s; g.save(); g.filter = fx; g.drawImage(v, 0, (H-dh)/2, W, dh); g.restore();
+  } else {
+    const s = Math.max(W/vw, H/vh); g.save(); g.filter = fx; g.drawImage(v, (W-vw*s)/2, (H-vh*s)/2, vw*s, vh*s); g.restore();
+  }
+}
+function drawStickers(g, t, info){
+  const ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+  const st = vState.st, top = vState.pos === 'top';
+  if(st.shop) pill(g, 32, 118, 52, info.code ? `${info.shop} · Code ${info.code}` : info.shop, '700 28px "Bricolage Grotesque", sans-serif', 'rgba(255,255,255,.88)', '#1b1d3a');
+  const py = top ? 196 : 846;
+  if(st.price && info.price){
+    const p = ease((t - vState.priceAt)/0.35);
+    if(p > 0){
+      g.save(); g.globalAlpha = p; g.translate(32 + (1-p)*-40, 0);
+      g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 18; g.shadowOffsetY = 6;
+      pricePill(g, 0, py, 96, info);
+      g.restore();
+    }
+  }
+  if(st.info){
+    const p = ease((t - vState.priceAt - 0.3)/0.35);
+    if(p > 0){
+      const low = info.stock > 0 && info.stock <= 3 ? ` · Only ${info.stock} left!` : '';
+      const txt = (APPAREL.includes(info.category) ? `Sizes: ${info.sizes} · COD` : 'Cash on delivery available') + low;
+      g.save(); g.globalAlpha = p;
+      pill(g, 32, py + (st.price && info.price ? 108 : 0), 54, txt, '600 28px Hind, sans-serif', 'rgba(27,29,58,.88)', '#ffffff');
+      g.restore();
+    }
+  }
+  const ol = offerLabel(info);
+  if(ol && st.price){
+    const p = ease((t - vState.priceAt + 0.2)/0.35);
+    if(p > 0){
+      const oy = top ? py + (st.info ? 172 : 108) : py - 66;
+      g.save(); g.globalAlpha = p; pill(g, 32, oy, 54, ol, '700 28px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff'); g.restore();
+    }
+  }
+}
+function drawEndCard(g, et, info, still, small){
+  const W=720, H=1280, a = 1 - Math.pow(1 - Math.min(1, et/0.35), 3);
+  const sg = small.getContext('2d'); sg.drawImage(still, 0, 0, small.width, small.height);
+  g.drawImage(still, 0, 0); g.save(); g.globalAlpha = a; g.drawImage(small, 0, 0, W, H); g.restore();
+  g.fillStyle = `rgba(27,29,58,${0.15 + 0.6*a})`; g.fillRect(0,0,W,H);
+  g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = '#ffffff';
+  fitFont(g, info.shop, 700, 60, '"Bricolage Grotesque", sans-serif', 620); g.fillText(info.shop, W/2, 430 + (1-a)*20);
+  g.font = '500 30px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText(info.loc, W/2, 478);
+  const ol = offerLabel(info);
+  if(ol) pill(g, W/2, 314, 58, ol, '700 30px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff', 'center');
+  if(info.price) pricePill(g, W/2, 530, 100, info, 'center');
+  pill(g, W/2, 668, 72, info.code ? `Link in bio → code ${info.code}` : 'Order now · link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
+  g.font = '500 28px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'center';
+  g.fillText(info.code ? productUrl(info) : shopUrl(), W/2, 800); g.fillText('COD · eSewa · Khalti', W/2, 842);
+  g.restore();
+}
+
+/* render with the seller's voice */
+async function renderTalking(info, actx){
+  const W=720, H=1280, stage = $('#stageV'), g = stage.getContext('2d'), bar = $('#recProgV i');
+  stage.hidden = false; $('#vidOutV').hidden = true; $('#btnSaveVidV').disabled = true; vState.blob = null; $('#recProgV').hidden = false;
+  const v = document.createElement('video'); v.playsInline = true; v.preload = 'auto'; v.src = vState.url;
+  await new Promise(r => { v.onloadeddata = r; v.onerror = r; });
+  let audioTrack = null;
+  if(actx){ try{ await actx.resume(); const node = actx.createMediaElementSource(v), dest = actx.createMediaStreamDestination(); node.connect(dest); audioTrack = dest.stream.getAudioTracks()[0] || null; }catch(e){ audioTrack = null; } }
+  if(!audioTrack) v.muted = true;
+  const types = audioTrack ? ['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'] : ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
+  const mime = (window.MediaRecorder && types.find(t => MediaRecorder.isTypeSupported(t))) || '';
+  let rec = null, chunks = [];
+  if(mime && stage.captureStream){
+    try{
+      const stream = stage.captureStream(30); if(audioTrack) stream.addTrack(audioTrack);
+      rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond:5_000_000});
+      vState.ext = mime.includes('mp4') ? 'mp4' : 'webm';
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    }catch(e){ rec = null; }
+  }
+  $('#recNoteV').textContent = rec ? (audioTrack ? 'Making your video with your voice…' : 'Making your video (sound could not be kept in this browser)…') : 'This browser cannot make videos. Try Chrome on Android or a computer.';
+  if(!rec) return;
+  await new Promise(r => { v.onseeked = r; v.currentTime = vState.start; });
+  const small = document.createElement('canvas'); small.width = 36; small.height = 64;
+  const still = document.createElement('canvas'); still.width = W; still.height = H;
+  const clipLen = vState.end - vState.start, endLen = vState.st.end ? 2.5 : 0, total = clipLen + endLen;
+  rec.start(); await v.play().catch(()=>{});
+  await new Promise(resolve => {
+    let endT0 = null;
+    (function frame(){
+      let t;
+      if(endT0 === null){
+        t = v.currentTime - vState.start;
+        if(v.currentTime >= vState.end || v.ended){ v.pause(); still.getContext('2d').drawImage(stage, 0, 0); endT0 = performance.now(); }
+        else { drawSource(g, v, small, vState.st.bright); drawStickers(g, t, info); }
+      }
+      if(endT0 !== null){
+        const et = (performance.now() - endT0)/1000; t = clipLen + et;
+        if(endLen) drawEndCard(g, et, info, still, small);
+        if(et >= endLen){ bar.style.width = '100%'; setTimeout(() => rec.stop(), 150); resolve(); return; }
+      }
+      bar.style.width = Math.min(100, t/total*100) + '%';
+      requestAnimationFrame(frame);
+    })();
+  });
+  await new Promise(r => rec.onstop = r);
+  if(actx) actx.close().catch(()=>{});
+  vState.blob = new Blob(chunks, {type: mime.split(';')[0]});
+  const out = $('#vidOutV'); out.src = URL.createObjectURL(vState.blob); out.hidden = false; stage.hidden = true; out.play().catch(()=>{});
+  $('#btnSaveVidV').disabled = false; $('#btnSaveStatusV').disabled = false; $('#recProgV').hidden = true;
+  shareFiles.talk = [new File([vState.blob], `${slugify(S.shop.name)}-video.${vState.ext}`, {type: vState.blob.type})]; syncShare();
+  $('#recNoteV').textContent = `Video ready (${vState.ext.toUpperCase()}, ${total.toFixed(1)} s). Tap it to play with sound.`;
+}
+$('#phoneV').addEventListener('click', () => { const o = $('#vidOutV'); if(o.hidden) return; o.muted = false; o.paused ? o.play().catch(()=>{}) : o.pause(); });
+
+let lastVInfo = null;
+$('#btnMakeV').onclick = async () => {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const i = vInfo(), problems = [];
+  if(!vState.url) problems.push('choose your video'); if(!i.price) problems.push('enter a price'); if(!draft.sizes.length) problems.push('pick at least one size');
+  const err = $('#formErr');
+  if(problems.length){ err.textContent = 'Please ' + problems.join(', ') + '.'; err.hidden = false; toast('Please ' + problems.join(', ')); return; }
+  err.hidden = true;
+  const actx = AC ? new AC() : null;
+  lastVInfo = i; vState.made = true; $('#codeOutV').textContent = i.code; [1,2,3,'Pin'].forEach(n => $('#vt'+n).classList.remove('done'));
+  $('#resultV').hidden = false; $('#resultV').scrollIntoView({behavior:'smooth', block:'start'});
+  const btn = $('#btnMakeV'); btn.disabled = true;
+  const fr = await grabFrame(Math.min(vState.start + 1, vState.end - 0.2));
+  vState.frameBlob = fr.blob; vState.frameImg = fr.dataUrl;
+  const capP = writeCaption(i, false, 'video');
+  await document.fonts.ready.catch(()=>{});
+  await renderTalking(i, actx);
+  await capP;
+  btn.disabled = false; btn.textContent = 'Make again';
+};
+$('#btnRegenV').onclick = () => lastVInfo && writeCaption(lastVInfo, true, 'video');
+$('#btnPinV').onclick = () => { if(!lastVInfo) return; copyText(pinnedComment({...lastVInfo, lang: captionLang})); $('#vtPin').classList.add('done'); };
+$('#btnCopyCapV').onclick = () => copyText($('#captionV').innerText);
+$('#lnkTikTokV').addEventListener('click', () => $('#vt2').classList.add('done'));
+$('#btnSaveVidV').onclick = async () => {
+  if(!vState.blob) return;
+  let copied = false;
+  try{ await navigator.clipboard.writeText($('#captionV').innerText); copied = true; }catch(e){}
+  const ok = await saveFile(`${slugify(S.shop.name)}-${slugify($('#fName').value || 'product')}.${vState.ext}`, vState.blob,
+    copied ? 'Video saved and caption copied. Now open TikTok.' : 'Video saved. Copy the caption before posting.');
+  if(ok) $('#vt1').classList.add('done');
+};
+$('#btnSaveStatusV').onclick = () => {
+  $('#stageV').toBlob(b => b && saveFile(`${slugify(S.shop.name)}-${slugify($('#fName').value || 'product')}-status.jpg`, b, 'Status image saved'), 'image/jpeg', .9);
+};
+$('#btnSaveStatus').onclick = () => {
+  if(!srcImage || !lastInfo){ toast('Make the video first'); return; }
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
+  const g = c.getContext('2d'); g.scale(1.5, 1.5);
+  drawFrame(g, 4.2, photos.length ? withPhoto(0, composeVertical) : composeVertical(), {...lastInfo, name: $('#fName').value.trim() || lastInfo.name});
+  pill(g, 360, 1150, 60, lastInfo.code ? productUrl(lastInfo) : shopUrl(), '600 28px Hind, sans-serif', 'rgba(27,29,58,.9)', '#ffffff', 'center');
+  c.toBlob(b => b && saveFile(`${slugify(S.shop.name)}-${slugify($('#fName').value || 'product')}-status.jpg`, b, 'Status image saved'), 'image/jpeg', .9);
+};
+$('#btnPublishV').onclick = () => {
+  const f = readForm();
+  if(!vState.frameImg || !(f.price > 0)){ toast('Make the video first'); return; }
+  const name = f.rawName || draft.aiName || f.category;
+  const code = (lastVInfo && lastVInfo.code) || nextCode(f.category); S.nextNum++;
+  S.products.push({ id:uid(), code, name, price:f.price, oldPrice:f.oldPrice, offer:f.offer, stock:f.stock, sizes:[...draft.sizes], category:f.category, img:vState.frameImg,
+    desc: draft.desc || f.notes || `${name} from ${S.shop.name}.`, caption:$('#captionV').innerText, created:Date.now(), views:0 });
+  save();
+  ['#fPrice','#fStock','#fName','#fNotes','#fOldPrice','#fOffer'].forEach(s => $(s).value = '');
+  if(vState.url) URL.revokeObjectURL(vState.url);
+  Object.assign(vState, {file:null, url:null, made:false, blob:null, frameBlob:null, frameImg:null});
+  vidInput.value = ''; $('#srcPreview').removeAttribute('src'); $('#trimBox').hidden = true; vdrop.querySelector('b').textContent = 'Tap to choose your video';
+  $('#resultV').hidden = true; $('#btnMakeV').textContent = 'Make my TikTok video';
+  $('#scriptOut').textContent = 'Fill in the price and details above, then tap “Write my script”.'; $('#btnScript').textContent = 'Write my script'; $('#btnPrompter').disabled = true;
+  draft.aiName = null; draft.desc = null;
+  toast('Added to your shop link'); go('shop');
+};
+
+/* ---------- pinned comment and product details ---------- */
+function pinnedComment(i){
+  const app = APPAREL.includes(i.category), low = i.stock > 0 && i.stock <= 3;
+  if(i.lang === 'nepali') return `📌 ${i.code ? `कोड ${i.code} · ` : ''}मूल्य: ${i.price}${i.oldPrice ? ` (पहिले ${i.oldPrice}, ${i.pct}% छुट)` : ''}${app ? ` · साइज: ${i.sizes}` : ''} · क्यास अन डेलिभरी · उपत्यकाभित्र १ दिनमा डेलिभरी${low ? ` · ${i.stock} वटा मात्र बाँकी!` : ''} · अर्डर: बायोको लिङ्क${i.code ? ` → ${i.code}` : ''} 🛍️`;
+  if(i.lang === 'english') return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (was ${i.oldPrice}, ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · Cash on delivery · 1-day delivery in the valley${low ? ` · Only ${i.stock} left!` : ''} · Order: link in bio${i.code ? ` → ${i.code}` : ''} 🛍️`;
+  return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (${i.oldPrice} bata ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · COD available · Valley bhitra 1 din ma delivery${low ? ` · ${i.stock} piece matra baki!` : ''} · Order: link in bio${i.code ? ` → ${i.code}` : ''} 🛍️`;
+}
+function productDetails(p){
+  const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
+  return `${p.name} (${p.code})\nPrice: ${npr(p.price)}${pct ? ` (was ${npr(p.oldPrice)}, ${pct}% off)` : ''}${APPAREL.includes(p.category) ? `\nSizes: ${p.sizes.join(', ')}` : ''}\nCash on delivery · eSewa · Khalti\nOrder here: https://${productUrl(p)}`;
+}
+function fillProductSelect(sel){ const v = sel.value; sel.innerHTML = S.products.map(p=>`<option value="${p.id}">${esc(p.code)} · ${esc(p.name)} · ${npr(p.price)}</option>`).join(''); if(v && prodById(v)) sel.value = v; }
+$('#homeProducts').addEventListener('click', e => { const b = e.target.closest('[data-details]'); if(b){ const p = prodById(b.dataset.details); if(p) copyText(productDetails(p)); } });
+
+/* ---------- orders ---------- */
+let orderFilter = 'all';
+function renderOrders(){
+  fillProductSelect($('#oProduct'));
+  const f = $('#orderFilter'); f.innerHTML='';
+  const FILTERS = { all:['All', () => true], today:['Paid today', paidToday], cod:['COD to collect', codDue] };
+  STATUSES.forEach(st => FILTERS[st] = [st==='paid' ? 'Completed' : st[0].toUpperCase()+st.slice(1), o => o.status === st]);
+  if(!FILTERS[orderFilter]) orderFilter = 'all';
+  Object.keys(FILTERS).forEach(s => { const n = S.orders.filter(FILTERS[s][1]).length; const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=`${FILTERS[s][0]} (${n})`; b.setAttribute('aria-pressed', s===orderFilter); b.onclick=()=>{orderFilter=s; renderOrders();}; f.append(b); });
+  const list = $('#orderList'); list.innerHTML='';
+  const rows = S.orders.filter(FILTERS[orderFilter][1]).sort((a,b)=>b.created-a.created);
+  const sum = document.createElement('p'); sum.className = 'small muted';
+  if(orderFilter === 'today') sum.innerHTML = `<b>${npr(rows.reduce((a,o)=>a+(o.price||0),0))}</b> sales today from ${rows.length} order${rows.length===1?'':'s'} (delivery charges not included).`;
+  if(orderFilter === 'cod') sum.innerHTML = `<b>${npr(rows.reduce((a,o)=>a+orderTotal(o),0))}</b> to collect from ${rows.length} order${rows.length===1?'':'s'}, including delivery. Tap <b>Collected ✓</b> when the rider hands over the cash.`;
+  if(sum.innerHTML) list.append(sum);
+  rows.forEach(o => {
+    const p = prodById(o.productId) || {name:'Removed product', price:0, img:'', sizes:[], stock:0};
+    const next = STATUSES[STATUSES.indexOf(o.status)+1];
+    const when = d => new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    const money = `<span class="price">${npr(orderTotal(o))}</span>${o.delivery ? ` <span class="muted">(${npr(o.price)} + ${npr(o.delivery)} delivery)</span>` : ''}`;
+    const payTxt = o.paidAt ? `<span style="color:var(--good)">${o.pay==='COD'?'Collected':'Paid'} ${when(o.paidAt)}</span>` : o.pay==='COD' ? `<span style="color:var(--warn)">COD due</span>` : `<span style="color:var(--warn)">${o.pay} not received</span>`;
+    const pillTxt = o.status==='paid' ? (o.pay==='COD' ? 'Collected' : 'Done') : o.status[0].toUpperCase()+o.status.slice(1);
+    let act = '';
+    if(!o.paidAt && o.pay!=='COD') act += `<button class="btn small indigo" type="button" data-collect="${o.id}">Received ✓</button>`;
+    if(o.pay==='COD' && !o.paidAt && o.status==='sent') act += `<button class="btn small indigo" type="button" data-collect="${o.id}">Collected ✓</button>`;
+    else if(next==='paid') act += `<button class="btn small" type="button" data-adv="${o.id}">Delivered ✓</button>`;
+    else if(next) act += `<button class="btn small" type="button" data-adv="${o.id}">Mark ${next}</button>`;
+    const d = document.createElement('div'); d.className='item order';
+    d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><div class="top"><b>${esc(o.customer)} · ${esc(p.name)}</b><span class="pill ${o.status}">${pillTxt}</span></div><span class="small muted"><span class="code">${esc(p.code || '')}</span> ${esc(o.size)} · ${esc(o.place)} · ${o.pay} · ordered ${when(o.created)}</span><span class="small">${money}</span><span class="small">${payTxt}</span></div><div class="acts"><button class="btn small" type="button" data-bill="${o.id}">Slip</button>${act}</div>`;
+    list.append(d);
+  });
+  if(!rows.length) list.innerHTML = '<p class="muted">No orders here yet.</p>';
+}
+/* order slip for the customer and the delivery rider */
+let billFor = null;
+function billImage(o){
+  const p = prodById(o.productId) || {name:'Product', price:0};
+  const W = 720, H = 1000, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), ink = '#1b1d3a', mute = '#5d6080', line = '#dcdfeb';
+  g.fillStyle = '#ffffff'; g.fillRect(0,0,W,H);
+  g.fillStyle = '#2f3a8f'; g.fillRect(0,0,W,150);
+  g.fillStyle = '#ffffff'; g.textAlign = 'left';
+  fitFont(g, S.shop.name, 700, 48, '"Bricolage Grotesque", sans-serif', 640); g.fillText(S.shop.name, 40, 76);
+  g.font = '500 26px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)';
+  g.fillText(`${S.shop.location}${S.shop.whatsapp ? ' · ' + S.shop.whatsapp : ''}`, 40, 118);
+  g.fillStyle = ink; g.font = '700 32px "Bricolage Grotesque", sans-serif'; g.fillText('Order slip', 40, 214);
+  g.textAlign = 'right'; g.font = '500 24px Hind, sans-serif'; g.fillStyle = mute;
+  g.fillText(`No. ${o.id.slice(-5).toUpperCase()}`, W-40, 200);
+  g.fillText(new Date(o.created).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}), W-40, 230);
+  const row = (y, label, value, bold) => { g.textAlign = 'left'; g.font = '500 24px Hind, sans-serif'; g.fillStyle = mute; g.fillText(label, 40, y);
+    g.textAlign = 'right'; g.font = `${bold ? 700 : 500} ${bold ? 30 : 26}px Hind, sans-serif`; g.fillStyle = ink; g.fillText(value, W-40, y); };
+  const rule = y => { g.fillStyle = line; g.fillRect(40, y, W-80, 2); };
+  rule(262);
+  row(310, 'Customer', o.customer); row(354, 'Deliver to', o.place);
+  rule(386);
+  const itemTxt = (p.code ? p.code + ' · ' : '') + p.name; row(434, 'Item', itemTxt.length > 32 ? itemTxt.slice(0,31) + '…' : itemTxt); row(478, 'Size', o.size || '-'); row(522, 'Quantity', '1');
+  row(566, 'Price', npr(o.price)); if(o.delivery) row(600, 'Delivery', npr(o.delivery));
+  rule(o.delivery ? 622 : 598);
+  const paid = !!o.paidAt;
+  g.fillStyle = paid ? '#dcf2e6' : '#fdf0d4'; roundRect(g, 40, 630, W-80, 140, 16); g.fill();
+  g.textAlign = 'left'; g.font = '600 26px Hind, sans-serif'; g.fillStyle = paid ? '#1f7a4d' : '#a15c00';
+  g.fillText(paid ? (o.pay === 'COD' ? 'Paid in cash' : `Paid by ${o.pay}`) : (o.pay === 'COD' ? 'Cash on delivery — collect' : `To pay by ${o.pay}`), 70, 684);
+  g.font = '700 54px "Bricolage Grotesque", sans-serif'; g.fillStyle = ink; g.fillText(npr(orderTotal(o)), 70, 746);
+  g.textAlign = 'center'; g.font = '600 28px Hind, sans-serif'; g.fillStyle = ink; g.fillText('Dhanyabad! 🙏', W/2, 850);
+  g.font = '500 24px Hind, sans-serif'; g.fillStyle = mute; g.fillText(`Order again: ${shopUrl()}`, W/2, 892);
+  g.font = '500 20px Hind, sans-serif'; g.fillText('Made with PasalPop', W/2, 960);
+  return c;
+}
+function billMessage(o){
+  const p = prodById(o.productId) || {name:'Product', price:0};
+  const pay = o.paidAt ? `Payment: ${o.pay} ✓ received` : o.pay === 'COD' ? `Cash on delivery: ${npr(orderTotal(o))} tirnu hola` : `${o.pay} ma ${npr(orderTotal(o))} pathaunu hola`;
+  return `Namaste ${o.customer.replace(/\s*\(example\)/,'')} 🙏\n${S.shop.name} bata tapai ko order:\n• ${p.name}${p.code ? ` [${p.code}]` : ''} (${o.size || '-'}) — ${npr(o.price)}${o.delivery ? `\n• Delivery — ${npr(o.delivery)}` : ''}\n${pay}\nDelivery: ${o.place}\nDhanyabad! Feri order garna: ${shopUrl()}`;
+}
+$('#btnBillClose').onclick = () => { $('#billBox').hidden = true; billFor = null; };
+$('#btnBillCopy').onclick = () => billFor && copyText(billMessage(billFor));
+$('#btnBillSave').onclick = () => { if(!billFor) return; billImage(billFor).toBlob(b => b && saveFile(`order-${billFor.id.slice(-5)}.jpg`, b, 'Slip saved'), 'image/jpeg', .92); };
+$('#orderList').addEventListener('click', e => {
+  const sb = e.target.closest('[data-bill]');
+  if(sb){ billFor = S.orders.find(x => x.id === sb.dataset.bill); $('#billImg').src = billImage(billFor).toDataURL('image/jpeg', .9); $('#billBox').hidden = false; $('#billBox').scrollIntoView({behavior:'smooth', block:'start'}); return; }
+  const c = e.target.closest('[data-collect]');
+  if(c){ const o = S.orders.find(x=>x.id===c.dataset.collect); o.paidAt = Date.now();
+    if(o.pay==='COD') o.status = 'paid';
+    save(); renderOrders(); toast(`${npr(o.pay==='COD' ? orderTotal(o) : o.price)} added to today's sales`); return; }
+  const b = e.target.closest('[data-adv]'); if(!b) return;
+  const o = S.orders.find(x=>x.id===b.dataset.adv); o.status = STATUSES[STATUSES.indexOf(o.status)+1];
+  if(o.status==='paid' && !o.paidAt) o.paidAt = Date.now();
+  save(); renderOrders(); toast(o.status==='paid' ? 'Order complete' : `Marked ${o.status}`);
+});
+function syncOrderForm(fromProduct){
+  const p = prodById($('#oProduct').value);
+  if(fromProduct && p) $('#oPrice').value = p.price;
+  $('#oReceivedRow').hidden = $('#oPay').value === 'COD';
+  const t = (+$('#oPrice').value||0) + (+$('#oDelivery').value||0);
+  $('#oTotal').textContent = t ? `Customer pays ${npr(t)}${$('#oPay').value==='COD' ? ' in cash on delivery' : ''}.` : '';
+}
+$('#oProduct').addEventListener('change', () => syncOrderForm(true));
+['#oPay','#oPrice','#oDelivery'].forEach(id => $(id).addEventListener('input', () => syncOrderForm(false)));
+$('#btnAddOrder').onclick = () => { $('#orderForm').hidden = false; fillProductSelect($('#oProduct')); $('#oDelivery').value = S.lastDelivery || ''; syncOrderForm(true); $('#oName').focus(); };
+$('#btnCancelOrder').onclick = () => { $('#orderForm').hidden = true; $('#orderErr').hidden = true; };
+$('#btnSaveOrder').onclick = () => {
+  const name = $('#oName').value.trim(), place = $('#oPlace').value.trim();
+  if(!$('#oProduct').value || !name || !place){ $('#orderErr').textContent='Add a product, the customer name and the address.'; $('#orderErr').hidden=false; return; }
+  const pay = $('#oPay').value, price = Math.max(0, +$('#oPrice').value || prodById($('#oProduct').value)?.price || 0), delivery = Math.max(0, +$('#oDelivery').value || 0);
+  S.lastDelivery = delivery || '';
+  S.orders.push({id:uid(), productId:$('#oProduct').value, customer:name, place, size:$('#oSize').value.trim()||'-', pay, price, delivery, status:'new', created:Date.now(), paidAt: pay !== 'COD' && $('#oReceived').checked ? Date.now() : null});
+  const p = prodById($('#oProduct').value); if(p && p.stock>0) p.stock--;
+  save(); ['#oName','#oPlace','#oSize'].forEach(s=>$(s).value=''); $('#orderForm').hidden = true; $('#orderErr').hidden = true; renderOrders(); toast('Order saved');
+};
+
+/* ---------- settings ---------- */
+$('#sName').oninput = () => $('#slugPreview').textContent = DOMAIN + '/' + (S.shop.slug || slugify($('#sName').value));
+$('#btnSaveSettings').onclick = async () => {
+  if(window.Cloud && Cloud.signedIn()){ const want = slugify($('#sSlug').value); if(want !== S.shop.slug && !(await Cloud.changeSlug(want))) return; }
+  S.shop.name = $('#sName').value.trim() || 'My Shop'; S.shop.whatsapp = $('#sWa').value.trim(); S.shop.location = $('#sLoc').value.trim() || 'Nepal';
+  save(); toast('Saved'); go('home');
+};
+$('#btnClearEx').onclick = () => {
+  const exIds = S.products.filter(p=>p.example).map(p=>p.id);
+  S.products = S.products.filter(p=>!p.example); S.orders = S.orders.filter(o=>!o.example && !exIds.includes(o.productId));
+  save(); renderHome(); toast('Examples removed');
+};
+
+/* ---------- online shop: accounts, sync, public shop page ---------- */
+var Cloud = (() => {
+  const enabled = !!(CLOUD.url && CLOUD.key && window.supabase && !IN_CLAUDE);
+  const sb = enabled ? window.supabase.createClient(CLOUD.url, CLOUD.key) : null;
+  let user = null, shopId = null, busy = false, again = false, timer = null, lastViews = 0, failed = false;
+  const iso = t => t ? new Date(t).toISOString() : null;
+  const ms = t => t ? Date.parse(t) : null;
+  const state = txt => { const el = $('#syncState'); if(!el) return; el.hidden = !txt; el.textContent = txt || ''; };
+  if(S && !S.sync) S.sync = { p:{}, o:{}, shop:'' };
+
+  /* local shape <-> database rows */
+  const imagesOf = p => [...new Set([p.img, ...(p.imgs || [])].filter(Boolean))];
+  const prodRow = p => ({ id:p.id, shop_id:shopId, code:p.code, name:p.name, price:+p.price||0, old_price:p.oldPrice ? +p.oldPrice : null,
+    offer:p.offer || null, stock:+p.stock||0, sizes:p.sizes || [], category:p.category || null, description:p.desc || null,
+    images:imagesOf(p), caption:p.caption || null, created_at:iso(p.created || (p.created = Date.now())) });
+  const prodLocal = r => { const imgs = r.images || []; return { id:r.id, code:r.code, name:r.name, price:r.price, oldPrice:r.old_price || undefined,
+    offer:r.offer || undefined, stock:r.stock, sizes:r.sizes || [], category:r.category || 'Other', desc:r.description || '',
+    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), views:r.views || 0, viewLog:{} }; };
+  const orderRow = o => ({ id:o.id, shop_id:shopId, product_id:(S.sync.p[o.productId] ? o.productId : null), customer:o.customer, place:o.place,
+    size:o.size, pay:o.pay, status:o.status, price:+o.price||0, delivery:+o.delivery||0, created_at:iso(o.created), paid_at:iso(o.paidAt) });
+  const orderLocal = r => ({ id:r.id, productId:r.product_id, customer:r.customer, place:r.place, size:r.size, pay:r.pay, status:r.status,
+    price:r.price, delivery:r.delivery, created:ms(r.created_at), paidAt:ms(r.paid_at) });
+  const shopRow = () => ({ name:S.shop.name, whatsapp:S.shop.whatsapp || '', location:S.shop.location || '', next_num:S.nextNum || 11, last_delivery:+S.lastDelivery || null });
+  const h = o => JSON.stringify(o);
+
+  async function upload(dataUrl, pid, i){
+    const blob = await (await fetch(dataUrl)).blob();
+    const path = `${user.id}/${pid}/${i}-${Date.now().toString(36)}.jpg`;
+    const { error } = await sb.storage.from('product-images').upload(path, blob, { contentType:'image/jpeg', upsert:true });
+    if(error) throw error;
+    return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+  }
+
+  /* send everything that changed on this phone to the server */
+  async function push(){
+    if(!shopId) return;
+    if(busy){ again = true; return; }
+    busy = true; state('Saving…');
+    try{
+      const sr = shopRow();
+      if(h(sr) !== S.sync.shop){ const { error } = await sb.from('shops').update(sr).eq('id', shopId); if(error) throw error; S.sync.shop = h(sr); }
+      for(const p of S.products.filter(x => !x.example)){
+        const urls = new Map();
+        for(const [i, src] of imagesOf(p).entries()) if(src.startsWith('data:') && !urls.has(src)) urls.set(src, await upload(src, p.id, i));
+        if(urls.size){ if(urls.has(p.img)) p.img = urls.get(p.img); if(p.imgs) p.imgs = p.imgs.map(x => urls.get(x) || x); saveLocal(); }
+        const row = prodRow(p);
+        if(h(row) === S.sync.p[p.id]) continue;
+        const { error } = await sb.from('products').upsert(row); if(error) throw error;
+        S.sync.p[p.id] = h(row);
+      }
+      const gone = Object.keys(S.sync.p).filter(id => !S.products.some(p => p.id === id));
+      if(gone.length){ const { error } = await sb.from('products').delete().in('id', gone); if(error) throw error; gone.forEach(id => delete S.sync.p[id]); }
+      for(const o of S.orders.filter(x => !x.example)){
+        const row = orderRow(o);
+        if(h(row) === S.sync.o[o.id]) continue;
+        const { error } = await sb.from('orders').upsert(row); if(error) throw error;
+        S.sync.o[o.id] = h(row);
+      }
+      const goneO = Object.keys(S.sync.o).filter(id => !S.orders.some(o => o.id === id));
+      if(goneO.length){ const { error } = await sb.from('orders').delete().in('id', goneO); if(error) throw error; goneO.forEach(id => delete S.sync.o[id]); }
+      saveLocal(); failed = false; state('Saved ✓');
+    }catch(e){
+      console.warn('sync', e); state('Not saved online · will retry');
+      if(!failed) toast('Could not save online. Your work is safe on this phone and will retry.');
+      failed = true; clearTimeout(timer); timer = setTimeout(push, 20000);
+    }finally{
+      busy = false;
+      if(again){ again = false; push(); }
+    }
+  }
+  function schedule(){ if(!shopId) return; clearTimeout(timer); state('Saving…'); timer = setTimeout(push, 800); }
+
+  /* bring the server copy to this phone, keeping edits not yet sent */
+  async function pull(){
+    const [pr, or, vw] = await Promise.all([
+      sb.from('products').select('*').eq('shop_id', shopId),
+      sb.from('orders').select('*').eq('shop_id', shopId),
+      sb.from('product_views').select('product_id,day,count').eq('shop_id', shopId).gte('day', dayKey(addDays(new Date(), -400)))
+    ]);
+    if(pr.error || or.error) throw (pr.error || or.error);
+    const merge = (localList, rows, toLocal, toRow, map) => {
+      const out = [];
+      rows.forEach(r => {
+        const mine = localList.find(x => x.id === r.id);
+        if(!mine && map[r.id]) return;                                   /* deleted here, not yet sent */
+        const server = toLocal(r);
+        if(mine && h(toRow(mine)) !== map[r.id]) out.push(mine);     /* changed here, not yet sent */
+        else { out.push(server); map[r.id] = h(toRow(server)); }
+      });
+      localList.forEach(x => { if(!x.example && !rows.some(r => r.id === x.id) && !map[x.id]) out.push(x); });   /* new here */
+      Object.keys(map).forEach(id => { if(!rows.some(r => r.id === id)) delete map[id]; });   /* deleted on another phone */
+      return out;
+    };
+    S.products = merge(S.products, pr.data, prodLocal, prodRow, S.sync.p);
+    S.orders = merge(S.orders, or.data, orderLocal, orderRow, S.sync.o);
+    applyViews(pr.data, vw.data || []);
+    saveLocal();
+  }
+  function applyViews(prodRows, viewRows){
+    S.products.forEach(p => { const r = prodRows.find(x => x.id === p.id); if(r) p.views = r.views || 0; p.viewLog = {}; });
+    viewRows.forEach(v => { const p = S.products.find(x => x.id === v.product_id); if(p) p.viewLog[v.day] = (p.viewLog[v.day] || 0) + v.count; });
+    lastViews = Date.now();
+  }
+  async function refreshViews(view){
+    if(!shopId || Date.now() - lastViews < 20000) return;
+    lastViews = Date.now();
+    const [pr, vw] = await Promise.all([
+      sb.from('products').select('id,views').eq('shop_id', shopId),
+      sb.from('product_views').select('product_id,day,count').eq('shop_id', shopId).gte('day', dayKey(addDays(new Date(), -400)))
+    ]);
+    if(pr.error || vw.error) return;
+    applyViews(pr.data, vw.data); saveLocal();
+    if(!$('#view-' + view).hidden) render(view);
+  }
+
+  /* first sign-in creates the shop; later sign-ins load it */
+  async function afterLogin(){
+    if(S.owner && S.owner !== user.id){ S = { shop:{ name:'My Shop', whatsapp:'', location:'Nepal' }, products:[], orders:[], nextNum:11, sync:{ p:{}, o:{}, shop:'' } }; }
+    S.owner = user.id;
+    let { data:shop, error } = await sb.from('shops').select('*').eq('owner', user.id).maybeSingle();
+    if(error) throw error;
+    const firstTime = !shop;
+    if(!shop){
+      const base = slugify(S.shop.name).slice(0, 26);
+      for(let n = 0; n < 12 && !shop; n++){
+        const slug = (n === 0 ? base : n < 9 ? base + (n + 1) : base + Math.random().toString(36).slice(2, 6)).padEnd(3, '0');
+        const res = await sb.from('shops').insert({ owner:user.id, slug, ...shopRow() }).select().single();
+        if(res.error && res.error.code !== '23505') throw res.error;
+        shop = res.data;
+      }
+      if(!shop) throw new Error('Could not create shop');
+    }
+    shopId = shop.id;
+    S.shop = { name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', slug:shop.slug };
+    S.nextNum = Math.max(S.nextNum || 11, shop.next_num || 11);
+    if(shop.last_delivery) S.lastDelivery = S.lastDelivery || shop.last_delivery;
+    S.sync.shop = firstTime ? '' : h({ name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', next_num:shop.next_num, last_delivery:shop.last_delivery || null });
+    const exIds = S.products.filter(p => p.example).map(p => p.id);
+    S.products = S.products.filter(p => !p.example);
+    if(firstTime && !S.products.length) S.nextNum = 11;   /* codes for real products start at 11 */
+    S.orders = S.orders.filter(o => !o.example && !exIds.includes(o.productId));
+    await pull();
+    saveLocal();
+    await push();
+    if(firstTime) toast(`Your shop is live at ${shopUrl()}`);
+  }
+
+  async function changeSlug(want){
+    if(want.length < 3){ toast('Shop link needs at least 3 letters'); return false; }
+    const { error } = await sb.from('shops').update({ slug:want }).eq('id', shopId);
+    if(error){ toast(error.code === '23505' ? 'That shop link is taken. Try another.' : 'Could not change the link. Try again.'); return false; }
+    S.shop.slug = want; saveLocal(); return true;
+  }
+
+  function signIn(){
+    if(!enabled){ toast('Online shop is available on walltok.com'); return; }
+    if(!S.shop.whatsapp || S.shop.whatsapp === '9800000000' || S.shop.name === 'Sita Fashion'){
+      go('settings'); toast('First add your shop name and WhatsApp number, then tap Make my shop link live'); return;
+    }
+    saveLocal();
+    sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/' } });
+  }
+  async function signOut(){
+    await sb.auth.signOut();
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    location.href = location.origin + '/';
+  }
+
+  function paint(view){
+    const live = !!shopId;
+    $('#claimCard').hidden = !enabled || live || !!user;
+    $('#claimUrl').textContent = shopUrl();
+    $('#linkState').textContent = live ? 'Live · put it in your TikTok bio' : enabled ? 'Not live yet' : 'Put it in your TikTok bio';
+    $('#slugRow').hidden = !live;
+    $('#acctCard').hidden = !enabled;
+    $('#btnClaim2').hidden = live || !!user;
+    $('#btnSignOut').hidden = !user;
+    $('#acctText').textContent = live ? `Signed in as ${user.email}. Your shop, orders and views are saved online, so you can use them on any phone.`
+      : 'Your shop is saved on this phone only. Make it live so customers can open your shop link and you see real views.';
+    if(live) $('#viewsNote').textContent = 'A view is counted when a customer opens a product on your shop link (once per customer per day). Your own visits are not counted. Tap a product to see its page.';
+    if(live && (view === 'home' || view === 'views')) refreshViews(view);
+  }
+
+  /* customers: walltok.com/<shop> */
+  async function openPublic(){
+    const box = $('#pubGrid');
+    S = { shop:{ name:'', whatsapp:'', location:'', slug:PUB_SLUG }, products:[], orders:[], sync:{ p:{}, o:{}, shop:'' } };
+    ['home','studio','orders','settings','views'].forEach(v => $('#view-' + v).hidden = true);
+    $('#view-shop').hidden = false;
+    if(!enabled){ box.innerHTML = '<p class="pubmsg muted">This shop is not available right now.</p>'; return; }
+    box.innerHTML = '<p class="pubmsg muted">Loading shop…</p>';
+    const { data:shop } = await sb.from('shops').select('id,slug,name,whatsapp,location').eq('slug', PUB_SLUG).maybeSingle();
+    if(!shop){ $('#pubName').textContent = 'Shop not found'; $('#pubMeta').textContent = `There is no shop at ${DOMAIN}/${PUB_SLUG}. Check the link in the seller's TikTok bio.`; box.innerHTML = ''; $('#shopSearch').hidden = true; return; }
+    const { data:rows } = await sb.from('products').select('*').eq('shop_id', shop.id);
+    S.shop = { name:shop.name, whatsapp:shop.whatsapp, location:shop.location, slug:shop.slug };
+    S.products = (rows || []).map(prodLocal);
+    document.title = `${shop.name} · ${DOMAIN}`;
+    const hit = PUB_CODE && S.products.find(p => (p.code || '').toLowerCase() === PUB_CODE);
+    if(hit){ shopOpen = hit.id; recordView(hit.id); }
+    renderShop();
+    addEventListener('popstate', () => {
+      const code = location.pathname.split('/').filter(Boolean)[1];
+      const p = code && S.products.find(x => (x.code || '').toLowerCase() === code.toLowerCase());
+      shopOpen = p ? p.id : null; renderShop();
+    });
+  }
+  function recordView(id){
+    const k = 'wt-viewed-' + id + '-' + dayKey(new Date());
+    try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); }catch(e){}
+    sb && sb.rpc('record_view', { p_product:id }).then(() => {}, () => {});
+  }
+
+  async function start(){
+    if(PUB_SLUG){ openPublic(); return; }
+    if(!enabled) return;
+    addEventListener('online', () => push());
+    const { data } = await sb.auth.getSession();
+    if(data && data.session){
+      user = data.session.user;
+      state('Loading…');
+      try{ await afterLogin(); state('Saved ✓'); }
+      catch(e){ console.warn(e); state('Offline · saved on this phone'); toast('Could not reach your online shop. Working on this phone for now.'); }
+      if(location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
+    }
+    const cur = ['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home';
+    render(cur);
+  }
+
+  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, enabled, signedIn: () => !!shopId };
+})();
+document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
+$('#btnSignOut').onclick = () => Cloud.signOut();
+
+if(!PUB_SLUG) go('home');
+Cloud.start();
+</script>
+
+</body>
+</html>

@@ -62,6 +62,11 @@ button.stat span::after{content:" ›";color:var(--indigo)}
 .vcount{font-family:var(--f-display);font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums;text-align:right}
 .vcount small{display:block;font-family:var(--f-body);font-weight:400;font-size:.72rem;color:var(--muted)}
 .pcard{cursor:pointer}
+.sync{font-family:var(--f-body);font-weight:500;font-size:.72rem;color:var(--muted);margin-left:6px}
+.claim{border-color:var(--accent);background:var(--accent-soft)}
+html.public .tabs, html.public #btnSettings, html.public #view-shop > .tip, html.public #view-shop > .urlbar, html.public #view-home{display:none!important}
+html.public .app{padding-bottom:24px}
+.pubmsg{text-align:center;padding:48px 16px}
 .vchart{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 8px}
 .vbars{display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:8px}
 .vbars .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0;position:relative}
@@ -205,7 +210,7 @@ textarea{resize:vertical;min-height:84px}
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand"><i>प</i>PasalPop</div>
+    <div class="brand"><i>प</i>PasalPop <span class="sync" id="syncState" hidden></span></div>
     <button class="btn small" id="btnSettings" type="button">Shop settings</button>
   </header>
 
@@ -223,8 +228,14 @@ textarea{resize:vertical;min-height:84px}
     </div>
     <button class="btn primary big" type="button" data-go="studio">+ New product (take photo)</button>
     <div class="tip" id="festTip"></div>
+    <div class="card stack claim" id="claimCard" hidden>
+      <h3>Make your shop link live</h3>
+      <p class="small">Right now your shop is only on this phone. Make <b id="claimUrl"></b> live so customers from TikTok can see your products and order, and you see real views.</p>
+      <button class="btn primary" type="button" data-claim>Sign in with Google · free</button>
+      <p class="small muted">Takes 10 seconds. Your products and orders come with you.</p>
+    </div>
     <div class="card stack">
-      <div class="section-h"><h3>Your shop link</h3><span class="muted small">Put it in your TikTok bio</span></div>
+      <div class="section-h"><h3>Your shop link</h3><span class="muted small" id="linkState">Put it in your TikTok bio</span></div>
       <div class="urlbar"><code id="homeUrl"></code><button class="btn small" type="button" data-copy-url>Copy</button></div>
     </div>
     <div class="stack">
@@ -547,7 +558,7 @@ textarea{resize:vertical;min-height:84px}
     </div>
     <div class="vchart" id="vChart"></div>
     <div class="list" id="viewsList"></div>
-    <p class="small muted">A view is counted each time someone opens a product's page on your shop link. Tap a product to see its page. In this test version, views are counted on this phone only; the full version will count every customer.</p>
+    <p class="small muted" id="viewsNote">A view is counted each time someone opens a product's page on your shop link. Tap a product to see its page. In this test version, views are counted on this phone only; the full version will count every customer.</p>
   </section>
 
   <!-- ORDERS -->
@@ -592,10 +603,16 @@ textarea{resize:vertical;min-height:84px}
       <div><label for="sName">Shop name</label><input id="sName"></div>
       <div><label for="sWa">WhatsApp number for orders</label><input id="sWa" inputmode="tel" placeholder="98XXXXXXXX"></div>
       <div><label for="sLoc">Location</label><input id="sLoc" placeholder="New Road, Kathmandu"></div>
+      <div id="slugRow" hidden><label for="sSlug">Shop link</label><div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><span class="small muted">walltok.com/</span><input id="sSlug" autocapitalize="off" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"></div><p class="small muted">Letters and numbers only. If you change it, update the link in your TikTok bio too.</p></div>
       <p class="small muted">Shop link: <b id="slugPreview"></b></p>
       <button class="btn indigo" id="btnSaveSettings" type="button">Save</button>
     </div>
-    <p class="small muted">Prototype: your shop is saved in this browser only. A live version would host the shop link for everyone.</p>
+    <div class="card stack" id="acctCard">
+      <h3>Your account</h3>
+      <p class="small muted" id="acctText">Your shop is saved on this phone only. Make it live so customers can open your shop link and you see real views.</p>
+      <button class="btn primary" type="button" data-claim id="btnClaim2">Make my shop link live</button>
+      <button class="btn" type="button" id="btnSignOut" hidden>Sign out</button>
+    </div>
   </section>
 </div>
 
@@ -615,7 +632,19 @@ textarea{resize:vertical;min-height:84px}
   <div class="ptext" id="pText"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.79.0/dist/umd/supabase.js"></script>
 <script>
+/* ---------- where the app lives ---------- */
+const DOMAIN = 'walltok.com';
+const CLOUD = { url: 'https://scyqeqdldpdlwsppqoae.supabase.co', key: 'sb_publishable_DXRL9GlaU7YbDOvvB3CB3w_EPyBGtcR' };   /* Supabase project URL and anon/publishable key */
+const IN_CLAUDE = !!(window.claude && window.claude.use);
+const ON_SITE = /(^|\.)walltok\.com$/.test(location.hostname);
+const QS = new URLSearchParams(location.search);
+const PATHPARTS = location.pathname.split('/').filter(x => x && x !== 'index.html' && x !== '404.html');
+/* a customer opening walltok.com/sitafashion or walltok.com/sitafashion/k12 sees only that shop */
+const PUB_SLUG = (QS.get('shop') || (ON_SITE ? PATHPARTS[0] : '') || '').toLowerCase().replace(/[^a-z0-9]/g,'');
+const PUB_CODE = (QS.get('p') || (ON_SITE ? PATHPARTS[1] : '') || '').toLowerCase();
+if(PUB_SLUG) document.documentElement.classList.add('public');
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const KEY = 'pasal-studio-v1';
@@ -623,7 +652,7 @@ const SIZES = ['Free size','S','M','L','XL','XXL'];
 const BACKDROPS = [['Marigold','#f6d38a'],['Sky','#cfe0f5'],['Blush','#f3d3d8'],['Mint','#cfeedd'],['Stone','#e4e2dc']];
 const STATUSES = ['new','packed','sent','paid'];
 const npr = n => 'रु ' + Number(n||0).toLocaleString('en-IN');
-const uid = () => Math.random().toString(36).slice(2,9);
+const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g,'').slice(0,16) : Math.random().toString(36).slice(2,10) + Date.now().toString(36);
 const slugify = s => (s||'myshop').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,30) || 'myshop';
 
 /* ---------- example images (drawn, clearly examples) ---------- */
@@ -658,8 +687,9 @@ function seed(){
   };
 }
 let S;
-try{ S = JSON.parse(localStorage.getItem(KEY)); }catch(e){ S = null; }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save in this browser. Try a smaller photo.'); } }
+try{ S = PUB_SLUG ? null : JSON.parse(localStorage.getItem(KEY)); }catch(e){ S = null; }
+function saveLocal(){ if(PUB_SLUG) return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save in this browser. Try a smaller photo.'); } }
+function save(){ saveLocal(); if(window.Cloud) Cloud.schedule(); }
 if(!S || !S.shop) S = seed();
 /* every product gets a short code, like K12, that customers use to find it from TikTok */
 const CODE_LETTER = {'Kurta':'K','Saree':'S','Clothes':'C','Shoes':'F','Bags':'B','Jewellery':'J','Cosmetics':'M','Cups & kitchen':'H','Plants':'P','Food':'D','Other':'X'};
@@ -695,7 +725,7 @@ async function copyText(txt){
   try{ await navigator.clipboard.writeText(txt); toast('Copied'); }
   catch(e){ toast('Select the text and copy it'); }
 }
-const shopUrl = () => 'pasalpop.com/' + slugify(S.shop.name);
+const shopUrl = () => DOMAIN + '/' + (S.shop.slug || slugify(S.shop.name));
 const prodById = id => S.products.find(p=>p.id===id);
 
 /* ---------- navigation ---------- */
@@ -719,7 +749,8 @@ function render(view){
   if(view==='shop') renderShop();
   if(view==='orders') renderOrders();
   if(view==='views') renderViews();
-  if(view==='settings'){ $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); }
+  if(view==='settings'){ $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; }
+  if(window.Cloud) Cloud.paint(view);
 }
 function renderHome(){
   $('#hShop').textContent = S.shop.name;
@@ -800,12 +831,14 @@ function renderProductPage(p){
       </div>
     </div>`;
   wireGallery(box.querySelector('.pdetail'), p);
-  $('#pBack').onclick = () => { shopOpen = null; renderShop(); window.scrollTo(0,0); };
+  $('#pBack').onclick = () => { shopOpen = null; if(PUB_SLUG && ON_SITE) history.pushState({}, '', `/${PUB_SLUG}`); renderShop(); window.scrollTo(0,0); };
   $('#pCopyLink').onclick = () => copyText('https://' + productUrl(p));
 }
 function openProduct(id, count = true){
   const p = prodById(id); if(!p) return;
-  if(count){ p.views = (p.views || 0) + 1; p.lastViewed = Date.now(); p.viewLog = p.viewLog || {}; const k = dayKey(new Date()); p.viewLog[k] = (p.viewLog[k] || 0) + 1; save(); }
+  if(count && PUB_SLUG){ if(window.Cloud) Cloud.recordView(id); }
+  else if(count && !(window.Cloud && Cloud.signedIn())){ p.views = (p.views || 0) + 1; p.lastViewed = Date.now(); p.viewLog = p.viewLog || {}; const k = dayKey(new Date()); p.viewLog[k] = (p.viewLog[k] || 0) + 1; save(); }
+  if(PUB_SLUG && ON_SITE && p.code) history.pushState({p:id}, '', `/${PUB_SLUG}/${p.code.toLowerCase()}`);
   if($('#view-shop').hidden) go('shop');
   shopOpen = id; renderShop(); window.scrollTo(0,0);
 }
@@ -2286,8 +2319,9 @@ $('#btnSaveOrder').onclick = () => {
 };
 
 /* ---------- settings ---------- */
-$('#sName').oninput = () => $('#slugPreview').textContent = 'pasalpop.com/' + slugify($('#sName').value);
-$('#btnSaveSettings').onclick = () => {
+$('#sName').oninput = () => $('#slugPreview').textContent = DOMAIN + '/' + (S.shop.slug || slugify($('#sName').value));
+$('#btnSaveSettings').onclick = async () => {
+  if(window.Cloud && Cloud.signedIn()){ const want = slugify($('#sSlug').value); if(want !== S.shop.slug && !(await Cloud.changeSlug(want))) return; }
   S.shop.name = $('#sName').value.trim() || 'My Shop'; S.shop.whatsapp = $('#sWa').value.trim(); S.shop.location = $('#sLoc').value.trim() || 'Nepal';
   save(); toast('Saved'); go('home');
 };
@@ -2297,7 +2331,241 @@ $('#btnClearEx').onclick = () => {
   save(); renderHome(); toast('Examples removed');
 };
 
-go('home');
+/* ---------- online shop: accounts, sync, public shop page ---------- */
+var Cloud = (() => {
+  const enabled = !!(CLOUD.url && CLOUD.key && window.supabase && !IN_CLAUDE);
+  const sb = enabled ? window.supabase.createClient(CLOUD.url, CLOUD.key) : null;
+  let user = null, shopId = null, busy = false, again = false, timer = null, lastViews = 0, failed = false;
+  const iso = t => t ? new Date(t).toISOString() : null;
+  const ms = t => t ? Date.parse(t) : null;
+  const state = txt => { const el = $('#syncState'); if(!el) return; el.hidden = !txt; el.textContent = txt || ''; };
+  if(S && !S.sync) S.sync = { p:{}, o:{}, shop:'' };
+
+  /* local shape <-> database rows */
+  const imagesOf = p => [...new Set([p.img, ...(p.imgs || [])].filter(Boolean))];
+  const prodRow = p => ({ id:p.id, shop_id:shopId, code:p.code, name:p.name, price:+p.price||0, old_price:p.oldPrice ? +p.oldPrice : null,
+    offer:p.offer || null, stock:+p.stock||0, sizes:p.sizes || [], category:p.category || null, description:p.desc || null,
+    images:imagesOf(p), caption:p.caption || null, created_at:iso(p.created || (p.created = Date.now())) });
+  const prodLocal = r => { const imgs = r.images || []; return { id:r.id, code:r.code, name:r.name, price:r.price, oldPrice:r.old_price || undefined,
+    offer:r.offer || undefined, stock:r.stock, sizes:r.sizes || [], category:r.category || 'Other', desc:r.description || '',
+    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), views:r.views || 0, viewLog:{} }; };
+  const orderRow = o => ({ id:o.id, shop_id:shopId, product_id:(S.sync.p[o.productId] ? o.productId : null), customer:o.customer, place:o.place,
+    size:o.size, pay:o.pay, status:o.status, price:+o.price||0, delivery:+o.delivery||0, created_at:iso(o.created), paid_at:iso(o.paidAt) });
+  const orderLocal = r => ({ id:r.id, productId:r.product_id, customer:r.customer, place:r.place, size:r.size, pay:r.pay, status:r.status,
+    price:r.price, delivery:r.delivery, created:ms(r.created_at), paidAt:ms(r.paid_at) });
+  const shopRow = () => ({ name:S.shop.name, whatsapp:S.shop.whatsapp || '', location:S.shop.location || '', next_num:S.nextNum || 11, last_delivery:+S.lastDelivery || null });
+  const h = o => JSON.stringify(o);
+
+  async function upload(dataUrl, pid, i){
+    const blob = await (await fetch(dataUrl)).blob();
+    const path = `${user.id}/${pid}/${i}-${Date.now().toString(36)}.jpg`;
+    const { error } = await sb.storage.from('product-images').upload(path, blob, { contentType:'image/jpeg', upsert:true });
+    if(error) throw error;
+    return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+  }
+
+  /* send everything that changed on this phone to the server */
+  async function push(){
+    if(!shopId) return;
+    if(busy){ again = true; return; }
+    busy = true; state('Saving…');
+    try{
+      const sr = shopRow();
+      if(h(sr) !== S.sync.shop){ const { error } = await sb.from('shops').update(sr).eq('id', shopId); if(error) throw error; S.sync.shop = h(sr); }
+      for(const p of S.products.filter(x => !x.example)){
+        const urls = new Map();
+        for(const [i, src] of imagesOf(p).entries()) if(src.startsWith('data:') && !urls.has(src)) urls.set(src, await upload(src, p.id, i));
+        if(urls.size){ if(urls.has(p.img)) p.img = urls.get(p.img); if(p.imgs) p.imgs = p.imgs.map(x => urls.get(x) || x); saveLocal(); }
+        const row = prodRow(p);
+        if(h(row) === S.sync.p[p.id]) continue;
+        const { error } = await sb.from('products').upsert(row); if(error) throw error;
+        S.sync.p[p.id] = h(row);
+      }
+      const gone = Object.keys(S.sync.p).filter(id => !S.products.some(p => p.id === id));
+      if(gone.length){ const { error } = await sb.from('products').delete().in('id', gone); if(error) throw error; gone.forEach(id => delete S.sync.p[id]); }
+      for(const o of S.orders.filter(x => !x.example)){
+        const row = orderRow(o);
+        if(h(row) === S.sync.o[o.id]) continue;
+        const { error } = await sb.from('orders').upsert(row); if(error) throw error;
+        S.sync.o[o.id] = h(row);
+      }
+      const goneO = Object.keys(S.sync.o).filter(id => !S.orders.some(o => o.id === id));
+      if(goneO.length){ const { error } = await sb.from('orders').delete().in('id', goneO); if(error) throw error; goneO.forEach(id => delete S.sync.o[id]); }
+      saveLocal(); failed = false; state('Saved ✓');
+    }catch(e){
+      console.warn('sync', e); state('Not saved online · will retry');
+      if(!failed) toast('Could not save online. Your work is safe on this phone and will retry.');
+      failed = true; clearTimeout(timer); timer = setTimeout(push, 20000);
+    }finally{
+      busy = false;
+      if(again){ again = false; push(); }
+    }
+  }
+  function schedule(){ if(!shopId) return; clearTimeout(timer); state('Saving…'); timer = setTimeout(push, 800); }
+
+  /* bring the server copy to this phone, keeping edits not yet sent */
+  async function pull(){
+    const [pr, or, vw] = await Promise.all([
+      sb.from('products').select('*').eq('shop_id', shopId),
+      sb.from('orders').select('*').eq('shop_id', shopId),
+      sb.from('product_views').select('product_id,day,count').eq('shop_id', shopId).gte('day', dayKey(addDays(new Date(), -400)))
+    ]);
+    if(pr.error || or.error) throw (pr.error || or.error);
+    const merge = (localList, rows, toLocal, toRow, map) => {
+      const out = [];
+      rows.forEach(r => {
+        const mine = localList.find(x => x.id === r.id);
+        if(!mine && map[r.id]) return;                                   /* deleted here, not yet sent */
+        const server = toLocal(r);
+        if(mine && h(toRow(mine)) !== map[r.id]) out.push(mine);     /* changed here, not yet sent */
+        else { out.push(server); map[r.id] = h(toRow(server)); }
+      });
+      localList.forEach(x => { if(!x.example && !rows.some(r => r.id === x.id) && !map[x.id]) out.push(x); });   /* new here */
+      Object.keys(map).forEach(id => { if(!rows.some(r => r.id === id)) delete map[id]; });   /* deleted on another phone */
+      return out;
+    };
+    S.products = merge(S.products, pr.data, prodLocal, prodRow, S.sync.p);
+    S.orders = merge(S.orders, or.data, orderLocal, orderRow, S.sync.o);
+    applyViews(pr.data, vw.data || []);
+    saveLocal();
+  }
+  function applyViews(prodRows, viewRows){
+    S.products.forEach(p => { const r = prodRows.find(x => x.id === p.id); if(r) p.views = r.views || 0; p.viewLog = {}; });
+    viewRows.forEach(v => { const p = S.products.find(x => x.id === v.product_id); if(p) p.viewLog[v.day] = (p.viewLog[v.day] || 0) + v.count; });
+    lastViews = Date.now();
+  }
+  async function refreshViews(view){
+    if(!shopId || Date.now() - lastViews < 20000) return;
+    lastViews = Date.now();
+    const [pr, vw] = await Promise.all([
+      sb.from('products').select('id,views').eq('shop_id', shopId),
+      sb.from('product_views').select('product_id,day,count').eq('shop_id', shopId).gte('day', dayKey(addDays(new Date(), -400)))
+    ]);
+    if(pr.error || vw.error) return;
+    applyViews(pr.data, vw.data); saveLocal();
+    if(!$('#view-' + view).hidden) render(view);
+  }
+
+  /* first sign-in creates the shop; later sign-ins load it */
+  async function afterLogin(){
+    if(S.owner && S.owner !== user.id){ S = { shop:{ name:'My Shop', whatsapp:'', location:'Nepal' }, products:[], orders:[], nextNum:11, sync:{ p:{}, o:{}, shop:'' } }; }
+    S.owner = user.id;
+    let { data:shop, error } = await sb.from('shops').select('*').eq('owner', user.id).maybeSingle();
+    if(error) throw error;
+    const firstTime = !shop;
+    if(!shop){
+      const base = slugify(S.shop.name).slice(0, 26);
+      for(let n = 0; n < 12 && !shop; n++){
+        const slug = (n === 0 ? base : n < 9 ? base + (n + 1) : base + Math.random().toString(36).slice(2, 6)).padEnd(3, '0');
+        const res = await sb.from('shops').insert({ owner:user.id, slug, ...shopRow() }).select().single();
+        if(res.error && res.error.code !== '23505') throw res.error;
+        shop = res.data;
+      }
+      if(!shop) throw new Error('Could not create shop');
+    }
+    shopId = shop.id;
+    S.shop = { name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', slug:shop.slug };
+    S.nextNum = Math.max(S.nextNum || 11, shop.next_num || 11);
+    if(shop.last_delivery) S.lastDelivery = S.lastDelivery || shop.last_delivery;
+    S.sync.shop = firstTime ? '' : h({ name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', next_num:shop.next_num, last_delivery:shop.last_delivery || null });
+    const exIds = S.products.filter(p => p.example).map(p => p.id);
+    S.products = S.products.filter(p => !p.example);
+    if(firstTime && !S.products.length) S.nextNum = 11;   /* codes for real products start at 11 */
+    S.orders = S.orders.filter(o => !o.example && !exIds.includes(o.productId));
+    await pull();
+    saveLocal();
+    await push();
+    if(firstTime) toast(`Your shop is live at ${shopUrl()}`);
+  }
+
+  async function changeSlug(want){
+    if(want.length < 3){ toast('Shop link needs at least 3 letters'); return false; }
+    const { error } = await sb.from('shops').update({ slug:want }).eq('id', shopId);
+    if(error){ toast(error.code === '23505' ? 'That shop link is taken. Try another.' : 'Could not change the link. Try again.'); return false; }
+    S.shop.slug = want; saveLocal(); return true;
+  }
+
+  function signIn(){
+    if(!enabled){ toast('Online shop is available on walltok.com'); return; }
+    if(!S.shop.whatsapp || S.shop.whatsapp === '9800000000' || S.shop.name === 'Sita Fashion'){
+      go('settings'); toast('First add your shop name and WhatsApp number, then tap Make my shop link live'); return;
+    }
+    saveLocal();
+    sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/' } });
+  }
+  async function signOut(){
+    await sb.auth.signOut();
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    location.href = location.origin + '/';
+  }
+
+  function paint(view){
+    const live = !!shopId;
+    $('#claimCard').hidden = !enabled || live || !!user;
+    $('#claimUrl').textContent = shopUrl();
+    $('#linkState').textContent = live ? 'Live · put it in your TikTok bio' : enabled ? 'Not live yet' : 'Put it in your TikTok bio';
+    $('#slugRow').hidden = !live;
+    $('#acctCard').hidden = !enabled;
+    $('#btnClaim2').hidden = live || !!user;
+    $('#btnSignOut').hidden = !user;
+    $('#acctText').textContent = live ? `Signed in as ${user.email}. Your shop, orders and views are saved online, so you can use them on any phone.`
+      : 'Your shop is saved on this phone only. Make it live so customers can open your shop link and you see real views.';
+    if(live) $('#viewsNote').textContent = 'A view is counted when a customer opens a product on your shop link (once per customer per day). Your own visits are not counted. Tap a product to see its page.';
+    if(live && (view === 'home' || view === 'views')) refreshViews(view);
+  }
+
+  /* customers: walltok.com/<shop> */
+  async function openPublic(){
+    const box = $('#pubGrid');
+    S = { shop:{ name:'', whatsapp:'', location:'', slug:PUB_SLUG }, products:[], orders:[], sync:{ p:{}, o:{}, shop:'' } };
+    ['home','studio','orders','settings','views'].forEach(v => $('#view-' + v).hidden = true);
+    $('#view-shop').hidden = false;
+    if(!enabled){ box.innerHTML = '<p class="pubmsg muted">This shop is not available right now.</p>'; return; }
+    box.innerHTML = '<p class="pubmsg muted">Loading shop…</p>';
+    const { data:shop } = await sb.from('shops').select('id,slug,name,whatsapp,location').eq('slug', PUB_SLUG).maybeSingle();
+    if(!shop){ $('#pubName').textContent = 'Shop not found'; $('#pubMeta').textContent = `There is no shop at ${DOMAIN}/${PUB_SLUG}. Check the link in the seller's TikTok bio.`; box.innerHTML = ''; $('#shopSearch').hidden = true; return; }
+    const { data:rows } = await sb.from('products').select('*').eq('shop_id', shop.id);
+    S.shop = { name:shop.name, whatsapp:shop.whatsapp, location:shop.location, slug:shop.slug };
+    S.products = (rows || []).map(prodLocal);
+    document.title = `${shop.name} · ${DOMAIN}`;
+    const hit = PUB_CODE && S.products.find(p => (p.code || '').toLowerCase() === PUB_CODE);
+    if(hit){ shopOpen = hit.id; recordView(hit.id); }
+    renderShop();
+    addEventListener('popstate', () => {
+      const code = location.pathname.split('/').filter(Boolean)[1];
+      const p = code && S.products.find(x => (x.code || '').toLowerCase() === code.toLowerCase());
+      shopOpen = p ? p.id : null; renderShop();
+    });
+  }
+  function recordView(id){
+    const k = 'wt-viewed-' + id + '-' + dayKey(new Date());
+    try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); }catch(e){}
+    sb && sb.rpc('record_view', { p_product:id }).then(() => {}, () => {});
+  }
+
+  async function start(){
+    if(PUB_SLUG){ openPublic(); return; }
+    if(!enabled) return;
+    addEventListener('online', () => push());
+    const { data } = await sb.auth.getSession();
+    if(data && data.session){
+      user = data.session.user;
+      state('Loading…');
+      try{ await afterLogin(); state('Saved ✓'); }
+      catch(e){ console.warn(e); state('Offline · saved on this phone'); toast('Could not reach your online shop. Working on this phone for now.'); }
+      if(location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
+    }
+    const cur = ['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home';
+    render(cur);
+  }
+
+  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, enabled, signedIn: () => !!shopId };
+})();
+document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
+$('#btnSignOut').onclick = () => Cloud.signOut();
+
+if(!PUB_SLUG) go('home');
+Cloud.start();
 </script>
 
 </body>
