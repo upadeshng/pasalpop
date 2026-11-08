@@ -541,7 +541,9 @@ textarea{resize:vertical;min-height:84px}
       <div class="chips" id="catChips"></div>
     </div>
     <div id="shopBrowse" class="stack">
-      <input id="shopSearch" type="search" placeholder="Search, or type a product code like K12" aria-label="Search products or type a product code">
+      <input id="shopSearch" type="search" placeholder="Try: red heels, size 40, under 3000, F12" aria-label="Search by name, colour, size, price or product code">
+      <div class="chips" id="searchHints"></div>
+      <p class="small muted" id="searchSummary" hidden></p>
       <div class="pgrid" id="pubGrid"></div>
     </div>
     <div id="pubProduct" class="stack" hidden></div>
@@ -819,16 +821,16 @@ function renderShop(){
   if(shopOpen && prodById(shopOpen)){ renderProductPage(prodById(shopOpen)); return; }
   $('#pubProduct').hidden = true; $('#shopBrowse').hidden = false;
   const grid = $('#pubGrid'); grid.innerHTML = '';
-  const q = shopQuery.trim().toLowerCase();
-  const list = S.products.filter(p => (shopCat==='All' || p.category===shopCat) &&
-    (!q || p.name.toLowerCase().includes(q) || (p.code||'').toLowerCase().includes(q) || p.category.toLowerCase().includes(q))).sort((a,b)=>b.created-a.created);
+  const Q = parseSearch(shopQuery);
+  const list = searchProducts(S.products.filter(p => shopCat==='All' || p.category===shopCat), Q);
+  paintSearchHelp(Q, list.length);
   list.forEach(p => {
     const el = document.createElement('div'); el.className='pcard'; el.dataset.open = p.id;
     el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc(p.sizes.join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
     wireGallery(el, p); grid.append(el);
   });
   if(!S.products.length) grid.innerHTML = '<p class="muted">No products yet.</p>';
-  else if(!list.length) grid.innerHTML = `<p class="muted">No product matches “${esc(shopQuery)}”.</p>`;
+  else if(!list.length) grid.innerHTML = `<p class="muted">Nothing matches “${esc(shopQuery)}”. Try a different size or a higher budget.</p>`;
 }
 function renderProductPage(p){
   $('#shopBrowse').hidden = true;
@@ -859,6 +861,90 @@ function openProduct(id, count = true){
 }
 $('#pubGrid').addEventListener('click', e => { if(e.target.closest('a')) return; const c = e.target.closest('[data-open]'); if(c) openProduct(c.dataset.open); });
 $('#shopSearch').addEventListener('input', e => { shopQuery = e.target.value; renderShop(); });
+
+/* ---------- smart search: words, colours, sizes, prices and codes in any order ----------
+   "red heels 37", "size 40 under 3000", "2000-4000", "below 2k", "F12", "offer", "sasto" */
+function parseSearch(raw){
+  const Q = { min:null, max:null, near:null, sizes:[], words:[], codes:[], offer:false, cheap:false, newest:false, text:raw.trim() };
+  let t = ' ' + raw.toLowerCase().replace(/रु\.?|\bnpr\b|\brs\b\.?/g, ' ').replace(/(\d),(\d{3})/g, '$1$2') + ' ';
+  const num = x => { x = String(x).trim(); const k = /k$/.test(x); const n = parseFloat(x); return isNaN(n) ? null : Math.round(k ? n * 1000 : n); };
+  const N = '(\\d+(?:\\.\\d+)?k?)';
+  const take = (re, fn) => { t = t.replace(re, (...m) => { fn(m); return ' '; }); };
+  /* ranges: 2000-4000, 2k to 4k, 38-40 (sizes) */
+  take(new RegExp(`(?:between\\s+)?${N}\\s*(?:-|–|to|and)\\s*${N}`, 'g'), m => {
+    const a = num(m[1]), b = num(m[2]); if(a == null || b == null) return;
+    if(a <= 50 && b <= 50){ for(let x = Math.min(a,b); x <= Math.max(a,b); x++) Q.sizes.push(String(x)); }
+    else { Q.min = Math.min(a,b); Q.max = Math.max(a,b); }
+  });
+  take(new RegExp(`(?:under|below|less than|upto|up to|max|within|budget|<|tala|bhanda kam)\\s*${N}`, 'g'), m => { Q.max = num(m[1]); });
+  take(new RegExp(`${N}\\s*(?:samma|bhitra|or less|and below|max)`, 'g'), m => { Q.max = num(m[1]); });
+  take(new RegExp(`(?:above|over|more than|from|min|>|mathi)\\s*${N}`, 'g'), m => { Q.min = num(m[1]); });
+  take(new RegExp(`(?:size|sz|no\\.?|eu|number)\\s*${N}`, 'g'), m => Q.sizes.push(String(num(m[1]))));
+  take(new RegExp(`${N}\\s*(?:size|no|number)\\b`, 'g'), m => Q.sizes.push(String(num(m[1]))));
+  /* product codes like F12 or #k11 */
+  take(/#?\b([a-z])\s?(\d{2,3})\b/g, m => Q.codes.push((m[1] + m[2]).toUpperCase()));
+  /* bare numbers: small ones are sizes, big ones are a budget */
+  take(new RegExp(`\\b${N}\\b`, 'g'), m => { const n = num(m[1]); if(n == null) return; if(n <= 50) Q.sizes.push(String(n)); else if(n >= 100){ Q.near = n; if(Q.max == null) Q.max = Math.round(n * 1.2); } });
+  const STOP = new Set('a an the for in with and or of me show i want need please any some shoe shoes jutta jutto chahiyo chaiyo ko lagi ma price cost rate size'.split(' '));
+  t.split(/[^a-zऀ-ॿ]+/).filter(Boolean).forEach(w => {
+    if(/^(offer|offers|sale|discount|deal|deals|chhut|chut)$/.test(w)) Q.offer = true;
+    else if(/^(cheap|cheapest|sasto|sasto|budget|low)$/.test(w)) Q.cheap = true;
+    else if(/^(new|latest|naya)$/.test(w)) Q.newest = true;
+    else if(!STOP.has(w) && w.length > 1) Q.words.push(w);
+  });
+  Q.sizes = [...new Set(Q.sizes)];
+  return Q;
+}
+const SYN = { ladies:['heel','flat','sandal'], lady:['heel','flat','sandal'], women:['heel','flat','sandal'], girl:['heel','flat','sandal'], trainer:['sneaker','running'], sport:['running','sneaker'], gents:['loafer','formal','boot'], men:['loafer','formal','boot'], kid:['kid'], child:['kid'], baby:['kid'],
+  wedding:['formal','heel','party'], bihe:['formal','heel','party'], party:['heel','party'], office:['formal','loafer'], gym:['running','sneaker'], running:['running'], winter:['boot'], jado:['boot'],
+  chappal:['slide','sandal'], slipper:['slide'], kalo:['black'], rato:['red'], seto:['white'], khairo:['brown'], pahelo:['yellow'], gulabi:['pink'], nilo:['blue'] };
+function searchProducts(items, Q){
+  const hay = p => [p.name, p.desc, p.category, p.offer, p.code, p.caption].filter(Boolean).join(' ').toLowerCase();
+  const sizeOk = p => !Q.sizes.length || (p.sizes || []).some(z => /free/i.test(z) || Q.sizes.includes(String(parseInt(String(z).replace(/\D+/g,' ')))) || Q.sizes.includes(String(z)));
+  let out = items.map(p => {
+    if(Q.codes.length && !Q.codes.includes((p.code || '').toUpperCase())) return null;
+    if(Q.min != null && p.price < Q.min) return null;
+    if(Q.max != null && p.price > Q.max) return null;
+    if(!sizeOk(p)) return null;
+    if(Q.offer && !(p.offer || p.oldPrice > p.price)) return null;
+    let score = 0; const h = hay(p);
+    for(const w of Q.words){ const stem = w.length > 3 ? w.replace(/(?<!s)s$/, '') : w; const alts = [w, stem, ...(SYN[w] || []), ...(SYN[stem] || [])]; if(alts.some(a => h.includes(a))) score++; }
+    if(Q.words.length && !score) return null;
+    return { p, score };
+  }).filter(Boolean);
+  out.sort((a, b) => (b.score - a.score)
+    || (Q.near != null ? Math.abs(a.p.price - Q.near) - Math.abs(b.p.price - Q.near) : 0)
+    || (Q.cheap ? a.p.price - b.p.price : 0)
+    || ((b.p.stock > 0) - (a.p.stock > 0))
+    || (b.p.created - a.p.created));
+  if(Q.words.length > 1){ const best = out.length ? out[0].score : 0; if(best === Q.words.length) out = out.filter(x => x.score === best); }
+  return out.map(x => x.p);
+}
+function paintSearchHelp(Q, n){
+  const parts = [];
+  if(Q.codes.length) parts.push('Code ' + Q.codes.join(', '));
+  if(Q.words.length) parts.push('“' + Q.words.join(' ') + '”');
+  if(Q.sizes.length) parts.push('Size ' + (Q.sizes.length > 3 ? Q.sizes[0] + '–' + Q.sizes[Q.sizes.length-1] : Q.sizes.join(', ')));
+  if(Q.min != null && Q.max != null && Q.near == null) parts.push(`${npr(Q.min)} – ${npr(Q.max)}`);
+  else if(Q.near != null) parts.push(`Around ${npr(Q.near)}`);
+  else if(Q.max != null) parts.push(`Under ${npr(Q.max)}`);
+  else if(Q.min != null) parts.push(`Above ${npr(Q.min)}`);
+  if(Q.offer) parts.push('On offer'); if(Q.cheap) parts.push('Cheapest first');
+  const sum = $('#searchSummary');
+  sum.hidden = !Q.text;
+  sum.innerHTML = Q.text ? `${n} product${n===1?'':'s'}${parts.length ? ' · ' + parts.map(esc).join(' · ') : ''} <button class="btn small" type="button" id="searchClear">Clear</button>` : '';
+  if(Q.text) $('#searchClear').onclick = () => { $('#shopSearch').value = ''; shopQuery = ''; renderShop(); };
+  const hints = $('#searchHints');
+  if(Q.text || S.products.length < 4){ hints.hidden = true; return; }
+  hints.hidden = false;
+  const prices = S.products.map(p => p.price).sort((a,b) => a-b), mid = prices[Math.floor(prices.length/2)];
+  const budget = Math.max(500, Math.round(mid / 500) * 500);
+  const sizeCount = {}; S.products.forEach(p => (p.sizes||[]).forEach(z => { if(/^\d+$/.test(z)) sizeCount[z] = (sizeCount[z]||0) + 1; }));
+  const topSize = Object.entries(sizeCount).sort((a,b) => b[1]-a[1])[0];
+  const ideas = [`Under ${budget}`, topSize ? `Size ${topSize[0]}` : null, S.products.some(p => p.offer || p.oldPrice > p.price) ? 'Offer' : null, 'Cheapest'].filter(Boolean);
+  hints.innerHTML = ideas.map(x => `<button class="chip" type="button" data-hint="${esc(x)}">${esc(x)}</button>`).join('');
+}
+$('#searchHints').addEventListener('click', e => { const b = e.target.closest('[data-hint]'); if(!b) return; $('#shopSearch').value = b.dataset.hint; shopQuery = b.dataset.hint; renderShop(); });
 $('#shopSearch').addEventListener('keydown', e => {
   if(e.key !== 'Enter') return;
   const hit = findByCode(e.target.value);
