@@ -64,6 +64,9 @@ button.stat span::after{content:" ›";color:var(--indigo)}
 .pcard{cursor:pointer}
 .sync{font-family:var(--f-body);font-weight:500;font-size:.72rem;color:var(--muted);margin-left:6px}
 .claim{border-color:var(--accent);background:var(--accent-soft)}
+.inapp{position:fixed;inset:0;background:rgba(27,29,58,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.inapp .card{width:100%;max-width:520px}
+.inapp ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 html.public .tabs, html.public #btnSettings, html.public #view-shop > .tip, html.public #view-shop > .urlbar, html.public #view-home{display:none!important}
 html.public .app{padding-bottom:24px}
 .pubmsg{text-align:center;padding:48px 16px}
@@ -228,6 +231,7 @@ textarea{resize:vertical;min-height:84px}
     </div>
     <button class="btn primary big" type="button" data-go="studio">+ New product (take photo)</button>
     <div class="tip" id="festTip"></div>
+    <div class="tip" id="inappBar" hidden>You're using WallTok inside <b id="inappBarName">another app</b>. Open it in your phone's browser to save your work properly and make your shop link live. <button class="btn small" type="button" id="inappBarBtn">How?</button></div>
     <div class="card stack claim" id="claimCard" hidden>
       <h3>Make your shop link live</h3>
       <p class="small">Right now your shop is only on this phone. Make <b id="claimUrl"></b> live so customers from TikTok can see your products and order, and you see real views.</p>
@@ -623,6 +627,17 @@ textarea{resize:vertical;min-height:84px}
   <button type="button" data-tab="orders"><span>☰</span>Orders</button>
 </nav></div>
 <div class="toast" id="toast" hidden></div>
+<div class="inapp" id="inapp" hidden role="dialog" aria-modal="true" aria-labelledby="inappH">
+  <div class="card stack">
+    <h3 id="inappH">Open in your browser to sign in</h3>
+    <p class="small">You opened WallTok inside <b id="inappName">another app</b>. Google does not allow signing in here, so open this page in <b id="inappBrowser">Chrome</b> instead.</p>
+    <p class="small muted">Products you make in this built-in browser stay here and do not move to Chrome, so it's best to use WallTok in Chrome from the start.</p>
+    <ol class="small" id="inappSteps"></ol>
+    <a class="btn primary" id="inappChrome" hidden>Open in Chrome</a>
+    <button class="btn" type="button" id="inappCopy">Copy link</button>
+    <button class="btn" type="button" id="inappClose">Close</button>
+  </div>
+</div>
 <div class="prompter" id="prompter" hidden role="dialog" aria-label="Teleprompter">
   <div class="pbar">
     <button class="btn primary" id="pPlay" type="button">Start</button>
@@ -2485,8 +2500,32 @@ var Cloud = (() => {
     S.shop.slug = want; saveLocal(); return true;
   }
 
+  /* Google blocks sign-in inside TikTok, Instagram and Facebook's built-in browsers */
+  const UA = navigator.userAgent || '';
+  const IN_APP = /musical_ly|BytedanceWebview|TikTok|trill_|Instagram|FBAN|FBAV|FB_IAB|Messenger|Snapchat|Line\/|; wv\)/i.test(UA)
+    ? (/musical_ly|Bytedance|TikTok|trill_/i.test(UA) ? 'TikTok' : /Instagram/i.test(UA) ? 'Instagram' : /FBAN|FBAV|FB_IAB|Messenger/i.test(UA) ? 'Facebook' : /Snapchat/i.test(UA) ? 'Snapchat' : 'another app')
+    : '';
+  const IS_IOS = /iPhone|iPad|iPod/i.test(UA);
+  function showInApp(){
+    const browser = IS_IOS ? 'Safari' : 'Chrome';
+    $('#inappName').textContent = IN_APP === 'another app' ? "another app's browser" : IN_APP;
+    $('#inappBrowser').textContent = browser;
+    const steps = IN_APP === 'TikTok'
+      ? [`Tap the ⋯ or ↗ button at the top right`, `Tap “Open in browser”`, `In ${browser}, tap Make my shop link live again`]
+      : [`Tap the ⋯ menu at the top right`, `Tap “Open in ${IS_IOS ? 'external browser' : 'Chrome'}” or “Open in browser”`, `In ${browser}, tap Make my shop link live again`];
+    $('#inappSteps').innerHTML = steps.map(x => `<li>${x}</li>`).join('') + `<li>No menu? Tap <b>Copy link</b> below and paste it into ${browser}.</li>`;
+    const chrome = $('#inappChrome');
+    chrome.hidden = IS_IOS;
+    chrome.href = `intent://${location.host}${location.pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(location.href)};end`;
+    $('#inapp').hidden = false;
+  }
+  $('#inappClose').onclick = () => { $('#inapp').hidden = true; };
+  $('#inappBarBtn').onclick = () => showInApp();
+  $('#inappCopy').onclick = () => copyText(location.origin + '/');
+
   function signIn(){
     if(!enabled){ toast('Online shop is available on walltok.com'); return; }
+    if(IN_APP){ saveLocal(); showInApp(); return; }
     if(!S.shop.whatsapp || S.shop.whatsapp === '9800000000' || S.shop.name === 'Sita Fashion'){
       go('settings'); toast('First add your shop name and WhatsApp number, then tap Make my shop link live'); return;
     }
@@ -2501,6 +2540,8 @@ var Cloud = (() => {
 
   function paint(view){
     const live = !!shopId;
+    $('#inappBar').hidden = !enabled || !IN_APP || !!user;
+    $('#inappBarName').textContent = IN_APP === 'another app' ? "another app's browser" : IN_APP;
     $('#claimCard').hidden = !enabled || live || !!user;
     $('#claimUrl').textContent = shopUrl();
     $('#linkState').textContent = live ? 'Live · put it in your TikTok bio' : enabled ? 'Not live yet' : 'Put it in your TikTok bio';
