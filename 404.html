@@ -869,7 +869,7 @@ function renderShop(){
   const list = searchProducts(S.products.filter(p => shopCat==='All' || p.category===shopCat), Q);
   paintSearchHelp(Q, list.length);
   /* products just posted on TikTok go first, so people arriving from the bio link see them straight away */
-  const jp = $('#justPosted'), recent = !Q.text && shopCat === 'All' ? S.products.filter(p => p.ttAt && Date.now() - p.ttAt < 3*864e5).sort((a,b) => b.ttAt - a.ttAt).slice(0, 3) : [];
+  const jp = $('#justPosted'), recent = !Q.text ? S.products.filter(p => (shopCat === 'All' || p.category === shopCat) && p.ttAt && Date.now() - p.ttAt < 3*864e5).sort((a,b) => b.ttAt - a.ttAt).slice(0, 3) : [];
   jp.hidden = !recent.length;
   jp.innerHTML = recent.length ? `<div class="section-h"><h3 style="margin:0"><span class="tt-logo" aria-hidden="true">♪</span>Just posted on TikTok</h3></div>` + recent.map(p => `
     <div class="jp" data-open="${p.id}"><img alt="${esc(p.name)}" src="${p.img}"><div class="stack" style="gap:4px;min-width:0">
@@ -2617,6 +2617,11 @@ var Cloud = (() => {
     S.products = merge(S.products, pr.data, prodLocal, prodRow, S.sync.p);
     S.orders = merge(S.orders, or.data, orderLocal, orderRow, S.sync.o);
     applyViews(pr.data, vw.data || []);
+    /* products posted to TikTok before WallTok remembered it: fill in from the post history */
+    try{
+      const { data:posts } = await sb.from('tiktok_posts').select('product_id,status,created_at').eq('shop_id', shopId).eq('status', 'PUBLISH_COMPLETE');
+      (posts || []).forEach(t => { const p = S.products.find(x => x.id === t.product_id), at = ms(t.created_at); if(p && at && (!p.ttAt || at > p.ttAt)) p.ttAt = at; });
+    }catch(e){}
     saveLocal();
   }
   function applyViews(prodRows, viewRows){
