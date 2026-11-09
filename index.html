@@ -2805,6 +2805,37 @@ var TT = (() => {
     const s2 = Math.max(bw/img.width, bh/img.height); g.drawImage(img, x + (bw - img.width*s2)/2, y + (bh - img.height*s2)/2, img.width*s2, img.height*s2); g.restore();
     return c;
   }
+  /* MP4 built frame by frame with the browser's video encoder: correct length in the file (TikTok checks it),
+     faster than real time, and it keeps going if the seller switches tabs */
+  function loadMuxer(){
+    if(window.Mp4Muxer) return Promise.resolve();
+    return new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js'; sc.onload = ok; sc.onerror = no; document.head.append(sc); });
+  }
+  async function encodeMp4(stage, draw, secs, onPct){
+    if(!window.VideoEncoder || !window.VideoFrame) throw new Error('no encoder');
+    await loadMuxer();
+    const W = stage.width, H = stage.height, fps = 30;
+    let codec = null;
+    for(const c of ['avc1.640028', 'avc1.4d0028', 'avc1.42002a']){
+      try{ const sup = await VideoEncoder.isConfigSupported({ codec:c, width:W, height:H, bitrate:4_000_000, framerate:fps }); if(sup.supported){ codec = c; break; } }catch(e){}
+    }
+    if(!codec) throw new Error('no h264');
+    const muxer = new Mp4Muxer.Muxer({ target:new Mp4Muxer.ArrayBufferTarget(), video:{ codec:'avc', width:W, height:H, frameRate:fps }, fastStart:'in-memory' });
+    let err = null;
+    const enc = new VideoEncoder({ output:(chunk, meta) => muxer.addVideoChunk(chunk, meta), error:e => { err = e; } });
+    enc.configure({ codec, width:W, height:H, bitrate:4_000_000, framerate:fps, avc:{ format:'avc' } });
+    const n = Math.round(secs * fps);
+    for(let i = 0; i < n; i++){
+      draw(i / fps);
+      const f = new VideoFrame(stage, { timestamp:Math.round(i * 1e6 / fps), duration:Math.round(1e6 / fps) });
+      enc.encode(f, { keyFrame:i % 60 === 0 }); f.close();
+      while(enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 4));
+      if(i % 6 === 0){ onPct(i / n); await new Promise(r => setTimeout(r, 0)); }
+      if(err) throw err;
+    }
+    await enc.flush(); enc.close(); muxer.finalize();
+    return new Blob([muxer.target.buffer], { type:'video/mp4' });
+  }
   async function makeVideo(p, onPct){
     const srcs = [...new Set([p.img, ...(p.imgs || [])].filter(Boolean))].slice(0, 4);
     const imgs = []; for(const s of srcs){ try{ imgs.push(await loadImg(s)); }catch(e){} }
@@ -2812,6 +2843,8 @@ var TT = (() => {
     const comps = imgs.map(frameFor), info = productInfo(p);
     const secs = Math.max(8, comps.length*2.2 + 2.2), T = secs*1000;
     const stage = document.createElement('canvas'); stage.width = 720; stage.height = 1280; const g = stage.getContext('2d');
+    try{ const blob = await encodeMp4(stage, t => drawFrame(g, t, comps, info, secs), secs, onPct); onPct(1); return { blob, ext:'mp4', secs, info }; }
+    catch(e){ console.warn('mp4 encoder unavailable, recording instead', e); }
     const types = ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
     const mime = (window.MediaRecorder && types.find(t => MediaRecorder.isTypeSupported(t))) || '';
     if(!mime || !stage.captureStream) throw new Error('This browser cannot make videos. Use Chrome on your phone.');
@@ -2908,7 +2941,7 @@ var TT = (() => {
     const fd = new FormData(); fd.set('meta', JSON.stringify(meta)); fd.set('video', new File([vid.blob], `${p.code || 'product'}.${vid.ext}`, { type:vid.blob.type }));
     try{
       const { publish_id } = await call('post', { body:fd });
-      show(`<p><b>Sent to TikTok ✓</b></p><p class="small muted" id="ttState">TikTok is processing your video…</p>
+      show(`<p><b id="ttHead">Sent to TikTok ✓</b></p><p class="small muted" id="ttState">TikTok is processing your video…</p>
         <div class="stack" style="gap:6px"><span class="small"><b>Last step: pin the details comment</b></span><span class="ttnote">TikTok doesn't let apps comment, so comment this on your post, then long-press it and tap Pin.</span>
         <button class="btn" type="button" id="ttPin">Copy comment</button></div>
         <button class="btn" type="button" id="ttDone">Done</button>`);
@@ -2928,7 +2961,14 @@ var TT = (() => {
     try{
       const r = await call('poll', { json:{ publish_id:id } });
       if(r.status === 'PUBLISH_COMPLETE'){ el.textContent = priv === 'SELF_ONLY' ? 'Posted ✓ It is on your profile as “Only me”.' : 'Posted ✓ It is live on your TikTok.'; busy = false; history(pid); return; }
-      if(r.status === 'FAILED'){ el.textContent = `TikTok could not post it (${r.fail_reason || 'unknown reason'}). Try again.`; busy = false; return; }
+      if(r.status === 'FAILED'){
+        const why = { duration_check:'TikTok could not read the video length.', file_format_check_failed:'TikTok did not accept the video file.', frame_rate_check_failed:'TikTok did not accept the video frame rate.',
+          picture_size_check_failed:'TikTok did not accept the video size.', spam_risk_too_many_posts:'You have posted too many times today. Try again tomorrow.', spam_risk_user_banned_from_posting:'This TikTok account cannot post right now.',
+          internal:'TikTok had a problem on its side.', video_pull_failed:'TikTok could not fetch the video.' }[r.fail_reason] || `TikTok could not post it (${r.fail_reason || 'unknown reason'}).`;
+        $('#ttHead').textContent = 'Not posted';
+        el.innerHTML = `${esc(why)} <button class="btn small" type="button" id="ttRetry">Try again</button>`;
+        $('#ttRetry').onclick = () => { busy = false; open(pid); };
+        busy = false; return; }
     }catch(e){}
     if(n > 40){ el.textContent = 'Still processing. Check your TikTok profile in a few minutes.'; busy = false; return; }
     setTimeout(() => poll(id, n + 1, priv), 3000);
