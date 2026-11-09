@@ -83,6 +83,13 @@ button.stat span::after{content:" ›";color:var(--indigo)}
 .ttopts label.chk.off{opacity:.5}
 .ttsub{padding-left:26px;display:flex;flex-direction:column;gap:6px}
 .ttnote{font-size:.78rem;color:var(--muted)}
+.btn.more{grid-column:1/-1;width:100%}
+.shoptabs{display:flex;gap:6px;border-bottom:1px solid var(--line);overflow-x:auto}
+.shoptabs button{font:inherit;font-weight:600;font-size:.9rem;background:none;border:0;border-bottom:3px solid transparent;padding:10px 6px;color:var(--muted);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.shoptabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.shoptabs .tt-logo{background:#111;color:#fff;width:20px;height:20px;margin:0}
+.ttago{position:absolute;left:8px;bottom:8px;background:rgba(17,17,17,.85);color:#fff;font-size:.7rem;font-weight:600;border-radius:999px;padding:3px 8px;z-index:2}
+.pcard{position:relative}
 .jp{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;background:var(--surface);border:2px solid var(--accent);border-radius:var(--r);padding:10px;cursor:pointer}
 .jp img{width:96px;height:96px;border-radius:10px;object-fit:cover}
 .jp b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -606,7 +613,7 @@ textarea{resize:vertical;min-height:84px}
       </div>
     </div>
     <div class="card stack" id="orderForm" hidden>
-      <div><label for="oProduct">Product</label><select id="oProduct"></select></div>
+      <div><label for="oProduct">Product</label><input id="oFind" type="search" placeholder="Find by name or code, e.g. F12" aria-label="Find product" hidden style="margin-bottom:6px"><select id="oProduct"></select></div>
       <div class="grid2">
         <div><label for="oName">Customer</label><input id="oName" placeholder="Ram"></div>
         <div><label for="oPlace">Address</label><input id="oPlace" placeholder="Baneshwor"></div>
@@ -750,7 +757,7 @@ function seed(){
 let S;
 try{ S = PUB_SLUG ? null : JSON.parse(localStorage.getItem(KEY)); }catch(e){ S = null; }
 function saveLocal(){ if(PUB_SLUG) return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save in this browser. Try a smaller photo.'); } }
-function save(){ saveLocal(); if(window.Cloud) Cloud.schedule(); }
+function save(){ _pArr = null; saveLocal(); if(window.Cloud) Cloud.schedule(); }
 if(!S || !S.shop) S = seed();
 /* every product gets a short code, like K12, that customers use to find it from TikTok */
 const CODE_LETTER = {'Kurta':'K','Saree':'S','Clothes':'C','Shoes':'F','Bags':'B','Jewellery':'J','Cosmetics':'M','Cups & kitchen':'H','Plants':'P','Food':'D','Other':'X'};
@@ -769,7 +776,11 @@ const codDue = o => o.pay === 'COD' && !o.paidAt;
 const paidToday = o => sameDay(o.paidAt);
 const productUrl = p => `${shopUrl()}/${String(p.code || '').toLowerCase()}`;
 /* views are logged per day so sellers can see today, this week or any dates */
-function dayKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+/* views are counted by Nepal's date (the server does the same), so "today" matches wherever the seller is */
+const NPT = (() => { try{ return new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Kathmandu', year:'numeric', month:'2-digit', day:'2-digit' }); }catch(e){ return null; } })();
+function dayKey(d){ if(NPT){ try{ return NPT.format(d); }catch(e){} } return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+/* midday on Nepal's current date, as a local date; adding days to it keeps the same calendar dates */
+const nepalToday = () => new Date(dayKey(new Date()) + 'T12:00');
 function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function viewsIn(p, from, to){ let n = 0; const log = p.viewLog || {}; for(const k in log) if(k >= from && k <= to) n += log[k]; return n; }
 S.products.forEach(p => {
@@ -787,7 +798,39 @@ async function copyText(txt){
   catch(e){ toast('Select the text and copy it'); }
 }
 const shopUrl = () => DOMAIN + '/' + (S.shop.slug || slugify(S.shop.name));
-const prodById = id => S.products.find(p=>p.id===id);
+let _pIdx = null, _pArr = null, _pLen = -1;
+const prodById = id => {
+  if(_pArr !== S.products || _pLen !== S.products.length){ _pIdx = new Map(S.products.map(p => [p.id, p])); _pArr = S.products; _pLen = S.products.length; }
+  return _pIdx.get(id);
+};
+/* long lists show a page at a time and load more as you scroll */
+function pager(box, items, make, step = 24){
+  if(box._io) box._io.disconnect();
+  box.innerHTML = '';
+  let shown = 0;
+  const more = document.createElement('button'); more.type = 'button'; more.className = 'btn more';
+  const visible = () => box.offsetParent !== null;
+  const upd = () => {
+    const left = items.length - shown;
+    if(left > 0){ more.textContent = `Show more (${left.toLocaleString('en-IN')} left)`; if(!more.isConnected) box.append(more); }
+    else more.remove();
+  };
+  const add = () => {
+    if(shown >= items.length) return;
+    const frag = document.createDocumentFragment();
+    items.slice(shown, shown + step).forEach(it => frag.append(make(it)));
+    shown = Math.min(items.length, shown + step);
+    box.insertBefore(frag, more.isConnected ? more : null); upd();
+  };
+  more.onclick = add;
+  if('IntersectionObserver' in window){
+    const io = new IntersectionObserver(es => { if(es.some(e => e.isIntersecting) && visible()) add(); }, { rootMargin:'800px 0px' });
+    io.observe(more); box._io = io;
+  }
+  add();
+  return { get shown(){ return shown; } };
+}
+function ago(t){ const m = Math.round((Date.now() - t) / 60000); return m < 60 ? `${Math.max(1, m)}m ago` : m < 1440 ? `${Math.round(m/60)}h ago` : `${Math.round(m/1440)}d ago`; }
 
 /* ---------- navigation ---------- */
 function go(view){
@@ -822,8 +865,8 @@ function renderHome(){
   $('#stSalesL').textContent = `Sales today · ${paid.length} order${paid.length===1?'':'s'}`;
   $('#stCod').textContent = npr(due.reduce((a,o) => a + orderTotal(o), 0));
   $('#stCodL').textContent = `COD to collect · ${due.length} order${due.length===1?'':'s'}`; $('#stProducts').textContent = S.products.length;
-  const vToday = S.products.reduce((a, p) => a + viewsIn(p, dayKey(new Date()), dayKey(new Date())), 0);
-  $('#stViews').textContent = vToday.toLocaleString('en-IN');
+  const tk = dayKey(new Date());
+  viewStats(tk, tk).then(st => { let n = 0; st.byProduct.forEach(v => n += v); $('#stViews').textContent = n.toLocaleString('en-IN'); });
   $('#stViewsL').textContent = `Views today · ${S.products.reduce((a, p) => a + (p.views || 0), 0).toLocaleString('en-IN')} total`;
   const top = [...S.products].sort((a,b)=>(b.views||0)-(a.views||0))[0];
   $('#festTip').innerHTML = top ? `<b>Tip:</b> Tihar and wedding season are busy. Your <b>${esc(top.name)}</b> is getting the most views. Make an offer video for it?` : '<b>Tip:</b> Add your first product to get your shop link ready.';
@@ -838,7 +881,7 @@ function itemRow(p, right){
   return d;
 }
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let shopCat = 'All', shopOpen = null, shopQuery = '';
+let shopCat = 'All', shopOpen = null, shopQuery = '', shopTab = null;
 const waNumber = () => '977' + String(S.shop.whatsapp).replace(/\D/g,'').replace(/^977/,'');
 function orderLink(p){
   const msg = `Namaste! I want to order:\n${p.name} (${p.code}) – ${npr(p.price)}\nhttps://${productUrl(p)}\nSize: ___\nAddress: ___`;
@@ -846,8 +889,8 @@ function orderLink(p){
 }
 function galleryHtml(p){
   return p.imgs && p.imgs.length > 1
-    ? `<div class="gallery">${p.imgs.map((src, k) => `<img alt="${esc(p.name)} photo ${k+1}" src="${src}">`).join('')}</div><span class="gcount">1/${p.imgs.length}</span>`
-    : `<img alt="${esc(p.name)}" src="${p.img}">`;
+    ? `<div class="gallery">${p.imgs.map((src, k) => `<img alt="${esc(p.name)} photo ${k+1}" src="${src}" loading="lazy" decoding="async">`).join('')}</div><span class="gcount">1/${p.imgs.length}</span>`
+    : `<img alt="${esc(p.name)}" src="${p.img}" loading="lazy" decoding="async">`;
 }
 function wireGallery(el, p){
   const gal = el.querySelector('.gallery');
@@ -864,24 +907,29 @@ function renderShop(){
   cats.forEach(c => { const b = document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=c; b.setAttribute('aria-pressed', c===shopCat); b.onclick=()=>{shopCat=c; shopOpen=null; renderShop();}; cc.append(b); });
   if(shopOpen && prodById(shopOpen)){ renderProductPage(prodById(shopOpen)); return; }
   $('#pubProduct').hidden = true; $('#shopBrowse').hidden = false;
-  const grid = $('#pubGrid'); grid.innerHTML = '';
+  const grid = $('#pubGrid');
   const Q = parseSearch(shopQuery);
-  const list = searchProducts(S.products.filter(p => shopCat==='All' || p.category===shopCat), Q);
+  const inCat = S.products.filter(p => shopCat === 'All' || p.category === shopCat);
+  /* tab of products posted to TikTok in the last two weeks, newest first */
+  const posted = inCat.filter(p => p.ttAt && Date.now() - p.ttAt < 14*864e5).sort((a,b) => b.ttAt - a.ttAt);
+  if(shopTab === null) shopTab = S.products.some(p => p.ttAt && Date.now() - p.ttAt < 3*864e5) ? 'tt' : 'all';
+  const tab = posted.length ? shopTab : 'all';
+  const tabs = $('#justPosted');
+  tabs.hidden = !posted.length;
+  tabs.innerHTML = posted.length ? `<div class="shoptabs" role="tablist" aria-label="Products">
+    <button type="button" role="tab" data-tab="all" aria-selected="${tab === 'all'}">All (${inCat.length.toLocaleString('en-IN')})</button>
+    <button type="button" role="tab" data-tab="tt" aria-selected="${tab === 'tt'}"><span class="tt-logo" aria-hidden="true">♪</span>Just posted on TikTok (${posted.length})</button></div>` : '';
+  let list = searchProducts(tab === 'tt' ? posted : inCat, Q);
+  if(tab === 'tt' && !Q.text) list = posted;
   paintSearchHelp(Q, list.length);
-  /* products just posted on TikTok go first, so people arriving from the bio link see them straight away */
-  const jp = $('#justPosted'), recent = !Q.text ? S.products.filter(p => (shopCat === 'All' || p.category === shopCat) && p.ttAt && Date.now() - p.ttAt < 3*864e5).sort((a,b) => b.ttAt - a.ttAt).slice(0, 3) : [];
-  jp.hidden = !recent.length;
-  jp.innerHTML = recent.length ? `<div class="section-h"><h3 style="margin:0"><span class="tt-logo" aria-hidden="true">♪</span>Just posted on TikTok</h3></div>` + recent.map(p => `
-    <div class="jp" data-open="${p.id}"><img alt="${esc(p.name)}" src="${p.img}"><div class="stack" style="gap:4px;min-width:0">
-      <b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc((p.sizes||[]).join(' · '))}</span>
-      <div class="row" style="gap:6px;flex-wrap:wrap"><a class="btn primary small" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a><button class="btn small" type="button">See details</button></div></div></div>`).join('') : '';
-  list.forEach(p => {
-    const el = document.createElement('div'); el.className='pcard'; el.dataset.open = p.id;
-    el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc(p.sizes.join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
-    wireGallery(el, p); grid.append(el);
-  });
-  if(!S.products.length) grid.innerHTML = '<p class="muted">No products yet.</p>';
-  else if(!list.length) grid.innerHTML = `<p class="muted">Nothing matches “${esc(shopQuery)}”. Try a different size or a higher budget.</p>`;
+  if(!S.products.length){ if(grid._io) grid._io.disconnect(); grid.innerHTML = '<p class="muted">No products yet.</p>'; return; }
+  if(!list.length){ if(grid._io) grid._io.disconnect(); grid.innerHTML = `<p class="muted">Nothing matches “${esc(shopQuery)}”. Try a different size or a higher budget.</p>`; return; }
+  pager(grid, list, p => {
+    const el = document.createElement('div'); el.className = 'pcard'; el.dataset.open = p.id;
+    const fresh = p.ttAt && Date.now() - p.ttAt < 14*864e5;
+    el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${fresh ? `<span class="ttago">♪ Posted ${ago(p.ttAt)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc((p.sizes||[]).join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
+    wireGallery(el, p); return el;
+  }, 24);
 }
 function renderProductPage(p){
   $('#shopBrowse').hidden = true;
@@ -913,8 +961,9 @@ function openProduct(id, count = true){
   shopOpen = id; renderShop(); window.scrollTo(0,0);
 }
 $('#pubGrid').addEventListener('click', e => { if(e.target.closest('a')) return; const c = e.target.closest('[data-open]'); if(c) openProduct(c.dataset.open); });
-$('#justPosted').addEventListener('click', e => { if(e.target.closest('a')) return; const c = e.target.closest('[data-open]'); if(c) openProduct(c.dataset.open); });
-$('#shopSearch').addEventListener('input', e => { shopQuery = e.target.value; renderShop(); });
+$('#justPosted').addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if(t){ shopTab = t.dataset.tab; renderShop(); } });
+let searchTimer = null;
+$('#shopSearch').addEventListener('input', e => { shopQuery = e.target.value; clearTimeout(searchTimer); searchTimer = setTimeout(renderShop, S.products.length > 300 ? 150 : 0); });
 
 /* ---------- smart search: words, colours, sizes, prices and codes in any order ----------
    "red heels 37", "size 40 under 3000", "2000-4000", "below 2k", "F12", "offer", "sasto" */
@@ -936,7 +985,7 @@ function parseSearch(raw){
   take(new RegExp(`(?:size|sz|no\\.?|eu|number)\\s*${N}`, 'g'), m => Q.sizes.push(String(num(m[1]))));
   take(new RegExp(`${N}\\s*(?:size|no|number)\\b`, 'g'), m => Q.sizes.push(String(num(m[1]))));
   /* product codes like F12 or #k11 */
-  take(/#?\b([a-z])\s?(\d{2,3})\b/g, m => Q.codes.push((m[1] + m[2]).toUpperCase()));
+  take(/#?\b([a-z])\s?(\d{2,5})\b/g, m => Q.codes.push((m[1] + m[2]).toUpperCase()));
   /* bare numbers: small ones are sizes, big ones are a budget */
   take(new RegExp(`\\b${N}\\b`, 'g'), m => { const n = num(m[1]); if(n == null) return; if(n <= 50) Q.sizes.push(String(n)); else if(n >= 100){ Q.near = n; if(Q.max == null) Q.max = Math.round(n * 1.2); } });
   const STOP = new Set('a an the for in with and or of me show i want need please any some shoe shoes jutta jutto chahiyo chaiyo ko lagi ma price cost rate size'.split(' '));
@@ -1009,58 +1058,73 @@ $('#shopSearch').addEventListener('keydown', e => {
 let vRange = 'thisweek', vFrom = '', vTo = '';
 const V_RANGES = { today:'Today', yesterday:'Yesterday', thisweek:'This week', week:'Last 7 days', month:'Last 30 days', all:'All time', custom:'Pick dates' };
 function rangeDates(r){
-  const t = new Date();
+  const t = nepalToday();
   if(r === 'today') return [t, t];
   if(r === 'yesterday') return [addDays(t,-1), addDays(t,-1)];
   if(r === 'week') return [addDays(t,-6), t];
   if(r === 'thisweek') return [addDays(t,-t.getDay()), t]; /* Nepal's week starts on Sunday */
   if(r === 'month') return [addDays(t,-29), t];
-  if(r === 'custom'){ const f = vFrom ? new Date(vFrom + 'T00:00') : addDays(t,-6), e = vTo ? new Date(vTo + 'T00:00') : t; return f <= e ? [f, e] : [e, f]; }
+  if(r === 'custom'){ const f = vFrom ? new Date(vFrom + 'T12:00') : addDays(t,-6), e = vTo ? new Date(vTo + 'T12:00') : t; return f <= e ? [f, e] : [e, f]; }
   return null;
 }
-function renderViews(){
+/* views per product and per day for a date range: from the server when the shop is online, else from this phone */
+async function viewStats(from, to){
+  if(window.Cloud && Cloud.signedIn()){ const r = await Cloud.viewsRange(from, to); if(r) return r; }
+  const byProduct = new Map(), byDay = new Map();
+  S.products.forEach(p => { const log = p.viewLog || {}; let n = 0; for(const k in log) if(k >= from && k <= to){ n += log[k]; byDay.set(k, (byDay.get(k) || 0) + log[k]); } if(n) byProduct.set(p.id, n); });
+  return { byProduct, byDay };
+}
+let viewsToken = 0;
+async function renderViews(){
+  const my = ++viewsToken;
   const rc = $('#vRanges'); rc.innerHTML = '';
   Object.keys(V_RANGES).forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = V_RANGES[r]; b.setAttribute('aria-pressed', r === vRange); b.onclick = () => { vRange = r; renderViews(); }; rc.append(b); });
   $('#vCustom').hidden = vRange !== 'custom';
   const rd = rangeDates(vRange), fmt = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
   const from = rd ? dayKey(rd[0]) : '0000', to = rd ? dayKey(rd[1]) : '9999';
   if(vRange === 'custom'){ $('#vFrom').value = from; $('#vTo').value = to; }
-  const count = p => rd ? viewsIn(p, from, to) : (p.views || 0);
-  const list = [...S.products].map(p => ({p, n: count(p)})).sort((a,b) => b.n - a.n);
-  const total = list.reduce((a,x) => a + x.n, 0), max = Math.max(1, ...list.map(x => x.n));
+  $('#vTotal').textContent = '…';
+  let cs = rd ? rd[0] : addDays(nepalToday(), -29), ce = rd ? rd[1] : nepalToday();
+  let nDays = Math.round((ce - cs) / 864e5) + 1;
+  if(nDays > 31){ cs = addDays(ce, -30); nDays = 31; }
+  const len = rd ? Math.round((rd[1] - rd[0]) / 864e5) + 1 : 0;
+  const [cur, prevS, chartS] = await Promise.all([
+    rd ? viewStats(from, to) : null,
+    rd ? viewStats(dayKey(addDays(rd[0], -len)), dayKey(addDays(rd[0], -1))) : null,
+    viewStats(dayKey(cs), dayKey(ce)) ]);
+  if(my !== viewsToken) return;
+  const count = p => rd ? (cur.byProduct.get(p.id) || 0) : (p.views || 0);
+  const list = S.products.map(p => ({p, n: count(p)})).sort((a,b) => b.n - a.n || b.p.created - a.p.created);
+  let total = 0, max = 1; for(const x of list){ total += x.n; if(x.n > max) max = x.n; }
   $('#vTotal').textContent = total.toLocaleString('en-IN');
   /* compare with the same length of time just before */
   let label = rd ? (from === to ? `Views · ${fmt(rd[0])}` : `Views · ${fmt(rd[0])} – ${fmt(rd[1])}`) : 'Views · all time';
   if(rd){
-    const len = Math.round((rd[1] - rd[0]) / 864e5) + 1, pf = dayKey(addDays(rd[0], -len)), pt = dayKey(addDays(rd[0], -1));
-    const prev = S.products.reduce((a,p) => a + viewsIn(p, pf, pt), 0);
+    let prev = 0; prevS.byProduct.forEach(v => prev += v);
     if(prev){ const pct = Math.round((total - prev) / prev * 100); label += ` · <span class="delta ${pct>=0?'up':'down'}">${pct>=0?'▲':'▼'} ${Math.abs(pct)}% vs ${len===1?'day before':`previous ${len} days`}</span>`; }
   }
   $('#vTotalL').innerHTML = label;
   $('#vTop').textContent = list[0] && list[0].n ? list[0].p.name : '–';
   /* daily chart: the chosen dates, or the last 30 days for all time; hidden for a single day */
   const chart = $('#vChart');
-  let cs = rd ? rd[0] : addDays(new Date(), -29), ce = rd ? rd[1] : new Date();
-  let nDays = Math.round((ce - cs) / 864e5) + 1;
-  if(nDays > 31){ cs = addDays(ce, -30); nDays = 31; }
   if(nDays <= 1){ chart.hidden = true; }
   else {
     chart.hidden = false;
     const days = Array.from({length:nDays}, (_, i) => addDays(cs, i)), todayK = dayKey(new Date());
-    const vals = days.map(d => { const k = dayKey(d); return S.products.reduce((a,p) => a + ((p.viewLog||{})[k] || 0), 0); });
+    const vals = days.map(d => chartS.byDay.get(dayKey(d)) || 0);
     const vmax = Math.max(1, ...vals), every = nDays > 14 ? Math.ceil(nDays / 7) : 1;
     chart.innerHTML = `<div class="small" style="display:flex;justify-content:space-between"><b>Views per day</b><span class="muted">Best day: ${Math.max(...vals)}</span></div>
       <div class="vbars" role="img" aria-label="Views per day">${days.map((d,i) => `<div class="bar${dayKey(d)===todayK?' today':''}" title="${fmt(d)}: ${vals[i]} views">${nDays<=14 && vals[i] ? `<em>${vals[i]}</em>` : ''}<i style="height:${Math.round(vals[i]/vmax*82)}%"></i></div>`).join('')}</div>
       <div class="vaxis">${days.map((d,i) => `<span>${i % every === 0 ? (nDays<=7 ? d.toLocaleDateString('en-GB',{weekday:'short'}) : d.getDate()) : ''}</span>`).join('')}</div>`;
   }
-  const box = $('#viewsList'); box.innerHTML = '';
-  list.forEach(({p, n}) => {
+  const box = $('#viewsList');
+  if(!list.length){ if(box._io) box._io.disconnect(); box.innerHTML = '<p class="muted">No products yet. Views appear here once customers open your products.</p>'; return; }
+  pager(box, list, ({p, n}) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'vrow';
-    b.innerHTML = `<img alt="" src="${p.img}"><span class="t"><b>${esc(p.name)}</b><span class="small muted"><span class="code">${esc(p.code)}</span> ${npr(p.price)} · ${(p.views||0).toLocaleString('en-IN')} all time${p.example ? ' <span class="pill ex">Example</span>' : ''}</span><span class="vbar"><i style="width:${Math.round(n/max*100)}%"></i></span></span><span class="vcount">${n.toLocaleString('en-IN')}<small>views</small></span>`;
+    b.innerHTML = `<img alt="" src="${p.img}" loading="lazy"><span class="t"><b>${esc(p.name)}</b><span class="small muted"><span class="code">${esc(p.code)}</span> ${npr(p.price)} · ${(p.views||0).toLocaleString('en-IN')} all time${p.example ? ' <span class="pill ex">Example</span>' : ''}</span><span class="vbar"><i style="width:${Math.round(n/max*100)}%"></i></span></span><span class="vcount">${n.toLocaleString('en-IN')}<small>views</small></span>`;
     b.onclick = () => openProduct(p.id, false);
-    box.append(b);
-  });
-  if(!list.length) box.innerHTML = '<p class="muted">No products yet. Views appear here once customers open your products.</p>';
+    return b;
+  }, 40);
 }
 $('#vFrom').addEventListener('change', e => { vFrom = e.target.value; renderViews(); });
 $('#vTo').addEventListener('change', e => { vTo = e.target.value; renderViews(); });
@@ -2394,7 +2458,15 @@ function productDetails(p){
   const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
   return `${p.name} (${p.code})\nPrice: ${npr(p.price)}${pct ? ` (was ${npr(p.oldPrice)}, ${pct}% off)` : ''}${APPAREL.includes(p.category) ? `\nSizes: ${p.sizes.join(', ')}` : ''}\nCash on delivery · eSewa · Khalti\nOrder here: https://${productUrl(p)}`;
 }
-function fillProductSelect(sel){ const v = sel.value; sel.innerHTML = S.products.map(p=>`<option value="${p.id}">${esc(p.code)} · ${esc(p.name)} · ${npr(p.price)}</option>`).join(''); if(v && prodById(v)) sel.value = v; }
+function fillProductSelect(sel, q = ''){
+  const v = sel.value, t = q.trim().toLowerCase();
+  let items = t ? S.products.filter(p => (p.code || '').toLowerCase().includes(t) || p.name.toLowerCase().includes(t)) : [...S.products].sort((a,b) => b.created - a.created);
+  const cur = v && prodById(v);
+  items = items.slice(0, 300); if(cur && !t && !items.includes(cur)) items.unshift(cur);
+  sel.innerHTML = items.map(p=>`<option value="${p.id}">${esc(p.code)} · ${esc(p.name)} · ${npr(p.price)}</option>`).join('') || '<option value="" disabled>No product matches</option>';
+  if(cur && items.includes(cur)) sel.value = v; else if(items.length) sel.selectedIndex = 0;
+  const find = $('#oFind'); if(find) find.hidden = S.products.length <= 12;
+}
 $('#homeProducts').addEventListener('click', e => { const b = e.target.closest('[data-details]'); if(b){ const p = prodById(b.dataset.details); if(p) copyText(productDetails(p)); } });
 
 /* ---------- orders ---------- */
@@ -2406,13 +2478,13 @@ function renderOrders(){
   STATUSES.forEach(st => FILTERS[st] = [st==='paid' ? 'Completed' : st[0].toUpperCase()+st.slice(1), o => o.status === st]);
   if(!FILTERS[orderFilter]) orderFilter = 'all';
   Object.keys(FILTERS).forEach(s => { const n = S.orders.filter(FILTERS[s][1]).length; const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=`${FILTERS[s][0]} (${n})`; b.setAttribute('aria-pressed', s===orderFilter); b.onclick=()=>{orderFilter=s; renderOrders();}; f.append(b); });
-  const list = $('#orderList'); list.innerHTML='';
+  const list = $('#orderList');
   const rows = S.orders.filter(FILTERS[orderFilter][1]).sort((a,b)=>b.created-a.created);
   const sum = document.createElement('p'); sum.className = 'small muted';
   if(orderFilter === 'today') sum.innerHTML = `<b>${npr(rows.reduce((a,o)=>a+(o.price||0),0))}</b> sales today from ${rows.length} order${rows.length===1?'':'s'} (delivery charges not included).`;
   if(orderFilter === 'cod') sum.innerHTML = `<b>${npr(rows.reduce((a,o)=>a+orderTotal(o),0))}</b> to collect from ${rows.length} order${rows.length===1?'':'s'}, including delivery. Tap <b>Collected ✓</b> when the rider hands over the cash.`;
-  if(sum.innerHTML) list.append(sum);
-  rows.forEach(o => {
+  if(!rows.length){ if(list._io) list._io.disconnect(); list.innerHTML = '<p class="muted">No orders here yet.</p>'; return; }
+  pager(list, rows, o => {
     const p = prodById(o.productId) || {name:'Removed product', price:0, img:'', sizes:[], stock:0};
     const next = STATUSES[STATUSES.indexOf(o.status)+1];
     const when = d => new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
@@ -2426,9 +2498,9 @@ function renderOrders(){
     else if(next) act += `<button class="btn small" type="button" data-adv="${o.id}">Mark ${next}</button>`;
     const d = document.createElement('div'); d.className='item order';
     d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><div class="top"><b>${esc(o.customer)} · ${esc(p.name)}</b><span class="pill ${o.status}">${pillTxt}</span></div><span class="small muted"><span class="code">${esc(p.code || '')}</span> ${esc(o.size)} · ${esc(o.place)} · ${o.pay} · ordered ${when(o.created)}</span><span class="small">${money}</span><span class="small">${payTxt}</span></div><div class="acts"><button class="btn small" type="button" data-bill="${o.id}">Slip</button>${act}</div>`;
-    list.append(d);
-  });
-  if(!rows.length) list.innerHTML = '<p class="muted">No orders here yet.</p>';
+    return d;
+  }, 30);
+  if(sum.innerHTML) list.prepend(sum);
 }
 /* order slip for the customer and the delivery rider */
 let billFor = null;
@@ -2493,6 +2565,7 @@ function syncOrderForm(fromProduct){
   $('#oTotal').textContent = t ? `Customer pays ${npr(t)}${$('#oPay').value==='COD' ? ' in cash on delivery' : ''}.` : '';
 }
 $('#oProduct').addEventListener('change', () => syncOrderForm(true));
+$('#oFind').addEventListener('input', e => { const sel = $('#oProduct'); fillProductSelect(sel, e.target.value); if(e.target.value.trim() && sel.options.length) sel.selectedIndex = 0; syncOrderForm(true); });
 ['#oPay','#oPrice','#oDelivery'].forEach(id => $(id).addEventListener('input', () => syncOrderForm(false)));
 $('#btnAddOrder').onclick = () => { $('#orderForm').hidden = false; fillProductSelect($('#oProduct')); $('#oDelivery').value = S.lastDelivery || ''; syncOrderForm(true); $('#oName').focus(); };
 $('#btnCancelOrder').onclick = () => { $('#orderForm').hidden = true; $('#orderErr').hidden = true; };
@@ -2542,7 +2615,14 @@ var Cloud = (() => {
   const orderLocal = r => ({ id:r.id, productId:r.product_id, customer:r.customer, place:r.place, size:r.size, pay:r.pay, status:r.status,
     price:r.price, delivery:r.delivery, created:ms(r.created_at), paidAt:ms(r.paid_at) });
   const shopRow = () => ({ name:S.shop.name, whatsapp:S.shop.whatsapp || '', location:S.shop.location || '', next_num:S.nextNum || 11, last_delivery:+S.lastDelivery || null });
-  const h = o => JSON.stringify(o);
+  /* a short fingerprint of each row, to spot what changed without keeping a second copy */
+  const digest = str => { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for(let i = 0; i < str.length; i++){ const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (h2 >>> 0).toString(36) + (h1 >>> 0).toString(36); };
+  const h = o => digest(JSON.stringify(o));
+  /* older versions stored the full row; turn those into fingerprints */
+  if(S && S.sync) ['p','o'].forEach(k => { const m = S.sync[k] || {}; for(const id in m) if(m[id] && m[id].length > 40) m[id] = digest(m[id]); });
+  if(S && S.sync && S.sync.shop && S.sync.shop.length > 40) S.sync.shop = digest(S.sync.shop);
 
   async function upload(dataUrl, pid, i){
     const blob = await (await fetch(dataUrl)).blob();
@@ -2560,27 +2640,37 @@ var Cloud = (() => {
     try{
       const sr = shopRow();
       if(h(sr) !== S.sync.shop){ const { error } = await sb.from('shops').update(sr).eq('id', shopId); if(error) throw error; S.sync.shop = h(sr); }
-      for(const p of S.products.filter(x => !x.example)){
+      /* photos first (each one is an upload), then rows in batches */
+      for(const p of S.products){
+        if(p.example) continue;
+        const srcs = imagesOf(p); if(!srcs.some(x => x.startsWith('data:'))) continue;
         const urls = new Map();
-        for(const [i, src] of imagesOf(p).entries()) if(src.startsWith('data:') && !urls.has(src)) urls.set(src, await upload(src, p.id, i));
-        if(urls.size){ if(urls.has(p.img)) p.img = urls.get(p.img); if(p.imgs) p.imgs = p.imgs.map(x => urls.get(x) || x); saveLocal(); }
-        const row = prodRow(p);
-        if(h(row) === S.sync.p[p.id]) continue;
-        let { error } = await sb.from('products').upsert(row);
-        if(error && /tiktok_posted_at/.test(error.message || '') && !noTT){ noTT = true; delete row.tiktok_posted_at; ({ error } = await sb.from('products').upsert(row)); }   /* database not updated yet */
-        if(error) throw error;
-        S.sync.p[p.id] = h(row);
+        for(const [i, src] of srcs.entries()) if(src.startsWith('data:') && !urls.has(src)) urls.set(src, await upload(src, p.id, i));
+        if(urls.has(p.img)) p.img = urls.get(p.img); if(p.imgs) p.imgs = p.imgs.map(x => urls.get(x) || x); saveLocal();
       }
-      const gone = Object.keys(S.sync.p).filter(id => !S.products.some(p => p.id === id));
-      if(gone.length){ const { error } = await sb.from('products').delete().in('id', gone); if(error) throw error; gone.forEach(id => delete S.sync.p[id]); }
-      for(const o of S.orders.filter(x => !x.example)){
-        const row = orderRow(o);
-        if(h(row) === S.sync.o[o.id]) continue;
-        const { error } = await sb.from('orders').upsert(row); if(error) throw error;
-        S.sync.o[o.id] = h(row);
-      }
-      const goneO = Object.keys(S.sync.o).filter(id => !S.orders.some(o => o.id === id));
-      if(goneO.length){ const { error } = await sb.from('orders').delete().in('id', goneO); if(error) throw error; goneO.forEach(id => delete S.sync.o[id]); }
+      const sendBatches = async (table, rows, map) => {
+        for(let i = 0; i < rows.length; i += 200){
+          const part = rows.slice(i, i + 200);
+          let { error } = await sb.from(table).upsert(part.map(x => x.row));
+          if(error && table === 'products' && /tiktok_posted_at/.test(error.message || '') && !noTT){   /* database not updated yet */
+            noTT = true; part.forEach(x => { delete x.row.tiktok_posted_at; x.fp = h(x.row); });
+            ({ error } = await sb.from(table).upsert(part.map(x => x.row)));
+          }
+          if(error) throw error;
+          part.forEach(x => { map[x.id] = x.fp; });
+          if(rows.length > 200) state(`Saving… ${Math.min(rows.length, i + 200).toLocaleString('en-IN')}/${rows.length.toLocaleString('en-IN')}`);
+        }
+      };
+      const changedP = []; for(const p of S.products){ if(p.example) continue; const row = prodRow(p), fp = h(row); if(fp !== S.sync.p[p.id]) changedP.push({ id:p.id, row, fp }); }
+      await sendBatches('products', changedP, S.sync.p);
+      const pIds = new Set(S.products.map(p => p.id));
+      const gone = Object.keys(S.sync.p).filter(id => !pIds.has(id));
+      for(let i = 0; i < gone.length; i += 200){ const part = gone.slice(i, i + 200); const { error } = await sb.from('products').delete().in('id', part); if(error) throw error; part.forEach(id => delete S.sync.p[id]); }
+      const changedO = []; for(const o of S.orders){ if(o.example) continue; const row = orderRow(o), fp = h(row); if(fp !== S.sync.o[o.id]) changedO.push({ id:o.id, row, fp }); }
+      await sendBatches('orders', changedO, S.sync.o);
+      const oIds = new Set(S.orders.map(o => o.id));
+      const goneO = Object.keys(S.sync.o).filter(id => !oIds.has(id));
+      for(let i = 0; i < goneO.length; i += 200){ const part = goneO.slice(i, i + 200); const { error } = await sb.from('orders').delete().in('id', part); if(error) throw error; part.forEach(id => delete S.sync.o[id]); }
       saveLocal(); failed = false; state('Saved ✓');
     }catch(e){
       console.warn('sync', e); state('Not saved online · will retry');
@@ -2594,50 +2684,75 @@ var Cloud = (() => {
   function schedule(){ if(!shopId) return; clearTimeout(timer); state('Saving…'); timer = setTimeout(push, 800); }
 
   /* bring the server copy to this phone, keeping edits not yet sent */
+  /* Supabase returns at most 1,000 rows per request, so big shops load in pages */
+  async function fetchAll(build, order = ['id'], size = 1000){
+    const out = [];
+    for(let from = 0; ; from += size){
+      let q = build(); order.forEach(c => { q = q.order(c); });
+      const { data, error } = await q.range(from, from + size - 1);
+      if(error) return { data:null, error };
+      out.push(...(data || []));
+      if(!data || data.length < size) return { data:out, error:null };
+    }
+  }
+  const viewsCache = new Map();
+  async function viewsRange(from, to){
+    if(!shopId) return null;
+    const key = from + '|' + to, hit = viewsCache.get(key);
+    if(hit && Date.now() - hit.at < 20000) return hit.v;
+    let byProduct = new Map(), byDay = new Map();
+    const [a, b] = await Promise.all([ sb.rpc('shop_views_by_product', { p_from:from, p_to:to }), sb.rpc('shop_views_by_day', { p_from:from, p_to:to }) ]);
+    if(!a.error && !b.error){
+      (a.data || []).forEach(r => byProduct.set(r.product_id, Number(r.views)));
+      (b.data || []).forEach(r => byDay.set(String(r.day).slice(0, 10), Number(r.views)));
+    } else {   /* database functions not added yet: add up the raw rows */
+      const raw = await fetchAll(() => sb.from('product_views').select('product_id,day,count').eq('shop_id', shopId).gte('day', from).lte('day', to), ['day', 'product_id']);
+      if(raw.error) return null;
+      raw.data.forEach(r => { byProduct.set(r.product_id, (byProduct.get(r.product_id) || 0) + r.count); byDay.set(r.day, (byDay.get(r.day) || 0) + r.count); });
+    }
+    const v = { byProduct, byDay }; viewsCache.set(key, { at:Date.now(), v }); return v;
+  }
   async function pull(){
-    const [pr, or, vw] = await Promise.all([
-      sb.from('products').select('*').eq('shop_id', shopId),
-      sb.from('orders').select('*').eq('shop_id', shopId),
-      sb.from('product_views').select('product_id,day,count').eq('shop_id', shopId).gte('day', dayKey(addDays(new Date(), -400)))
+    const [pr, or] = await Promise.all([
+      fetchAll(() => sb.from('products').select('*').eq('shop_id', shopId)),
+      fetchAll(() => sb.from('orders').select('*').eq('shop_id', shopId))
     ]);
     if(pr.error || or.error) throw (pr.error || or.error);
     const merge = (localList, rows, toLocal, toRow, map) => {
       const out = [];
+      const mineById = new Map(localList.map(x => [x.id, x])), rowIds = new Set(rows.map(r => r.id));
       rows.forEach(r => {
-        const mine = localList.find(x => x.id === r.id);
+        const mine = mineById.get(r.id);
         if(!mine && map[r.id]) return;                                   /* deleted here, not yet sent */
         const server = toLocal(r);
         if(mine && h(toRow(mine)) !== map[r.id]) out.push(mine);     /* changed here, not yet sent */
         else { out.push(server); map[r.id] = h(toRow(server)); }
       });
-      localList.forEach(x => { if(!x.example && !rows.some(r => r.id === x.id) && !map[x.id]) out.push(x); });   /* new here */
-      Object.keys(map).forEach(id => { if(!rows.some(r => r.id === id)) delete map[id]; });   /* deleted on another phone */
+      localList.forEach(x => { if(!x.example && !rowIds.has(x.id) && !map[x.id]) out.push(x); });   /* new here */
+      Object.keys(map).forEach(id => { if(!rowIds.has(id)) delete map[id]; });   /* deleted on another phone */
       return out;
     };
     S.products = merge(S.products, pr.data, prodLocal, prodRow, S.sync.p);
     S.orders = merge(S.orders, or.data, orderLocal, orderRow, S.sync.o);
-    applyViews(pr.data, vw.data || []);
+    applyViews(pr.data);
     /* products posted to TikTok before WallTok remembered it: fill in from the post history */
     try{
-      const { data:posts } = await sb.from('tiktok_posts').select('product_id,status,created_at').eq('shop_id', shopId).eq('status', 'PUBLISH_COMPLETE');
-      (posts || []).forEach(t => { const p = S.products.find(x => x.id === t.product_id), at = ms(t.created_at); if(p && at && (!p.ttAt || at > p.ttAt)) p.ttAt = at; });
+      const { data:posts } = await fetchAll(() => sb.from('tiktok_posts').select('id,product_id,status,created_at').eq('shop_id', shopId).eq('status', 'PUBLISH_COMPLETE'));
+      (posts || []).forEach(t => { const p = prodById(t.product_id), at = ms(t.created_at); if(p && at && (!p.ttAt || at > p.ttAt)) p.ttAt = at; });
     }catch(e){}
     saveLocal();
   }
-  function applyViews(prodRows, viewRows){
-    S.products.forEach(p => { const r = prodRows.find(x => x.id === p.id); if(r) p.views = r.views || 0; p.viewLog = {}; });
-    viewRows.forEach(v => { const p = S.products.find(x => x.id === v.product_id); if(p) p.viewLog[v.day] = (p.viewLog[v.day] || 0) + v.count; });
-    lastViews = Date.now();
+  function applyViews(prodRows){
+    const byId = new Map(prodRows.map(r => [r.id, r]));
+    S.products.forEach(p => { const r = byId.get(p.id); if(r) p.views = r.views || 0; p.viewLog = {}; });
+    viewsCache.clear(); lastViews = Date.now();
   }
   async function refreshViews(view){
     if(!shopId || Date.now() - lastViews < 20000) return;
     lastViews = Date.now();
-    const [pr, vw] = await Promise.all([
-      sb.from('products').select('id,views').eq('shop_id', shopId),
-      sb.from('product_views').select('product_id,day,count').eq('shop_id', shopId).gte('day', dayKey(addDays(new Date(), -400)))
-    ]);
-    if(pr.error || vw.error) return;
-    applyViews(pr.data, vw.data); saveLocal();
+    const pr = await fetchAll(() => sb.from('products').select('id,views').eq('shop_id', shopId));
+    if(pr.error) return;
+    applyViews(pr.data); saveLocal();
     if(!$('#view-' + view).hidden) render(view);
   }
 
@@ -2745,7 +2860,7 @@ var Cloud = (() => {
     box.innerHTML = '<p class="pubmsg muted">Loading shop…</p>';
     const { data:shop } = await sb.from('shops').select('id,slug,name,whatsapp,location').eq('slug', PUB_SLUG).maybeSingle();
     if(!shop){ $('#pubName').textContent = 'Shop not found'; $('#pubMeta').textContent = `There is no shop at ${DOMAIN}/${PUB_SLUG}. Check the link in the seller's TikTok bio.`; box.innerHTML = ''; $('#shopSearch').hidden = true; return; }
-    const { data:rows } = await sb.from('products').select('*').eq('shop_id', shop.id);
+    const { data:rows } = await fetchAll(() => sb.from('products').select('*').eq('shop_id', shop.id));
     S.shop = { name:shop.name, whatsapp:shop.whatsapp, location:shop.location, slug:shop.slug };
     S.products = (rows || []).map(prodLocal);
     document.title = `${shop.name} · ${DOMAIN}`;
@@ -2793,7 +2908,7 @@ var Cloud = (() => {
     const { data } = await sb.from('tiktok_posts').select('status,created_at').eq('product_id', pid).order('created_at', { ascending:false });
     return data || [];
   }
-  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, token, tiktokPosts, enabled, signedIn: () => !!shopId };
+  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, token, tiktokPosts, viewsRange, enabled, signedIn: () => !!shopId };
 })();
 document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
 
