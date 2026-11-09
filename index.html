@@ -2836,12 +2836,14 @@ var TT = (() => {
     catch(e){ show(`<p>TikTok posting is not switched on yet.</p><p class="small muted">${e.status === 401 ? 'Sign in to WallTok again, then try.' : 'The WallTok owner needs to finish the TikTok setup.'}</p>`); return; }
     if(!st.configured){ show('<p>TikTok posting is not switched on yet.</p><p class="small muted">The WallTok owner needs to finish the TikTok setup.</p>'); return; }
     if(!st.connected){
-      show(`<p>Connect your TikTok account once. After that, WallTok can post your product videos with the caption, straight to your TikTok.</p>
+      show(`${st.reconnect ? '<p><b>Your TikTok connection ended</b> (WallTok was removed in TikTok, or the login expired). Connect again to keep posting.</p>' : '<p>Connect your TikTok account once. After that, WallTok can post your product videos with the caption, straight to your TikTok.</p>'}
         <button class="btn ink big" type="button" id="ttConnect"><span class="tt-logo" aria-hidden="true">♪</span> Connect TikTok</button>
         <p class="ttnote">You'll sign in on TikTok and allow WallTok to post for you. You can disconnect any time.</p>`);
       $('#ttConnect').onclick = connect; return;
     }
-    if(!st.canPost){ show(`<p>TikTok won't take a post from this account right now.</p><p class="small muted">${esc(st.reason?.message || 'You may have posted too often today. Try again later.')}</p>`); return; }
+    if(!st.canPost){ show(`<p>TikTok won't take a post from this account right now.</p><p class="small muted">${esc(st.reason?.message || 'You may have posted too often today. Try again later.')}</p>
+      <button class="btn" type="button" id="ttReconnect">Disconnect and connect TikTok again</button>`);
+      $('#ttReconnect').onclick = async () => { $('#ttReconnect').disabled = true; try{ await call('disconnect'); }catch(e){} open(pid); }; return; }
     compose(p);
   }
   async function connect(){
@@ -2917,7 +2919,7 @@ var TT = (() => {
       busy = false; $('#ttGo').textContent = 'Post to TikTok'; $('#ttGo').disabled = false;
       const msg = e.code === 'unaudited_client_can_only_post_to_private_accounts' ? `TikTok refused: while WallTok is waiting for approval, the connected account${st.username ? ' (@' + st.username + ')' : ''} must be Private and the post must be Only me. If you just made it private, wait a few minutes and try again.`
         : e.code === 'spam_risk_too_many_posts' ? 'TikTok says you have posted too many times today. Try again tomorrow.'
-        : e.code === 'access_token_invalid' || e.status === 401 ? 'Your TikTok connection expired. Close this and connect again.' : e.message;
+        : e.code === 'not_connected' || e.code === 'access_token_invalid' || e.status === 401 ? 'Your TikTok connection ended. Close this and tap Post to TikTok to connect again.' : e.message;
       $('#ttWhy').textContent = msg; toast(msg);
     }
   }
