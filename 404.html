@@ -2860,7 +2860,8 @@ var TT = (() => {
       <div class="ttprev"><div class="ph" id="ttPh">Making your video… <span id="ttPct">0%</span></div>
         <div class="stack" style="gap:6px"><label for="tpCap" style="margin:0">Caption</label><textarea class="ttcap" id="tpCap" maxlength="2200">${esc(cap)}</textarea><span class="ttnote"><span id="ttCnt"></span>/2200</span></div></div>
       <div class="ttopts stack">
-        <div><label for="ttPriv">Who can see this video</label><select id="ttPriv"><option value="" selected disabled>Choose…</option>${opts}</select></div>
+        <div><label for="ttPriv">Who can see this video</label><select id="ttPriv"><option value="" selected disabled>Choose…</option>${opts}</select>
+          ${st.pendingApproval ? `<p class="ttnote">TikTok is still reviewing WallTok, so for now posts can only be “Only me”, and your TikTok account must be Private. Everyone, Friends and Followers unlock after approval.</p>` : ''}</div>
         <div class="stack" style="gap:6px"><span class="small"><b>Allow viewers to</b></span>
           ${chk('ttCmt', 'Comment', st.commentDisabled)}${chk('ttDuet', 'Duet', st.duetDisabled)}${chk('ttStitch', 'Stitch', st.stitchDisabled)}</div>
         <div class="stack" style="gap:6px">
@@ -2914,7 +2915,7 @@ var TT = (() => {
       poll(publish_id, 0, meta.privacy_level);
     }catch(e){
       busy = false; $('#ttGo').textContent = 'Post to TikTok'; $('#ttGo').disabled = false;
-      const msg = e.code === 'unaudited_client_can_only_post_to_private_accounts' ? 'While WallTok is waiting for TikTok approval, your TikTok account must be set to Private, and the post visibility to Only me.'
+      const msg = e.code === 'unaudited_client_can_only_post_to_private_accounts' ? `TikTok refused: while WallTok is waiting for approval, the connected account${st.username ? ' (@' + st.username + ')' : ''} must be Private and the post must be Only me. If you just made it private, wait a few minutes and try again.`
         : e.code === 'spam_risk_too_many_posts' ? 'TikTok says you have posted too many times today. Try again tomorrow.'
         : e.code === 'access_token_invalid' || e.status === 401 ? 'Your TikTok connection expired. Close this and connect again.' : e.message;
       $('#ttWhy').textContent = msg; toast(msg);
