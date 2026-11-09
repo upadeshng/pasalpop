@@ -84,6 +84,20 @@ button.stat span::after{content:" ›";color:var(--indigo)}
 .ttsub{padding-left:26px;display:flex;flex-direction:column;gap:6px}
 .ttnote{font-size:.78rem;color:var(--muted)}
 .btn.more{grid-column:1/-1;width:100%}
+.btn.wa-btn,.btn.wa-big{background:#0b6e5f;border-color:#0b6e5f;color:#fff}
+.btn.wa-big{font-size:1rem;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn.g-btn{display:flex;align-items:center;justify-content:center;gap:8px}
+.gdot{width:18px;height:18px;border-radius:50%;background:conic-gradient(#4285f4 0 25%,#34a853 0 50%,#fbbc05 0 75%,#ea4335 0);position:relative;flex:none}
+.gdot::after{content:'';position:absolute;inset:4px;border-radius:50%;background:#fff}
+.freepill{background:#fff;color:#0b6e5f;font-size:.68rem;font-weight:800;border-radius:99px;padding:1px 7px}
+.wareq{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:10px;text-align:center}
+.wareq b{display:block;font-family:var(--f-display);font-size:1.5rem;letter-spacing:2px}
+.waiting{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.spin{width:12px;height:12px;border-radius:50%;border:2px solid #0b6e5f;border-top-color:transparent;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.otp{display:flex;gap:8px}
+.otp input{flex:1;font-size:1.3rem;letter-spacing:6px;text-align:center;font-family:var(--f-display)}
 .shoptabs{display:flex;gap:6px;border-bottom:1px solid var(--line);overflow-x:auto}
 .shoptabs button{font:inherit;font-weight:600;font-size:.9rem;background:none;border:0;border-bottom:3px solid transparent;padding:10px 6px;color:var(--muted);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .shoptabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
@@ -263,8 +277,8 @@ textarea{resize:vertical;min-height:84px}
     <div class="card stack claim" id="claimCard" hidden>
       <h3>Make your shop link live</h3>
       <p class="small">Right now your shop is only on this phone. Make <b id="claimUrl"></b> live so customers from TikTok can see your products and order, and you see real views.</p>
-      <button class="btn primary" type="button" data-claim>Sign in with Google · free</button>
-      <p class="small muted">Takes 10 seconds. Your products and orders come with you.</p>
+      <button class="btn primary" type="button" data-claim>Make it live · free</button>
+      <p class="small muted">Sign in with WhatsApp or Google. Takes 10 seconds, no password. Your products and orders come with you.</p>
     </div>
     <div class="card stack">
       <div class="section-h"><h3>Your shop link</h3><span class="muted small" id="linkState">Put it in your TikTok bio</span></div>
@@ -640,7 +654,8 @@ textarea{resize:vertical;min-height:84px}
     <h1>Shop settings</h1>
     <div class="card stack">
       <div><label for="sName">Shop name</label><input id="sName"></div>
-      <div><label for="sWa">WhatsApp number for orders</label><input id="sWa" inputmode="tel" placeholder="98XXXXXXXX"></div>
+      <div><label for="sWa">WhatsApp number for orders <span id="waBadge" class="small" style="color:var(--good);font-weight:700" hidden>✓ verified</span></label><input id="sWa" inputmode="tel" placeholder="98XXXXXXXX">
+        <button class="btn small wa-btn" type="button" id="btnWaLink" hidden style="margin-top:6px">Confirm with WhatsApp</button></div>
       <div><label for="sLoc">Location</label><input id="sLoc" placeholder="New Road, Kathmandu"></div>
       <div id="slugRow" hidden><label for="sSlug">Shop link</label><div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><span class="small muted">walltok.com/</span><input id="sSlug" autocapitalize="off" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"></div><p class="small muted">Letters and numbers only. If you change it, update the link in your TikTok bio too.</p></div>
       <p class="small muted">Shop link: <b id="slugPreview"></b></p>
@@ -662,6 +677,12 @@ textarea{resize:vertical;min-height:84px}
   <button type="button" data-tab="orders"><span>☰</span>Orders</button>
 </nav></div>
 <div class="toast" id="toast" hidden></div>
+<div class="inapp" id="waModal" hidden role="dialog" aria-modal="true" aria-labelledby="waH">
+  <div class="card stack ttcard">
+    <div class="section-h"><h3 id="waH">Make your shop link live</h3><button class="btn small" type="button" id="waClose">Close</button></div>
+    <div id="waBody" class="stack"></div>
+  </div>
+</div>
 <div class="inapp" id="ttPost" hidden role="dialog" aria-modal="true" aria-labelledby="ttH">
   <div class="card stack ttcard">
     <div class="section-h"><h3 id="ttH">Post to TikTok</h3><button class="btn small" type="button" id="ttClose">Close</button></div>
@@ -882,7 +903,8 @@ function itemRow(p, right){
 }
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let shopCat = 'All', shopOpen = null, shopQuery = '', shopTab = null;
-const waNumber = () => '977' + String(S.shop.whatsapp).replace(/\D/g,'').replace(/^977/,'');
+const waNumber = () => { const raw = String(S.shop.whatsapp || '').trim(), d = raw.replace(/\D/g, '');
+  if(raw.startsWith('+') || d.startsWith('977') || d.length > 10) return d; return '977' + d; };
 function orderLink(p){
   const msg = `Namaste! I want to order:\n${p.name} (${p.code}) – ${npr(p.price)}\nhttps://${productUrl(p)}\nSize: ___\nAddress: ___`;
   return `https://wa.me/${waNumber()}?text=${encodeURIComponent(msg)}`;
@@ -2596,7 +2618,7 @@ $('#btnClearEx').onclick = () => {
 var Cloud = (() => {
   const enabled = !!(CLOUD.url && CLOUD.key && window.supabase && !IN_CLAUDE);
   const sb = enabled ? window.supabase.createClient(CLOUD.url, CLOUD.key) : null;
-  let user = null, shopId = null, busy = false, again = false, timer = null, lastViews = 0, failed = false, noTT = false;
+  let user = null, shopId = null, busy = false, again = false, timer = null, lastViews = 0, failed = false, noTT = false, firstShop = false;
   const iso = t => t ? new Date(t).toISOString() : null;
   const ms = t => t ? Date.parse(t) : null;
   const state = txt => { const el = $('#syncState'); if(!el) return; el.hidden = !txt; el.textContent = txt || ''; };
@@ -2762,9 +2784,11 @@ var Cloud = (() => {
     S.owner = user.id;
     let { data:shop, error } = await sb.from('shops').select('*').eq('owner', user.id).maybeSingle();
     if(error) throw error;
-    const firstTime = !shop;
+    const firstTime = !shop; firstShop = firstTime;
     if(!shop){
-      const base = slugify(S.shop.name).slice(0, 26);
+      if(S.shop.name === 'Sita Fashion' && S.products.every(p => p.example)) S.shop.name = 'My Shop';   /* still the example */
+      if(S.shop.whatsapp === '9800000000') S.shop.whatsapp = S.verifiedWa || '';
+      const base = (S.shop.name === 'My Shop' ? 'shop' + (S.verifiedWa || '').replace(/\D/g, '').slice(-4) : slugify(S.shop.name)).slice(0, 26);
       for(let n = 0; n < 12 && !shop; n++){
         const slug = (n === 0 ? base : n < 9 ? base + (n + 1) : base + Math.random().toString(36).slice(2, 6)).padEnd(3, '0');
         const res = await sb.from('shops').insert({ owner:user.id, slug, ...shopRow() }).select().single();
@@ -2818,14 +2842,97 @@ var Cloud = (() => {
   $('#inappBarBtn').onclick = () => showInApp();
   $('#inappCopy').onclick = () => copyText(location.origin + '/');
 
+  /* sign-in sheet: WhatsApp first inside TikTok/Instagram (Google is blocked there), Google first in a normal browser */
   function signIn(){
     if(!enabled){ toast('Online shop is available on walltok.com'); return; }
-    if(IN_APP){ saveLocal(); showInApp(); return; }
-    if(!S.shop.whatsapp || S.shop.whatsapp === '9800000000' || S.shop.name === 'Sita Fashion'){
-      go('settings'); toast('First add your shop name and WhatsApp number, then tap Make my shop link live'); return;
-    }
     saveLocal();
-    sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/' } });
+    const wa = `<button class="btn wa-big" type="button" id="waGo">Continue with WhatsApp <span class="freepill">FREE</span></button>`;
+    const g = IN_APP ? `<button class="btn g-btn" type="button" id="gGo" style="opacity:.7"><span class="gdot"></span>Google: open in your browser first</button>`
+                     : `<button class="btn g-btn" type="button" id="gGo"><span class="gdot"></span>Continue with Google</button>`;
+    $('#waH').textContent = 'Make your shop link live';
+    $('#waBody').innerHTML = `<p class="small">So customers from TikTok can open your shop link, see your products and order.${IN_APP ? ` You're inside ${IN_APP === 'another app' ? 'an app' : IN_APP}, so WhatsApp is the quickest way here.` : ''}</p>
+      ${IN_APP ? wa + g : g + wa}
+      <p class="small muted" style="text-align:center">No password. Your products and orders come with you.</p>`;
+    $('#waModal').hidden = false;
+    $('#waGo').onclick = () => waStart('login');
+    $('#gGo').onclick = () => { if(IN_APP){ $('#waModal').hidden = true; showInApp(); return; } sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/' } }); };
+  }
+
+  /* WhatsApp: seller sends "LOGIN 7Q2K" to WallTok's login number; we watch for it */
+  let waTok = null, waTimer = null, waMode = 'login';
+  async function waCall(path, body, auth = false){
+    const headers = { 'Content-Type':'application/json', apikey:CLOUD.key };
+    if(auth){ const { data } = await sb.auth.getSession(); if(data?.session) headers.Authorization = 'Bearer ' + data.session.access_token; }
+    const r = await fetch(`${CLOUD.url}/functions/v1/whatsapp/${path}`, { method:'POST', headers, body:JSON.stringify(body || {}) });
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok) throw Object.assign(new Error(j.error?.message || 'WhatsApp sign-in failed'), { code:j.error?.code, status:r.status });
+    return j;
+  }
+  async function waStart(mode){
+    waMode = mode; clearTimeout(waTimer);
+    $('#waModal').hidden = false;
+    $('#waH').textContent = mode === 'link' ? 'Confirm your WhatsApp number' : 'Sign in with WhatsApp';
+    $('#waBody').innerHTML = '<p class="muted">Getting your code…</p>';
+    let st;
+    try{ st = await waCall('start', { mode }, mode === 'link'); }
+    catch(e){ $('#waBody').innerHTML = `<p>${esc(e.code === 'not_configured' ? 'WhatsApp sign-in is not switched on yet.' : e.message)}</p>${mode === 'login' ? '<button class="btn" type="button" id="waBack">Use Google instead</button>' : ''}`; if($('#waBack')) $('#waBack').onclick = signIn; return; }
+    waTok = st.token;
+    const num = '+' + st.number;
+    $('#waBody').innerHTML = `
+      <p class="small">Tap the button. WhatsApp opens with this message ready, just tap <b>Send</b>${mode === 'link' ? '' : ' and come back here'}.</p>
+      <div class="wareq"><span class="small muted">your message</span><b>LOGIN ${esc(st.code)}</b></div>
+      <a class="btn wa-big" href="${esc(st.link)}" target="_blank" rel="noopener" id="waOpen">Open WhatsApp</a>
+      <div class="waiting" id="waWait"><span class="spin" aria-hidden="true"></span><span>Waiting for your message…</span></div>
+      <p class="small muted">${mode === 'link' ? 'Send it from the WhatsApp number your customers should order on.' : 'Send it from the WhatsApp number your customers order on. It becomes your shop’s order number.'}</p>
+      <details class="small"><summary>WhatsApp didn't open?</summary><p class="small">Send <b>LOGIN ${esc(st.code)}</b> to <b>${esc(num)}</b> on WhatsApp. <button class="btn small" type="button" id="waCopy">Copy message</button></p></details>
+      ${mode === 'login' ? `<div class="stack" style="gap:6px"><label for="waCode" style="margin:0">Got a 6-digit code instead?</label>
+        <div class="otp"><input id="waCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000"><button class="btn indigo" type="button" id="waCodeGo">Sign in</button></div></div>` : ''}
+      <p class="small" id="waMsg" role="status"></p>`;
+    $('#waCopy').onclick = () => copyText(`LOGIN ${st.code}`);
+    if($('#waCodeGo')) $('#waCodeGo').onclick = async () => {
+      const code = $('#waCode').value.replace(/\D/g, ''); if(code.length !== 6){ $('#waMsg').textContent = 'Enter the 6 numbers from WhatsApp.'; return; }
+      $('#waCodeGo').disabled = true;
+      try{ await waDone(await waCall('code', { token:waTok, code })); }
+      catch(e){ $('#waMsg').textContent = e.message; $('#waCodeGo').disabled = false; }
+    };
+    if($('#waCode')) $('#waCode').addEventListener('input', e => { if(e.target.value.replace(/\D/g,'').length === 6) $('#waCodeGo').click(); });
+    const started = Date.now();
+    const poll = async () => {
+      if($('#waModal').hidden || !waTok) return;
+      try{
+        const r = await waCall('poll', { token:waTok });
+        if(r.status === 'done' || r.status === 'linked'){ await waDone(r); return; }
+        if(r.status === 'expired' || r.status === 'used' || Date.now() - started > 11*60000){ $('#waWait').innerHTML = 'This request expired. <button class="btn small" type="button" id="waAgain">Start again</button>'; $('#waAgain').onclick = () => waStart(mode); return; }
+      }catch(e){ if(e.code === 'number_taken'){ $('#waWait').textContent = e.message; return; } }
+      waTimer = setTimeout(poll, document.hidden ? 4000 : 2000);
+    };
+    waTimer = setTimeout(poll, 2500);
+  }
+  document.addEventListener('visibilitychange', () => { if(!document.hidden && waTok && !$('#waModal').hidden){ clearTimeout(waTimer); waTimer = setTimeout(async () => { try{ const r = await waCall('poll', { token:waTok }); if(r.status === 'done' || r.status === 'linked') await waDone(r); else waTimer = setTimeout(() => {}, 0); }catch(e){} }, 300); } });
+  $('#waClose').onclick = () => { $('#waModal').hidden = true; clearTimeout(waTimer); waTok = null; };
+
+  /* the WhatsApp number is proven */
+  async function waDone(r){
+    clearTimeout(waTimer); waTok = null;
+    const num = '+' + r.phone;
+    if(r.status === 'linked'){
+      S.shop.whatsapp = num; S.verifiedWa = num; save();
+      $('#waModal').hidden = true; toast(`WhatsApp ${num} confirmed ✓ Orders will come to this number.`);
+      render(['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home'); return;
+    }
+    $('#waBody').innerHTML = '<p class="muted">Signing you in…</p>';
+    let res = await sb.auth.verifyOtp({ token_hash:r.token_hash, type:'email' });
+    if(res.error) res = await sb.auth.verifyOtp({ token_hash:r.token_hash, type:'magiclink' });
+    if(res.error || !res.data?.session){ $('#waBody').innerHTML = `<p>Could not finish signing in. <button class="btn small" type="button" id="waAgain">Try again</button></p>`; $('#waAgain').onclick = () => waStart('login'); return; }
+    user = res.data.session.user;
+    S.verifiedWa = num;
+    if(!S.shop.whatsapp || S.shop.whatsapp === '9800000000') S.shop.whatsapp = num;
+    state('Loading…');
+    try{ await afterLogin(); state('Saved ✓'); }catch(e){ console.warn(e); state('Offline · saved on this phone'); }
+    if(!S.shop.whatsapp){ S.shop.whatsapp = num; save(); }
+    $('#waModal').hidden = true;
+    if(firstShop) { go('settings'); toast(`Welcome! Your shop is live at ${shopUrl()}. Give it your shop's name here.`); }
+    else { toast('Signed in with WhatsApp ✓'); render(['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home'); }
   }
   async function signOut(){
     await sb.auth.signOut();
@@ -2844,6 +2951,9 @@ var Cloud = (() => {
     $('#acctCard').hidden = !enabled;
     $('#btnClaim2').hidden = live || !!user;
     $('#btnSignOut').hidden = !user;
+    const verified = S.verifiedWa && S.shop.whatsapp && S.verifiedWa.replace(/\D/g, '') === waNumber();
+    $('#waBadge').hidden = !verified;
+    $('#btnWaLink').hidden = !live || !!verified;
     $('#acctText').textContent = live ? `Signed in as ${user.email}. Your shop, orders and views are saved online, so you can use them on any phone.`
       : 'Your shop is saved on this phone only. Make it live so customers can open your shop link and you see real views.';
     if(live) $('#viewsNote').textContent = 'A view is counted when a customer opens a product on your shop link (once per customer per day). Your own visits are not counted. Tap a product to see its page.';
@@ -2893,6 +3003,14 @@ var Cloud = (() => {
     }
     const cur = ['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home';
     render(cur);
+    /* tapped the sign-in link in WallTok's WhatsApp reply */
+    const wl = QS.get('walogin');
+    if(wl){
+      history.replaceState(null, '', location.pathname);
+      $('#waModal').hidden = false; $('#waH').textContent = 'Sign in with WhatsApp';
+      try{ await waDone(await waCall('link', { t:wl })); }
+      catch(e){ $('#waBody').innerHTML = `<p>${esc(e.message)}</p><button class="btn" type="button" id="waAgain">Start again</button>`; $('#waAgain').onclick = () => waStart('login'); }
+    }
     /* back from TikTok's sign-in */
     const tt = QS.get('tiktok'), back = QS.get('post');
     if(tt){
@@ -2908,6 +3026,7 @@ var Cloud = (() => {
     const { data } = await sb.from('tiktok_posts').select('status,created_at').eq('product_id', pid).order('created_at', { ascending:false });
     return data || [];
   }
+  $('#btnWaLink').onclick = () => waStart('link');
   return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, token, tiktokPosts, viewsRange, enabled, signedIn: () => !!shopId };
 })();
 document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
