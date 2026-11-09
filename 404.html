@@ -2811,29 +2811,37 @@ var TT = (() => {
     if(window.Mp4Muxer) return Promise.resolve();
     return new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js'; sc.onload = ok; sc.onerror = no; document.head.append(sc); });
   }
-  async function encodeMp4(stage, draw, secs, onPct){
+  async function encodeMp4(stage, draw, secs, onPct, hw){
     if(!window.VideoEncoder || !window.VideoFrame) throw new Error('no encoder');
     await loadMuxer();
     const W = stage.width, H = stage.height, fps = 30;
     let codec = null;
-    for(const c of ['avc1.640028', 'avc1.4d0028', 'avc1.42002a']){
-      try{ const sup = await VideoEncoder.isConfigSupported({ codec:c, width:W, height:H, bitrate:4_000_000, framerate:fps }); if(sup.supported){ codec = c; break; } }catch(e){}
+    for(const c of ['avc1.4d0028', 'avc1.640028', 'avc1.42002a']){
+      try{ const sup = await VideoEncoder.isConfigSupported({ codec:c, width:W, height:H, bitrate:4_000_000, framerate:fps, hardwareAcceleration:hw }); if(sup.supported){ codec = c; break; } }catch(e){}
     }
-    if(!codec) throw new Error('no h264');
-    const muxer = new Mp4Muxer.Muxer({ target:new Mp4Muxer.ArrayBufferTarget(), video:{ codec:'avc', width:W, height:H, frameRate:fps }, fastStart:'in-memory' });
-    let err = null;
-    const enc = new VideoEncoder({ output:(chunk, meta) => muxer.addVideoChunk(chunk, meta), error:e => { err = e; } });
-    enc.configure({ codec, width:W, height:H, bitrate:4_000_000, framerate:fps, avc:{ format:'avc' } });
+    if(!codec) throw new Error('no h264 (' + hw + ')');
+    const muxer = new Mp4Muxer.Muxer({ target:new Mp4Muxer.ArrayBufferTarget(), video:{ codec:'avc', width:W, height:H }, fastStart:'in-memory' });
+    let err = null, last = Date.now(), outs = 0;
+    const enc = new VideoEncoder({
+      output:(chunk, meta) => { try{ muxer.addVideoChunk(chunk, meta); outs++; last = Date.now(); }catch(e){ err = e; } },
+      error:e => { err = e; } });
+    enc.configure({ codec, width:W, height:H, bitrate:4_000_000, framerate:fps, hardwareAcceleration:hw, avc:{ format:'avc' } });
     const n = Math.round(secs * fps);
-    for(let i = 0; i < n; i++){
-      draw(i / fps);
-      const f = new VideoFrame(stage, { timestamp:Math.round(i * 1e6 / fps), duration:Math.round(1e6 / fps) });
-      enc.encode(f, { keyFrame:i % 60 === 0 }); f.close();
-      while(enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 4));
-      if(i % 6 === 0){ onPct(i / n); await new Promise(r => setTimeout(r, 0)); }
+    const stalled = () => err || (Date.now() - last > 6000);
+    try{
+      for(let i = 0; i < n; i++){
+        draw(i / fps);
+        const f = new VideoFrame(stage, { timestamp:Math.round(i * 1e6 / fps), duration:Math.round(1e6 / fps) });
+        enc.encode(f, { keyFrame:i % 60 === 0 }); f.close();
+        while(enc.encodeQueueSize > 6){ if(stalled()) throw err || new Error('encoder stalled'); await new Promise(r => setTimeout(r, 4)); }
+        if(i % 6 === 0){ onPct(i / n); await new Promise(r => setTimeout(r, 0)); }
+        if(stalled()) throw err || new Error('encoder stalled');
+      }
+      await Promise.race([enc.flush(), new Promise((_, no) => setTimeout(() => no(new Error('flush timed out')), 15000))]);
       if(err) throw err;
-    }
-    await enc.flush(); enc.close(); muxer.finalize();
+      if(outs < n * 0.9) throw new Error('missing frames ' + outs + '/' + n);
+      muxer.finalize();
+    }finally{ try{ enc.close(); }catch(e){} }
     return new Blob([muxer.target.buffer], { type:'video/mp4' });
   }
   async function makeVideo(p, onPct){
@@ -2843,8 +2851,10 @@ var TT = (() => {
     const comps = imgs.map(frameFor), info = productInfo(p);
     const secs = Math.max(8, comps.length*2.2 + 2.2), T = secs*1000;
     const stage = document.createElement('canvas'); stage.width = 720; stage.height = 1280; const g = stage.getContext('2d');
-    try{ const blob = await encodeMp4(stage, t => drawFrame(g, t, comps, info, secs), secs, onPct); onPct(1); return { blob, ext:'mp4', secs, info }; }
-    catch(e){ console.warn('mp4 encoder unavailable, recording instead', e); }
+    for(const hw of ['no-preference', 'prefer-software']){
+      try{ const blob = await encodeMp4(stage, t => drawFrame(g, t, comps, info, secs), secs, onPct, hw); onPct(1); return { blob, ext:'mp4', secs, info }; }
+      catch(e){ console.warn('mp4 encoder (' + hw + ') failed', e); onPct(0); }
+    }
     const types = ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
     const mime = (window.MediaRecorder && types.find(t => MediaRecorder.isTypeSupported(t))) || '';
     if(!mime || !stage.captureStream) throw new Error('This browser cannot make videos. Use Chrome on your phone.');
