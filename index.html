@@ -83,6 +83,10 @@ button.stat span::after{content:" ›";color:var(--indigo)}
 .ttopts label.chk.off{opacity:.5}
 .ttsub{padding-left:26px;display:flex;flex-direction:column;gap:6px}
 .ttnote{font-size:.78rem;color:var(--muted)}
+.jp{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;background:var(--surface);border:2px solid var(--accent);border-radius:var(--r);padding:10px;cursor:pointer}
+.jp img{width:96px;height:96px;border-radius:10px;object-fit:cover}
+.jp b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#justPosted .tt-logo{background:#111;color:#fff;width:24px;height:24px;vertical-align:-3px}
 details.small summary{cursor:pointer;color:var(--muted);padding:4px 0}
 html.public .tabs, html.public #btnSettings, html.public #view-shop > .tip, html.public #view-shop > .urlbar, html.public #view-home{display:none!important}
 html.public .app{padding-bottom:24px}
@@ -565,6 +569,7 @@ textarea{resize:vertical;min-height:84px}
       <input id="shopSearch" type="search" placeholder="Try: red heels, size 40, under 3000, F12" aria-label="Search by name, colour, size, price or product code">
       <div class="chips" id="searchHints"></div>
       <p class="small muted" id="searchSummary" hidden></p>
+      <div id="justPosted" class="stack" hidden></div>
       <div class="pgrid" id="pubGrid"></div>
     </div>
     <div id="pubProduct" class="stack" hidden></div>
@@ -863,6 +868,13 @@ function renderShop(){
   const Q = parseSearch(shopQuery);
   const list = searchProducts(S.products.filter(p => shopCat==='All' || p.category===shopCat), Q);
   paintSearchHelp(Q, list.length);
+  /* products just posted on TikTok go first, so people arriving from the bio link see them straight away */
+  const jp = $('#justPosted'), recent = !Q.text && shopCat === 'All' ? S.products.filter(p => p.ttAt && Date.now() - p.ttAt < 3*864e5).sort((a,b) => b.ttAt - a.ttAt).slice(0, 3) : [];
+  jp.hidden = !recent.length;
+  jp.innerHTML = recent.length ? `<div class="section-h"><h3 style="margin:0"><span class="tt-logo" aria-hidden="true">♪</span>Just posted on TikTok</h3></div>` + recent.map(p => `
+    <div class="jp" data-open="${p.id}"><img alt="${esc(p.name)}" src="${p.img}"><div class="stack" style="gap:4px;min-width:0">
+      <b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc((p.sizes||[]).join(' · '))}</span>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><a class="btn primary small" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a><button class="btn small" type="button">See details</button></div></div></div>`).join('') : '';
   list.forEach(p => {
     const el = document.createElement('div'); el.className='pcard'; el.dataset.open = p.id;
     el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc(p.sizes.join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
@@ -901,6 +913,7 @@ function openProduct(id, count = true){
   shopOpen = id; renderShop(); window.scrollTo(0,0);
 }
 $('#pubGrid').addEventListener('click', e => { if(e.target.closest('a')) return; const c = e.target.closest('[data-open]'); if(c) openProduct(c.dataset.open); });
+$('#justPosted').addEventListener('click', e => { if(e.target.closest('a')) return; const c = e.target.closest('[data-open]'); if(c) openProduct(c.dataset.open); });
 $('#shopSearch').addEventListener('input', e => { shopQuery = e.target.value; renderShop(); });
 
 /* ---------- smart search: words, colours, sizes, prices and codes in any order ----------
@@ -1737,7 +1750,7 @@ function templateCaption(info){
     nepali: `नयाँ ${info.name} आयो ✨ ${deal}\nसाइज: ${info.sizes}। उपत्यकाभित्र १ दिनमा डेलिभरी, क्यास अन डेलिभरी उपलब्ध।${low ? `\nस्टक ${info.stock} वटा मात्र बाँकी!` : ''}\nअर्डर गर्न बायोको लिङ्कमा क्लिक गर्नुहोस् 🛍️`,
     english: `New ${n} just in ✨ ${deal}\nSizes: ${info.sizes}. Delivery in 1 day inside the valley, cash on delivery available.${low ? `\nOnly ${info.stock} left!` : ''}\nTap the link in bio to order 🛍️`
   }[info.lang||'roman'];
-  const codeLine = info.code ? `\n${{roman:'Product code', nepali:'प्रोडक्ट कोड', english:'Product code'}[info.lang||'roman']}: ${info.code}` : '';
+  const codeLine = info.code ? `\n${{roman:'Order', nepali:'अर्डर', english:'Order'}[info.lang||'roman']}: ${productUrl(info)} (${{roman:'code', nepali:'कोड', english:'code'}[info.lang||'roman']} ${info.code})` : '';
   return body + codeLine + '\n\n' + tags.map(t=>'#'+t.replace(/\s+/g,'')).join(' ');
 }
 async function aiCaption(info, fresh, image){
@@ -2006,7 +2019,12 @@ $('#btnPostTT').onclick = () => postFlow('photo');
 $('#btnPostTTV').onclick = () => postFlow('talk');
 $('#pdPin').onclick = () => { (postMode === 'talk' ? $('#btnPinV') : $('#btnPin')).click(); $('#pdPinRow').classList.add('done'); };
 $('#pdClose').onclick = () => { $('#postDone').hidden = true; };
-$('#pdFinish').onclick = () => { $('#postDone').hidden = true; (postMode === 'talk' ? $('#btnPublishV') : $('#btnPublish')).click(); };
+$('#pdFinish').onclick = () => {
+  $('#postDone').hidden = true;
+  const before = new Set(S.products.map(p => p.id));
+  (postMode === 'talk' ? $('#btnPublishV') : $('#btnPublish')).click();
+  const added = S.products.find(p => !before.has(p.id)); if(added){ added.ttAt = Date.now(); save(); }
+};
 if(!inClaude && !window.claude){ $('#btnAiBox').hidden = true; $('#aiBoxNote').hidden = true; }
 
 /* ---------- talking-video mode ---------- */
@@ -2368,9 +2386,9 @@ $('#btnPublishV').onclick = () => {
 /* ---------- pinned comment and product details ---------- */
 function pinnedComment(i){
   const app = APPAREL.includes(i.category), low = i.stock > 0 && i.stock <= 3;
-  if(i.lang === 'nepali') return `📌 ${i.code ? `कोड ${i.code} · ` : ''}मूल्य: ${i.price}${i.oldPrice ? ` (पहिले ${i.oldPrice}, ${i.pct}% छुट)` : ''}${app ? ` · साइज: ${i.sizes}` : ''} · क्यास अन डेलिभरी · उपत्यकाभित्र १ दिनमा डेलिभरी${low ? ` · ${i.stock} वटा मात्र बाँकी!` : ''} · अर्डर: बायोको लिङ्क${i.code ? ` → ${i.code}` : ''} 🛍️`;
-  if(i.lang === 'english') return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (was ${i.oldPrice}, ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · Cash on delivery · 1-day delivery in the valley${low ? ` · Only ${i.stock} left!` : ''} · Order: link in bio${i.code ? ` → ${i.code}` : ''} 🛍️`;
-  return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (${i.oldPrice} bata ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · COD available · Valley bhitra 1 din ma delivery${low ? ` · ${i.stock} piece matra baki!` : ''} · Order: link in bio${i.code ? ` → ${i.code}` : ''} 🛍️`;
+  if(i.lang === 'nepali') return `📌 ${i.code ? `कोड ${i.code} · ` : ''}मूल्य: ${i.price}${i.oldPrice ? ` (पहिले ${i.oldPrice}, ${i.pct}% छुट)` : ''}${app ? ` · साइज: ${i.sizes}` : ''} · क्यास अन डेलिभरी · उपत्यकाभित्र १ दिनमा डेलिभरी${low ? ` · ${i.stock} वटा मात्र बाँकी!` : ''} · अर्डर: ${i.code ? productUrl(i) + ' (बायोको लिङ्क)' : 'बायोको लिङ्क'} 🛍️`;
+  if(i.lang === 'english') return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (was ${i.oldPrice}, ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · Cash on delivery · 1-day delivery in the valley${low ? ` · Only ${i.stock} left!` : ''} · Order: ${i.code ? productUrl(i) + ' (link in bio)' : 'link in bio'} 🛍️`;
+  return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (${i.oldPrice} bata ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · COD available · Valley bhitra 1 din ma delivery${low ? ` · ${i.stock} piece matra baki!` : ''} · Order: ${i.code ? productUrl(i) + ' (link in bio)' : 'link in bio'} 🛍️`;
 }
 function productDetails(p){
   const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
@@ -2505,7 +2523,7 @@ $('#btnClearEx').onclick = () => {
 var Cloud = (() => {
   const enabled = !!(CLOUD.url && CLOUD.key && window.supabase && !IN_CLAUDE);
   const sb = enabled ? window.supabase.createClient(CLOUD.url, CLOUD.key) : null;
-  let user = null, shopId = null, busy = false, again = false, timer = null, lastViews = 0, failed = false;
+  let user = null, shopId = null, busy = false, again = false, timer = null, lastViews = 0, failed = false, noTT = false;
   const iso = t => t ? new Date(t).toISOString() : null;
   const ms = t => t ? Date.parse(t) : null;
   const state = txt => { const el = $('#syncState'); if(!el) return; el.hidden = !txt; el.textContent = txt || ''; };
@@ -2515,10 +2533,10 @@ var Cloud = (() => {
   const imagesOf = p => [...new Set([p.img, ...(p.imgs || [])].filter(Boolean))];
   const prodRow = p => ({ id:p.id, shop_id:shopId, code:p.code, name:p.name, price:+p.price||0, old_price:p.oldPrice ? +p.oldPrice : null,
     offer:p.offer || null, stock:+p.stock||0, sizes:p.sizes || [], category:p.category || null, description:p.desc || null,
-    images:imagesOf(p), caption:p.caption || null, created_at:iso(p.created || (p.created = Date.now())) });
+    images:imagesOf(p), caption:p.caption || null, created_at:iso(p.created || (p.created = Date.now())), ...(noTT ? {} : { tiktok_posted_at:iso(p.ttAt) }) });
   const prodLocal = r => { const imgs = r.images || []; return { id:r.id, code:r.code, name:r.name, price:r.price, oldPrice:r.old_price || undefined,
     offer:r.offer || undefined, stock:r.stock, sizes:r.sizes || [], category:r.category || 'Other', desc:r.description || '',
-    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), views:r.views || 0, viewLog:{} }; };
+    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), ttAt:ms(r.tiktok_posted_at), views:r.views || 0, viewLog:{} }; };
   const orderRow = o => ({ id:o.id, shop_id:shopId, product_id:(S.sync.p[o.productId] ? o.productId : null), customer:o.customer, place:o.place,
     size:o.size, pay:o.pay, status:o.status, price:+o.price||0, delivery:+o.delivery||0, created_at:iso(o.created), paid_at:iso(o.paidAt) });
   const orderLocal = r => ({ id:r.id, productId:r.product_id, customer:r.customer, place:r.place, size:r.size, pay:r.pay, status:r.status,
@@ -2548,7 +2566,9 @@ var Cloud = (() => {
         if(urls.size){ if(urls.has(p.img)) p.img = urls.get(p.img); if(p.imgs) p.imgs = p.imgs.map(x => urls.get(x) || x); saveLocal(); }
         const row = prodRow(p);
         if(h(row) === S.sync.p[p.id]) continue;
-        const { error } = await sb.from('products').upsert(row); if(error) throw error;
+        let { error } = await sb.from('products').upsert(row);
+        if(error && /tiktok_posted_at/.test(error.message || '') && !noTT){ noTT = true; delete row.tiktok_posted_at; ({ error } = await sb.from('products').upsert(row)); }   /* database not updated yet */
+        if(error) throw error;
         S.sync.p[p.id] = h(row);
       }
       const gone = Object.keys(S.sync.p).filter(id => !S.products.some(p => p.id === id));
@@ -2897,7 +2917,7 @@ var TT = (() => {
   function compose(p){
     const info = productInfo(p);
     let cap = p.caption || templateCaption(info);
-    if(p.code && !cap.includes(p.code)) cap += `\nCode ${p.code} · link in bio`;
+    if(p.code && !cap.includes(productUrl(p))) cap += `\nOrder: ${productUrl(p)} (code ${p.code}, link in bio)`;
     const opts = (st.privacyOptions || []).map(o => `<option value="${o}">${PRIV[o] || o}</option>`).join('');
     const chk = (id, label, off) => `<label class="chk${off ? ' off' : ''}"><input type="checkbox" id="${id}" ${off ? 'disabled' : ''}> ${label}${off ? ' <span class="ttnote">(turned off in your TikTok settings)</span>' : ''}</label>`;
     show(`
@@ -2970,7 +2990,7 @@ var TT = (() => {
     const el = $('#ttState'); if(!el) { busy = false; return; }
     try{
       const r = await call('poll', { json:{ publish_id:id } });
-      if(r.status === 'PUBLISH_COMPLETE'){ el.textContent = priv === 'SELF_ONLY' ? 'Posted ✓ It is on your profile as “Only me”.' : 'Posted ✓ It is live on your TikTok.'; busy = false; history(pid); return; }
+      if(r.status === 'PUBLISH_COMPLETE'){ const pp = prodById(pid); if(pp){ pp.ttAt = Date.now(); save(); } el.textContent = priv === 'SELF_ONLY' ? 'Posted ✓ It is on your profile as “Only me”.' : 'Posted ✓ It is live on your TikTok.'; busy = false; history(pid); return; }
       if(r.status === 'FAILED'){
         const why = { duration_check:'TikTok could not read the video length.', file_format_check_failed:'TikTok did not accept the video file.', frame_rate_check_failed:'TikTok did not accept the video frame rate.',
           picture_size_check_failed:'TikTok did not accept the video size.', spam_risk_too_many_posts:'You have posted too many times today. Try again tomorrow.', spam_risk_user_banned_from_posting:'This TikTok account cannot post right now.',
