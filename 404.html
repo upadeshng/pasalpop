@@ -67,6 +67,8 @@ button.stat span::after{content:" ›";color:var(--indigo)}
 .inapp{position:fixed;inset:0;background:rgba(27,29,58,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:16px}
 .inapp .card{width:100%;max-width:520px}
 .inapp ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+#postDone ol{padding-left:0}
+details.small summary{cursor:pointer;color:var(--muted);padding:4px 0}
 html.public .tabs, html.public #btnSettings, html.public #view-shop > .tip, html.public #view-shop > .urlbar, html.public #view-home{display:none!important}
 html.public .app{padding-bottom:24px}
 .pubmsg{text-align:center;padding:48px 16px}
@@ -440,13 +442,15 @@ textarea{resize:vertical;min-height:84px}
         <div class="row"><button class="btn" id="btnCopyCapV" type="button">Copy caption</button><button class="btn" id="btnRegenV" type="button">Write another</button></div>
       </div>
       <div class="post stack">
-        <div><h3>Post to TikTok</h3><p class="small muted">Three taps. Your shop link updates too.</p></div>
+        <div><h3>Post to TikTok</h3><p class="small muted">One tap opens TikTok with your video and copies the caption. Then just paste and post.</p></div>
+        <button class="btn primary big" id="btnPostTTV" type="button">Post to TikTok</button>
+        <details class="small"><summary>Or do it step by step</summary>
         <ol class="steps">
           <li id="vt1"><div><b>Save video and copy caption</b><span class="small muted">One tap does both</span></div><div class="row" style="justify-content:flex-end"><button class="btn primary" id="btnShareV" type="button" hidden disabled>Share to TikTok</button><button class="btn indigo" id="btnSaveVidV" type="button" disabled>Save + copy</button></div></li>
           <li id="vt2"><div><b>Open TikTok and post</b><span class="small muted">Tap +, pick the video, paste the caption</span></div><a class="btn primary" id="lnkTikTokV" href="https://www.tiktok.com/upload" target="_blank" rel="noopener">Open TikTok</a></li>
           <li id="vtPin"><div><b>Pin a comment with all details</b><span class="small muted">Post it as the first comment and pin it. Fewer “price kati?” questions.</span></div><button class="btn" id="btnPinV" type="button">Copy comment</button></li>
           <li id="vt3"><div><b>Put the product on your shop link</b><span class="small muted">A still from your video is used as the photo</span></div><button class="btn" id="btnPublishV" type="button">Add to shop</button></li>
-        </ol>
+        </ol></details>
       </div>
     </div>
 
@@ -512,7 +516,7 @@ textarea{resize:vertical;min-height:84px}
         </div>
       </div>
       <div class="post stack" id="postBox">
-        <div><h3>Post to TikTok</h3><p class="small muted">Three taps. Your shop link updates too.</p></div>
+        <div><h3>Post to TikTok</h3><p class="small muted">One tap opens TikTok with your post and copies the caption. Then just paste and post.</p></div>
         <div id="postAsRow">
           <label>Post as</label>
           <div class="chips" id="postAs">
@@ -520,12 +524,14 @@ textarea{resize:vertical;min-height:84px}
             <button type="button" class="chip" data-as="photos">Photo slides</button>
           </div>
         </div>
+        <button class="btn primary big" id="btnPostTT" type="button">Post to TikTok</button>
+        <details class="small"><summary>Or do it step by step</summary>
         <ol class="steps">
           <li id="st1"><div><b>Save video and copy caption</b><span class="small muted">One tap does both</span></div><div class="row" style="justify-content:flex-end"><button class="btn primary" id="btnShare" type="button" hidden disabled>Share to TikTok</button><button class="btn indigo" id="btnSaveVid" type="button" disabled>Save + copy</button></div></li>
           <li id="st2"><div><b>Open TikTok and post</b><span class="small muted">Tap +, pick the video, paste the caption, add a trending sound</span></div><a class="btn primary" id="lnkTikTok" href="https://www.tiktok.com/upload" target="_blank" rel="noopener">Open TikTok</a></li>
           <li id="stPin"><div><b>Pin a comment with all details</b><span class="small muted">Post it as the first comment and pin it. Fewer “price kati?” questions.</span></div><button class="btn" id="btnPin" type="button">Copy comment</button></li>
           <li id="st3"><div><b>Put the product on your shop link</b><span class="small muted">So customers from TikTok can order it</span></div><button class="btn" id="btnPublish" type="button">Add to shop</button></li>
-        </ol>
+        </ol></details>
         <p class="small muted">Tip: post in the evening when your customers are scrolling, and keep your shop link in your TikTok bio.</p>
       </div>
     </div>
@@ -629,6 +635,18 @@ textarea{resize:vertical;min-height:84px}
   <button type="button" data-tab="orders"><span>☰</span>Orders</button>
 </nav></div>
 <div class="toast" id="toast" hidden></div>
+<div class="inapp" id="postDone" hidden role="dialog" aria-modal="true" aria-labelledby="postDoneH">
+  <div class="card stack">
+    <h3 id="postDoneH">Finish in TikTok</h3>
+    <ol class="steps small" style="margin:0">
+      <li class="done"><div><b>Caption copied ✓</b><span class="muted" id="pdOpenNote">TikTok opened with your video</span></div><a class="btn primary" id="pdOpenTT" href="https://www.tiktok.com/upload" target="_blank" rel="noopener" hidden>Open TikTok</a></li>
+      <li><div><b>In TikTok, tap the caption box → Paste → Post</b><span class="muted">Add a trending sound if you like</span></div></li>
+      <li id="pdPinRow"><div><b>Pin the details comment</b><span class="muted">Comment it on your post, long-press it, tap Pin</span></div><button class="btn" type="button" id="pdPin">Copy comment</button></li>
+    </ol>
+    <button class="btn primary big" type="button" id="pdFinish">Posted · add to my shop</button>
+    <button class="btn" type="button" id="pdClose">Not posted yet</button>
+  </div>
+</div>
 <div class="inapp" id="inapp" hidden role="dialog" aria-modal="true" aria-labelledby="inappH">
   <div class="card stack">
     <h3 id="inappH">Open in your browser to sign in</h3>
@@ -1938,6 +1956,34 @@ async function shareTo(files, caption, onDone){
 }
 $('#btnShare').onclick = () => shareTo(postAs === 'photos' ? shareFiles.slides : shareFiles.photoVideo, $('#captionOut').innerText, () => { markStep(1); markStep(2); });
 $('#btnShareV').onclick = () => shareTo(shareFiles.talk, $('#captionV').innerText, () => { $('#vt1').classList.add('done'); $('#vt2').classList.add('done'); });
+/* one tap: copy caption + open TikTok, then a short finish list */
+let postMode = 'photo';
+async function postFlow(mode){
+  postMode = mode;
+  const talk = mode === 'talk';
+  const files = talk ? shareFiles.talk : (postAs === 'photos' ? shareFiles.slides : shareFiles.photoVideo);
+  const cap = (talk ? $('#captionV') : $('#captionOut')).innerText;
+  const saveBtn = talk ? $('#btnSaveVidV') : $('#btnSaveVid');
+  if(!files && saveBtn.disabled){ toast(talk ? 'Make the video first' : (postAs === 'photos' ? 'Photo slides are still being made…' : 'Video is still being made… or switch to Photo slides')); return; }
+  if(canShareFiles && files){
+    shareTo(files, cap, () => { talk ? ($('#vt1').classList.add('done'), $('#vt2').classList.add('done')) : (markStep(1), markStep(2)); openPostDone(true); });
+  } else {
+    try{ await saveBtn.onclick(); }catch(e){}
+    openPostDone(false);
+  }
+}
+function openPostDone(shared){
+  $('#pdOpenNote').textContent = shared ? 'TikTok opened with your ' + (postMode !== 'talk' && postAs === 'photos' ? 'photos' : 'video')
+    : (postMode !== 'talk' && postAs === 'photos' ? 'Photos saved. In TikTok tap +, pick them in Photo mode' : 'Video saved. In TikTok tap +, pick the video from Gallery');
+  $('#pdPinRow').classList.remove('done');
+  $('#pdOpenTT').hidden = shared;
+  $('#postDone').hidden = false;
+}
+$('#btnPostTT').onclick = () => postFlow('photo');
+$('#btnPostTTV').onclick = () => postFlow('talk');
+$('#pdPin').onclick = () => { (postMode === 'talk' ? $('#btnPinV') : $('#btnPin')).click(); $('#pdPinRow').classList.add('done'); };
+$('#pdClose').onclick = () => { $('#postDone').hidden = true; };
+$('#pdFinish').onclick = () => { $('#postDone').hidden = true; (postMode === 'talk' ? $('#btnPublishV') : $('#btnPublish')).click(); };
 if(!inClaude && !window.claude){ $('#btnAiBox').hidden = true; $('#aiBoxNote').hidden = true; }
 
 /* ---------- talking-video mode ---------- */
