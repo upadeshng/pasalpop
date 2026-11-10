@@ -966,13 +966,22 @@ function renderProductPage(p){
         <p class="small muted">Cash on delivery · eSewa · Khalti · 1-day delivery inside the valley</p>
         <a class="btn primary big" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
         <button class="btn" type="button" id="pCopyLink">Copy product link</button>
-        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist">Posts the video and caption straight to your TikTok</span></div>` : ''}
+        <a class="btn ink" id="pWatchTT" href="${esc(p.ttUrl || '#')}" target="_blank" rel="noopener" ${p.ttUrl ? '' : 'hidden'}><span class="tt-logo" aria-hidden="true">♪</span> Watch on TikTok</a>
+        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist">Posts the video and caption straight to your TikTok</span><div id="pTTLinks" class="stack" style="gap:6px"></div></div>` : ''}
+        ${!PUB_SLUG ? `<details class="small" id="pTTPaste"><summary>${p.ttUrl ? 'Change the TikTok link' : 'Posted this from the TikTok app? Add the link'}</summary>
+          <div class="otp" style="margin-top:6px"><input id="pTTUrl" inputmode="url" placeholder="https://www.tiktok.com/@you/video/…" value="${esc(p.ttUrl || '')}"><button class="btn small" type="button" id="pTTSave">Save</button></div>
+          <p class="small muted">Customers see a <b>Watch on TikTok</b> button on this product.${p.ttUrl ? ' Leave it empty and Save to remove it.' : ''}</p></details>` : ''}
       </div>
     </div>`;
   wireGallery(box.querySelector('.pdetail'), p);
   $('#pBack').onclick = () => { shopOpen = null; if(PUB_SLUG && ON_SITE) history.pushState({}, '', `/${PUB_SLUG}`); renderShop(); window.scrollTo(0,0); };
   $('#pCopyLink').onclick = () => copyText('https://' + productUrl(p));
   if($('#pPostTT')){ $('#pPostTT').onclick = () => TT.open(p.id); TT.history(p.id); }
+  if($('#pTTSave')) $('#pTTSave').onclick = () => {
+    const v = $('#pTTUrl').value.trim();
+    if(v && !/^https?:\/\/([a-z]+\.)?tiktok\.com\/\S+$/i.test(v)){ toast('Paste a TikTok link, like https://www.tiktok.com/@you/video/123…'); return; }
+    p.ttUrl = v; if(v && !p.ttAt) p.ttAt = Date.now(); save(); toast(v ? 'TikTok link saved ✓' : 'TikTok link removed'); renderProductPage(p);
+  };
 }
 function openProduct(id, count = true){
   const p = prodById(id); if(!p) return;
@@ -2628,10 +2637,10 @@ var Cloud = (() => {
   const imagesOf = p => [...new Set([p.img, ...(p.imgs || [])].filter(Boolean))];
   const prodRow = p => ({ id:p.id, shop_id:shopId, code:p.code, name:p.name, price:+p.price||0, old_price:p.oldPrice ? +p.oldPrice : null,
     offer:p.offer || null, stock:+p.stock||0, sizes:p.sizes || [], category:p.category || null, description:p.desc || null,
-    images:imagesOf(p), caption:p.caption || null, created_at:iso(p.created || (p.created = Date.now())), ...(noTT ? {} : { tiktok_posted_at:iso(p.ttAt) }) });
+    images:imagesOf(p), caption:p.caption || null, created_at:iso(p.created || (p.created = Date.now())), ...(noTT ? {} : { tiktok_posted_at:iso(p.ttAt), tiktok_url:p.ttUrl || null }) });
   const prodLocal = r => { const imgs = r.images || []; return { id:r.id, code:r.code, name:r.name, price:r.price, oldPrice:r.old_price || undefined,
     offer:r.offer || undefined, stock:r.stock, sizes:r.sizes || [], category:r.category || 'Other', desc:r.description || '',
-    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), ttAt:ms(r.tiktok_posted_at), views:r.views || 0, viewLog:{} }; };
+    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), ttAt:ms(r.tiktok_posted_at), ttUrl:r.tiktok_url || '', views:r.views || 0, viewLog:{} }; };
   const orderRow = o => ({ id:o.id, shop_id:shopId, product_id:(S.sync.p[o.productId] ? o.productId : null), customer:o.customer, place:o.place,
     size:o.size, pay:o.pay, status:o.status, price:+o.price||0, delivery:+o.delivery||0, created_at:iso(o.created), paid_at:iso(o.paidAt) });
   const orderLocal = r => ({ id:r.id, productId:r.product_id, customer:r.customer, place:r.place, size:r.size, pay:r.pay, status:r.status,
@@ -2674,8 +2683,8 @@ var Cloud = (() => {
         for(let i = 0; i < rows.length; i += 200){
           const part = rows.slice(i, i + 200);
           let { error } = await sb.from(table).upsert(part.map(x => x.row));
-          if(error && table === 'products' && /tiktok_posted_at/.test(error.message || '') && !noTT){   /* database not updated yet */
-            noTT = true; part.forEach(x => { delete x.row.tiktok_posted_at; x.fp = h(x.row); });
+          if(error && table === 'products' && /tiktok_(posted_at|url)/.test(error.message || '') && !noTT){   /* database not updated yet */
+            noTT = true; part.forEach(x => { delete x.row.tiktok_posted_at; delete x.row.tiktok_url; x.fp = h(x.row); });
             ({ error } = await sb.from(table).upsert(part.map(x => x.row)));
           }
           if(error) throw error;
@@ -3023,7 +3032,7 @@ var Cloud = (() => {
   async function token(){ const { data } = await sb.auth.getSession(); return data?.session?.access_token || ''; }
   async function tiktokPosts(pid){
     if(!shopId) return [];
-    const { data } = await sb.from('tiktok_posts').select('status,created_at').eq('product_id', pid).order('created_at', { ascending:false });
+    const { data } = await sb.from('tiktok_posts').select('status,created_at,post_url,privacy_level').eq('product_id', pid).order('created_at', { ascending:false });
     return data || [];
   }
   $('#btnWaLink').onclick = () => waStart('link');
@@ -3229,7 +3238,13 @@ var TT = (() => {
     const el = $('#ttState'); if(!el) { busy = false; return; }
     try{
       const r = await call('poll', { json:{ publish_id:id } });
-      if(r.status === 'PUBLISH_COMPLETE'){ const pp = prodById(pid); if(pp){ pp.ttAt = Date.now(); save(); } el.textContent = priv === 'SELF_ONLY' ? 'Posted ✓ It is on your profile as “Only me”.' : 'Posted ✓ It is live on your TikTok.'; busy = false; history(pid); return; }
+      if(r.status === 'PUBLISH_COMPLETE'){
+        const id0 = pid, pp = prodById(id0); if(pp){ pp.ttAt = Date.now(); if(r.post_url && r.public) pp.ttUrl = r.post_url; save(); }
+        el.textContent = priv === 'SELF_ONLY' ? 'Posted ✓ It is on your profile as “Only me”.' : 'Posted ✓ It is live on your TikTok.';
+        busy = false; history(id0);
+        if(r.post_url) showLink(r.post_url);
+        else if(priv !== 'SELF_ONLY') { el.textContent += ' Getting the post link…'; linkLater(id, id0, 0); }
+        return; }
       if(r.status === 'FAILED'){
         const why = { duration_check:'TikTok could not read the video length.', file_format_check_failed:'TikTok did not accept the video file.', frame_rate_check_failed:'TikTok did not accept the video frame rate.',
           picture_size_check_failed:'TikTok did not accept the video size.', spam_risk_too_many_posts:'You have posted too many times today. Try again tomorrow.', spam_risk_user_banned_from_posting:'This TikTok account cannot post right now.',
@@ -3242,12 +3257,47 @@ var TT = (() => {
     if(n > 40){ el.textContent = 'Still processing. Check your TikTok profile in a few minutes.'; busy = false; return; }
     setTimeout(() => poll(id, n + 1, priv), 3000);
   }
+  function showLink(url){
+    const el = $('#ttState'); if(!el) return;
+    el.innerHTML = `${esc(el.textContent.replace(/ Getting the post link…$/, ''))} <a class="btn small ink" href="${esc(url)}" target="_blank" rel="noopener">Open the post</a>`;
+  }
+  /* TikTok gives the post's link a little after posting, once its checks pass */
+  async function linkLater(publish_id, prodId, n){
+    if(n > 12) { const el = $('#ttState'); if(el) el.textContent = el.textContent.replace(/ Getting the post link…$/, ' The link will show on the product once TikTok finishes its checks.'); return; }
+    try{
+      const r = await call('poll', { json:{ publish_id } });
+      if(r.post_url){ const pp = prodById(prodId); if(pp && r.public){ pp.ttUrl = r.post_url; save(); } showLink(r.post_url); history(prodId); refreshWatch(prodId); return; }
+    }catch(e){}
+    setTimeout(() => linkLater(publish_id, prodId, n + 1), 15000);
+  }
+  function refreshWatch(prodId){
+    const p = prodById(prodId), a = $('#pWatchTT');
+    if(p && a && shopOpen === prodId){ a.href = p.ttUrl || '#'; a.hidden = !p.ttUrl; }
+  }
+  let linksAsked = false;
   async function history(id){
     const el = $('#pTTHist'); if(!el) return;
     const rows = await Cloud.tiktokPosts(id); if(!rows || !rows.length || !$('#pTTHist')) return;
     const ok = rows.filter(r => r.status === 'PUBLISH_COMPLETE');
     const last = new Date(rows[0].created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
     el.textContent = ok.length ? `Posted to TikTok ${ok.length} time${ok.length === 1 ? '' : 's'} · last ${last}` : `Last sent to TikTok ${last}`;
+    const box = $('#pTTLinks');
+    if(box){
+      const withLink = rows.filter(r => r.post_url);
+      box.innerHTML = withLink.map(r => `<a class="small" href="${esc(r.post_url)}" target="_blank" rel="noopener">♪ Post of ${new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}${r.privacy_level === 'SELF_ONLY' ? ' · Only me' : ''} ›</a>`).join('');
+      if(ok.length && !withLink.length && ok.some(r => r.privacy_level === 'SELF_ONLY')) box.innerHTML = '<span class="small muted">TikTok does not give links for “Only me” posts. Once WallTok is approved and you post publicly, the link appears here and on the product.</span>';
+    }
+    /* recent posts without a link yet: ask TikTok once per visit */
+    if(!linksAsked && ok.some(r => !r.post_url && r.privacy_level !== 'SELF_ONLY')){
+      linksAsked = true;
+      try{
+        const r = await call('links', { json:{} });
+        let changed = false;
+        (r.posts || []).forEach(x => { const pp = prodById(x.product_id); if(pp && x.public && pp.ttUrl !== x.post_url){ pp.ttUrl = x.post_url; changed = true; } });
+        if(changed) save();
+        if((r.posts || []).length){ refreshWatch(id); history(id); }
+      }catch(e){}
+    }
   }
   function close(){ $('#ttPost').hidden = true; pid = null; vid = null; busy = false; }
   $('#ttClose').onclick = close;
