@@ -248,6 +248,26 @@ textarea{resize:vertical;min-height:84px}
 .scene[aria-pressed="true"]{border-color:var(--indigo)}
 .scene .sug{position:absolute;top:8px;left:8px;background:var(--accent);color:var(--accent-ink);font-size:.65rem;border-radius:999px;padding:0 6px}
 .section-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+a.brand{color:inherit;text-decoration:none}
+.btn.icon{width:40px;height:40px;padding:0;font-size:1.15rem}
+.topr{display:flex;align-items:center;gap:8px}
+html.noTabs .tabs{display:none}
+html.noTabs .app{padding-bottom:24px}
+.tabs button[hidden]{display:none}
+.tabs nav.five{grid-template-columns:repeat(5,1fr)}
+.ex-hero{background:var(--indigo);color:var(--surface);border-radius:var(--r);padding:20px 16px}
+.ex-hero h1{color:var(--surface);font-size:1.45rem}
+.visit{display:flex;align-items:center;background:var(--surface);border-radius:12px;padding:4px 4px 4px 12px;gap:2px}
+.visit .vpre{margin:0;color:var(--muted);font-weight:600;white-space:nowrap;font-size:.95rem}
+.visit input{border:0;padding:8px 4px;min-width:0;flex:1;background:transparent;color:var(--ink)}
+.visit input:focus{outline:none}
+.visit:focus-within{box-shadow:0 0 0 3px var(--accent)}
+.pcard a.cover{display:block;color:inherit;text-decoration:none;position:relative;padding:0;margin:0;font-size:inherit}
+.pcard a.pname{color:inherit;text-decoration:none;padding:0;margin:0;font-size:inherit}
+.pcard a.shoplink{padding:0;margin-top:auto;font-size:.82rem}
+.shoplink{color:var(--indigo);font-weight:600;text-decoration:none;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.linkbtn{background:none;border:0;padding:6px 0;font:inherit;font-weight:600;color:var(--indigo);cursor:pointer;text-decoration:none;align-self:flex-start}
+.moreshop{text-align:center;padding:14px;font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -255,9 +275,23 @@ textarea{resize:vertical;min-height:84px}
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand"><i>W</i>WallTok <span class="sync" id="syncState" hidden></span></div>
-    <button class="btn small" id="btnSettings" type="button">Shop settings</button>
+    <div class="brand"><a class="brand" id="brandLink" href="/"><i>W</i>WallTok</a> <span class="sync" id="syncState" hidden></span></div>
+    <div class="topr">
+      <a class="btn small" id="btnSell" href="/?app=1" hidden>Sell on WallTok</a>
+      <button class="btn icon" id="btnSettings" type="button" aria-label="Shop settings" title="Shop settings">⚙</button>
+    </div>
   </header>
+
+  <!-- EXPLORE: walltok.com -->
+  <section id="view-explore" class="stack" hidden>
+    <div class="ex-hero stack">
+      <h1>Shop from TikTok sellers</h1>
+      <form class="visit" id="visitForm" role="search"><label class="vpre" for="visitSlug">walltok.com/</label><input id="visitSlug" placeholder="shop name" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"><button class="btn primary small" type="submit">Visit</button></form>
+    </div>
+    <div class="pgrid" id="exGrid"></div>
+    <p class="muted small" id="exMsg" style="text-align:center"></p>
+    <div id="exMore" style="height:1px"></div>
+  </section>
 
   <!-- HOME -->
   <section id="view-home" class="stack">
@@ -272,20 +306,18 @@ textarea{resize:vertical;min-height:84px}
       <button class="stat" type="button" data-go="views"><b id="stViews">0</b><span id="stViewsL">Views today</span></button>
     </div>
     <button class="btn primary big" type="button" data-go="studio">+ New product (take photo)</button>
-    <div class="tip" id="festTip"></div>
     <div class="tip" id="inappBar" hidden>You're using WallTok inside <b id="inappBarName">another app</b>. Open it in your phone's browser to save your work properly and make your shop link live. <button class="btn small" type="button" id="inappBarBtn">How?</button></div>
     <div class="card stack claim" id="claimCard" hidden>
-      <h3>Make your shop link live</h3>
-      <p class="small">Right now your shop is only on this phone. Make <b id="claimUrl"></b> live so customers from TikTok can see your products and order, and you see real views.</p>
+      <h3>Put your shop online</h3>
+      <p class="small">So customers can open <b id="claimUrl"></b> from TikTok and order.</p>
       <button class="btn primary" type="button" data-claim>Make it live · free</button>
-      <p class="small muted">Sign in with WhatsApp or Google. Takes 10 seconds, no password. Your products and orders come with you.</p>
     </div>
-    <div class="card stack">
-      <div class="section-h"><h3>Your shop link</h3><span class="muted small" id="linkState">Put it in your TikTok bio</span></div>
+    <div class="stack" style="gap:6px">
+      <div class="section-h"><span class="small muted">Your shop link</span><span class="muted small" id="linkState"></span></div>
       <div class="urlbar"><code id="homeUrl"></code><button class="btn small" type="button" data-copy-url>Copy</button></div>
     </div>
     <div class="stack">
-      <div class="section-h"><h3>Recent products</h3><button class="btn small" type="button" data-go="shop">View shop</button></div>
+      <div class="section-h"><h3>Recent products</h3><button class="linkbtn" type="button" data-go="shop">See all ›</button></div>
       <div class="list" id="homeProducts"></div>
     </div>
     <p class="muted small" id="exampleNote">Examples are shown so you can see how it works. <button class="btn small" type="button" id="btnClearEx">Remove examples</button></p>
@@ -304,7 +336,7 @@ textarea{resize:vertical;min-height:84px}
       <input type="file" id="fileInput" accept="image/*" multiple hidden>
       <div class="drop" id="drop" role="button" tabindex="0">
         <p><b>Tap to choose photos</b></p>
-        <p class="muted small">Front, back, close-up, colours. Choose several at once. Phone photos are fine.</p>
+        <p class="muted small">Front, back and close-up. Phone photos are fine.</p>
       </div>
       <div class="thumbs" id="thumbs" hidden></div>
       <p class="small muted" id="photoCount"></p>
@@ -313,8 +345,9 @@ textarea{resize:vertical;min-height:84px}
         <figure><img id="imgAfter" alt="Cleaned up photo"><figcaption>Studio look</figcaption></figure>
       </div>
       <div id="backdropRow" class="stack" hidden>
-        <div class="stack" style="gap:8px">
-          <label style="margin:0">Rotate this photo</label>
+        <details class="adjust">
+          <summary>Rotate, filter and light</summary>
+          <div class="stack" style="gap:10px;margin-top:10px">
           <div class="row">
             <button class="btn small" type="button" id="rotL" aria-label="Rotate left 90 degrees">↺ Left</button>
             <button class="btn small" type="button" id="rotR" aria-label="Rotate right 90 degrees">↻ Right</button>
@@ -323,14 +356,10 @@ textarea{resize:vertical;min-height:84px}
             <label for="tilt">Straighten <span class="muted" id="tiltVal">0°</span></label>
             <input type="range" id="tilt" min="-15" max="15" step="0.5" value="0">
           </div>
-        </div>
-        <div>
-          <label>Filter <span class="muted" style="font-weight:400">· applies to all photos</span></label>
-          <div class="chips" id="filterChips"></div>
-        </div>
-        <details class="adjust">
-          <summary>Adjust light and colour</summary>
-          <div class="stack" style="gap:8px;margin-top:10px">
+          <div>
+            <label>Filter <span class="muted" style="font-weight:400">· all photos</span></label>
+            <div class="chips" id="filterChips"></div>
+          </div>
             <div><label for="adjB">Brightness <span class="muted" id="adjBVal"></span></label><input type="range" id="adjB" min="70" max="140" value="100"></div>
             <div><label for="adjC">Contrast <span class="muted" id="adjCVal"></span></label><input type="range" id="adjC" min="70" max="140" value="100"></div>
             <div><label for="adjS">Colour <span class="muted" id="adjSVal"></span></label><input type="range" id="adjS" min="0" max="170" value="100"></div>
@@ -345,14 +374,17 @@ textarea{resize:vertical;min-height:84px}
             <button type="button" class="chip" data-mode="keep">Keep original</button>
           </div>
         </div>
-        <div id="bgTools" class="stack" style="gap:8px">
-          <div>
+        <p class="small muted" id="segNote" hidden></p>
+        <details id="bgTools" class="adjust">
+          <summary>Fix the cut-out</summary>
+          <div class="stack" style="gap:8px;margin-top:10px">
+          <div id="tolRow">
             <label for="tol">How much to remove <span class="muted" id="tolVal"></span></label>
             <input type="range" id="tol" min="12" max="95" value="42">
             <div class="row small muted" style="justify-content:space-between"><span>Less</span><span>More</span></div>
           </div>
-          <button class="btn indigo small" type="button" id="btnAiBox" style="align-self:flex-start">✨ AI: find the product</button>
-          <p class="small muted" id="aiBoxNote">Best for busy backgrounds like patterned bed covers.</p>
+          <button class="btn indigo small" type="button" id="btnAiBox" style="align-self:flex-start" hidden>✨ AI: find the product</button>
+          <p class="small muted" id="aiBoxNote" hidden>Best for busy backgrounds like patterned bed covers.</p>
           <div>
             <label>When I tap either photo</label>
             <div class="chips" id="tapMode">
@@ -361,7 +393,8 @@ textarea{resize:vertical;min-height:84px}
             </div>
           </div>
           <div class="row"><button class="btn small" type="button" id="btnUndoBg" disabled>Undo tap</button><button class="btn small" type="button" id="btnResetBg">Start again</button></div>
-        </div>
+          </div>
+        </details>
         <div>
           <label>Scene <span class="muted" id="sceneHint" style="font-weight:400"></span></label>
           <div class="scenes" id="scenes"></div>
@@ -388,8 +421,9 @@ textarea{resize:vertical;min-height:84px}
         <select id="fCat"><option>Kurta</option><option>Saree</option><option>Clothes</option><option>Shoes</option><option>Bags</option><option>Jewellery</option><option>Cosmetics</option><option>Cups &amp; kitchen</option><option>Plants</option><option>Food</option><option>Other</option></select>
       </div>
       <div><label for="fNotes">What's special? (optional)</label><input id="fNotes" placeholder="Pure cotton, new design, easy to wash"></div>
-      <div class="offer-box stack" style="gap:10px">
-        <div class="section-h"><label style="margin:0">Offer (optional)</label><span class="small muted">Shows the old price crossed out</span></div>
+      <details class="adjust" id="offerBox">
+        <summary>Add an offer (optional)</summary>
+      <div class="offer-box stack" style="gap:10px;margin-top:10px">
         <div class="grid2">
           <div><label for="fOldPrice">Old price (रु)</label><input id="fOldPrice" type="number" inputmode="numeric" min="0" placeholder="2500"></div>
           <div><label for="fOffer">Offer label</label>
@@ -397,6 +431,7 @@ textarea{resize:vertical;min-height:84px}
           </div>
         </div>
       </div>
+      </details>
       <div>
         <label>Caption and script language</label>
         <div class="chips" id="langChips">
@@ -579,8 +614,7 @@ textarea{resize:vertical;min-height:84px}
 
   <!-- SHOP (public) -->
   <section id="view-shop" class="stack" hidden>
-    <div class="tip">This is what customers see when they tap the link in your TikTok bio.</div>
-    <div class="urlbar"><code id="shopUrl"></code><button class="btn small" type="button" data-copy-url>Copy</button></div>
+    <code id="shopUrl" hidden></code>
     <div class="shop-head stack">
       <h1 id="pubName">Sita Fashion</h1>
       <p id="pubMeta" style="opacity:.85"></p>
@@ -588,13 +622,12 @@ textarea{resize:vertical;min-height:84px}
     </div>
     <div id="shopBrowse" class="stack">
       <input id="shopSearch" type="search" placeholder="Try: red heels, size 40, under 3000, F12" aria-label="Search by name, colour, size, price or product code">
-      <div class="chips" id="searchHints"></div>
+      <div class="chips" id="searchHints" hidden></div>
       <p class="small muted" id="searchSummary" hidden></p>
       <div id="justPosted" class="stack" hidden></div>
       <div class="pgrid" id="pubGrid"></div>
     </div>
     <div id="pubProduct" class="stack" hidden></div>
-    <p class="muted small" style="text-align:center">Pay with eSewa, Khalti or cash on delivery.</p>
   </section>
 
   <!-- VIEWS REPORT -->
@@ -657,24 +690,25 @@ textarea{resize:vertical;min-height:84px}
       <div><label for="sWa">WhatsApp number for orders <span id="waBadge" class="small" style="color:var(--good);font-weight:700" hidden>✓ verified</span></label><input id="sWa" inputmode="tel" placeholder="98XXXXXXXX">
         <button class="btn small wa-btn" type="button" id="btnWaLink" hidden style="margin-top:6px">Confirm with WhatsApp</button></div>
       <div><label for="sLoc">Location</label><input id="sLoc" placeholder="New Road, Kathmandu"></div>
-      <div id="slugRow" hidden><label for="sSlug">Shop link</label><div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><span class="small muted">walltok.com/</span><input id="sSlug" autocapitalize="off" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"></div><p class="small muted">Letters and numbers only. If you change it, update the link in your TikTok bio too.</p></div>
-      <p class="small muted">Shop link: <b id="slugPreview"></b></p>
+      <div id="slugRow" hidden><label for="sSlug">Shop link</label><div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><span class="small muted">walltok.com/</span><input id="sSlug" autocapitalize="off" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"></div><p class="small muted">If you change it, update your TikTok bio too.</p></div>
+      <p class="small muted" id="slugLine">Shop link: <b id="slugPreview"></b></p>
       <button class="btn indigo" id="btnSaveSettings" type="button">Save</button>
     </div>
     <div class="card stack" id="acctCard">
       <h3>Your account</h3>
-      <p class="small muted" id="acctText">Your shop is saved on this phone only. Make it live so customers can open your shop link and you see real views.</p>
+      <p class="small muted" id="acctText">Saved on this phone only.</p>
       <button class="btn primary" type="button" data-claim id="btnClaim2">Make my shop link live</button>
       <button class="btn" type="button" id="btnSignOut" hidden>Sign out</button>
     </div>
   </section>
 </div>
 
-<div class="tabs"><nav>
+<div class="tabs"><nav id="tabNav">
+  <button type="button" data-tab="explore" id="tabExplore" hidden><span>⌕</span>Explore</button>
   <button type="button" data-tab="home"><span>⌂</span>Home</button>
-  <button type="button" data-tab="shop"><span>▦</span>Shop</button>
   <button type="button" data-tab="studio" class="plus"><span>+</span>New</button>
   <button type="button" data-tab="orders"><span>☰</span>Orders</button>
+  <button type="button" data-tab="shop"><span>▦</span>Shop</button>
 </nav></div>
 <div class="toast" id="toast" hidden></div>
 <div class="inapp" id="waModal" hidden role="dialog" aria-modal="true" aria-labelledby="waH">
@@ -854,12 +888,26 @@ function pager(box, items, make, step = 24){
 function ago(t){ const m = Math.round((Date.now() - t) / 60000); return m < 60 ? `${Math.max(1, m)}m ago` : m < 1440 ? `${Math.round(m/60)}h ago` : `${Math.round(m/1440)}d ago`; }
 
 /* ---------- navigation ---------- */
+const VIEWS = ['explore','home','studio','shop','orders','settings','views'];
+const curView = () => VIEWS.find(v => !$('#view-' + v).hidden) || 'home';
 function go(view){
-  ['home','studio','shop','orders','settings','views'].forEach(v => $('#view-'+v).hidden = v !== view);
+  VIEWS.forEach(v => $('#view-'+v).hidden = v !== view);
   if(view === 'shop') shopOpen = null;
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab===view ? 'page' : 'false'));
-  render(view); window.scrollTo(0,0);
+  try{ sessionStorage.setItem('wt-view', view); }catch(e){}
+  chrome(view); render(view); window.scrollTo(0,0);
 }
+/* header and footer: customers on walltok.com see a clean page; sellers get their tabs */
+function chrome(view){
+  const cloud = !!(window.Cloud && Cloud.enabled), signed = !!(window.Cloud && Cloud.signedIn && Cloud.signedIn());
+  const ex = view === 'explore';
+  document.documentElement.classList.toggle('noTabs', ex && !signed);
+  $('#tabExplore').hidden = !cloud; $('#tabNav').classList.toggle('five', cloud);
+  $('#btnSettings').hidden = ex;
+  $('#btnSell').hidden = !(ex && !signed);
+}
+$('#brandLink').onclick = e => { if(window.Cloud && Cloud.enabled && !PUB_SLUG){ e.preventDefault(); go('explore'); } else if(!ON_SITE || !(window.Cloud && Cloud.enabled)){ e.preventDefault(); if(!PUB_SLUG) go('home'); } };
+$('#btnSell').onclick = e => { e.preventDefault(); go('home'); };
 $$('[data-tab]').forEach(b => b.onclick = () => go(b.dataset.tab));
 document.addEventListener('click', e => {
   const g = e.target.closest('[data-go]'); if(g){ if(g.dataset.filter) orderFilter = g.dataset.filter; go(g.dataset.go); }
@@ -870,6 +918,7 @@ $('#btnSettings').onclick = () => go('settings');
 /* ---------- render ---------- */
 function render(view){
   $('#homeUrl').textContent = shopUrl(); $('#shopUrl').textContent = shopUrl();
+  if(view==="explore") renderExplore();
   if(view==='home') renderHome();
   if(view==='shop') renderShop();
   if(view==='orders') renderOrders();
@@ -890,9 +939,8 @@ function renderHome(){
   viewStats(tk, tk).then(st => { let n = 0; st.byProduct.forEach(v => n += v); $('#stViews').textContent = n.toLocaleString('en-IN'); });
   $('#stViewsL').textContent = `Views today · ${S.products.reduce((a, p) => a + (p.views || 0), 0).toLocaleString('en-IN')} total`;
   const top = [...S.products].sort((a,b)=>(b.views||0)-(a.views||0))[0];
-  $('#festTip').innerHTML = top ? `<b>Tip:</b> Tihar and wedding season are busy. Your <b>${esc(top.name)}</b> is getting the most views. Make an offer video for it?` : '<b>Tip:</b> Add your first product to get your shop link ready.';
   const list = $('#homeProducts'); list.innerHTML = '';
-  [...S.products].sort((a,b)=>b.created-a.created).slice(0,5).forEach(p => list.append(itemRow(p, `<div class="stack" style="gap:6px;align-items:flex-end"><span class="price">${npr(p.price)}</span><button class="btn small" type="button" data-details="${p.id}">Copy details</button></div>`)));
+  [...S.products].sort((a,b)=>b.created-a.created).slice(0,5).forEach(p => { const r = itemRow(p, `<span class="price">${npr(p.price)}</span>`); r.style.cursor = 'pointer'; r.onclick = () => { go('shop'); openProduct(p.id, false); }; list.append(r); });
   if(!S.products.length) list.innerHTML = '<p class="muted">No products yet. Tap “New product” to add your first one.</p>';
   $('#exampleNote').hidden = !S.products.some(p=>p.example) && !S.orders.some(o=>o.example);
 }
@@ -949,10 +997,47 @@ function renderShop(){
   pager(grid, list, p => {
     const el = document.createElement('div'); el.className = 'pcard'; el.dataset.open = p.id;
     const fresh = p.ttAt && Date.now() - p.ttAt < 14*864e5;
-    el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${fresh ? `<span class="ttago">♪ Posted ${ago(p.ttAt)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc((p.sizes||[]).join(' · '))}${p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span><a class="btn primary" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a></div>`;
+    el.innerHTML = `${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}${fresh ? `<span class="ttago">♪ Posted ${ago(p.ttAt)}</span>` : ''}${galleryHtml(p)}<div class="b"><b>${esc(p.name)}</b>${priceHtml(p)}<span class="small muted"><span class="code">${esc(p.code)}</span> ${esc((p.sizes||[]).join(' · '))}${p.stock===0?` · <b style="color:var(--warn)">Sold out</b>`:p.stock<=3?` · <b style="color:var(--warn)">Only ${p.stock} left</b>`:''}</span></div>`;
     wireGallery(el, p); return el;
   }, 24);
 }
+/* walltok.com: newest products from every shop */
+const EX = { rows:[], shops:new Map(), done:false, busy:false, err:false };
+async function exLoad(){
+  if(EX.busy || EX.done || !(window.Cloud && Cloud.enabled)) return;
+  EX.busy = true; $('#exMsg').textContent = EX.rows.length ? 'Loading more…' : 'Loading…';
+  try{
+    const r = await Cloud.explore(EX.rows.length, 24);
+    r.shops.forEach(sh => EX.shops.set(sh.id, sh));
+    const fresh = r.rows.filter(x => EX.shops.has(x.shop_id));
+    EX.rows.push(...fresh); if(r.rows.length < 24) EX.done = true;
+    paintExplore(fresh); EX.err = false;
+  }catch(e){ console.warn(e); EX.err = true; }
+  EX.busy = false;
+  $('#exMsg').textContent = EX.err ? 'Could not load products. Check your internet.' : !EX.rows.length ? 'No products yet.' : '';
+}
+function exCard(p, sh){
+  const href = `/${sh.slug}/${encodeURIComponent((p.code || '').toLowerCase())}`, img = (p.images || [])[0] || '';
+  const lp = { price:p.price, oldPrice:p.old_price };
+  const el = document.createElement('div'); el.className = 'pcard';
+  el.innerHTML = `<a class="cover" href="${href}">${p.offer ? `<span class="offer-tag">${esc(p.offer)}</span>` : ''}<img alt="${esc(p.name)}" src="${esc(img)}" loading="lazy" decoding="async"></a>
+    <div class="b"><a class="pname" href="${href}"><b>${esc(p.name)}</b></a>${priceHtml(lp)}${p.stock === 0 ? '<span class="small" style="color:var(--warn)">Sold out</span>' : ''}<a class="shoplink" href="/${sh.slug}">${esc(sh.name)} ›</a></div>`;
+  return el;
+}
+function paintExplore(rows){ const g = $('#exGrid'); rows.forEach(p => g.append(exCard(p, EX.shops.get(p.shop_id)))); }
+function renderExplore(){
+  const g = $('#exGrid');
+  if(!(window.Cloud && Cloud.enabled)){ g.innerHTML = ''; $('#exMsg').textContent = 'Open walltok.com to see shops.'; return; }
+  if(!EX.rows.length && !EX.busy){ g.innerHTML = ''; exLoad(); }
+  if(!g._io && 'IntersectionObserver' in window){ g._io = new IntersectionObserver(es => { if(es.some(e => e.isIntersecting) && !$('#view-explore').hidden) exLoad(); }, { rootMargin:'600px' }); g._io.observe($('#exMore')); }
+}
+$('#visitForm').onsubmit = e => {
+  e.preventDefault();
+  let v = $('#visitSlug').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^(www\.)?walltok\.com\/?/, '').split(/[/?#]/)[0].replace(/[^a-z0-9]/g, '');
+  if(!v){ $('#visitSlug').focus(); return; }
+  location.href = '/' + v;
+};
+
 function renderProductPage(p){
   $('#shopBrowse').hidden = true;
   const box = $('#pubProduct'); box.hidden = false;
@@ -963,19 +1048,21 @@ function renderProductPage(p){
         ${priceHtml(p)}
         <p class="muted">${esc(p.desc || '')}</p>
         <p class="small"><b>Sizes:</b> ${esc(p.sizes.join(' · '))}${p.stock<=3 && p.stock>0 ? ` · <b style="color:var(--warn)">Only ${p.stock} left</b>` : ''}${p.stock===0 ? ' · <b style="color:var(--warn)">Sold out</b>' : ''}</p>
-        <p class="small muted">Cash on delivery · eSewa · Khalti · 1-day delivery inside the valley</p>
+        <p class="small muted">Cash on delivery · eSewa · Khalti</p>
         <a class="btn primary big" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
-        <button class="btn" type="button" id="pCopyLink">Copy product link</button>
         <a class="btn ink" id="pWatchTT" href="${esc(p.ttUrl || '#')}" target="_blank" rel="noopener" ${p.ttUrl ? '' : 'hidden'}><span class="tt-logo" aria-hidden="true">♪</span> Watch on TikTok</a>
-        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist">Posts the video and caption straight to your TikTok</span><div id="pTTLinks" class="stack" style="gap:6px"></div></div>` : ''}
+        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist"></span><div id="pTTLinks" class="stack" style="gap:6px"></div></div>` : ''}
         ${!PUB_SLUG ? `<details class="small" id="pTTPaste"><summary>${p.ttUrl ? 'Change the TikTok link' : 'Posted this from the TikTok app? Add the link'}</summary>
           <div class="otp" style="margin-top:6px"><input id="pTTUrl" inputmode="url" placeholder="https://www.tiktok.com/@you/video/…" value="${esc(p.ttUrl || '')}"><button class="btn small" type="button" id="pTTSave">Save</button></div>
           <p class="small muted">Customers see a <b>Watch on TikTok</b> button on this product.${p.ttUrl ? ' Leave it empty and Save to remove it.' : ''}</p></details>` : ''}
+        <button class="linkbtn" type="button" id="pCopyLink">Share this product ›</button>
       </div>
-    </div>`;
+    </div>
+    <button class="linkbtn moreshop" type="button" id="pMore" style="align-self:center">More from ${esc(S.shop.name || 'this shop')} ›</button>`;
   wireGallery(box.querySelector('.pdetail'), p);
   $('#pBack').onclick = () => { shopOpen = null; if(PUB_SLUG && ON_SITE) history.pushState({}, '', `/${PUB_SLUG}`); renderShop(); window.scrollTo(0,0); };
-  $('#pCopyLink').onclick = () => copyText('https://' + productUrl(p));
+  $('#pCopyLink').onclick = async () => { const url = 'https://' + productUrl(p); if(navigator.share){ try{ await navigator.share({ title:p.name, url }); return; }catch(e){ if(e && e.name === 'AbortError') return; } } copyText(url); };
+  $('#pMore').onclick = () => $('#pBack').click();
   if($('#pPostTT')){ $('#pPostTT').onclick = () => TT.open(p.id); TT.history(p.id); }
   if($('#pTTSave')) $('#pTTSave').onclick = () => {
     const v = $('#pTTUrl').value.trim();
@@ -1069,7 +1156,7 @@ function paintSearchHelp(Q, n){
   sum.innerHTML = Q.text ? `${n} product${n===1?'':'s'}${parts.length ? ' · ' + parts.map(esc).join(' · ') : ''} <button class="btn small" type="button" id="searchClear">Clear</button>` : '';
   if(Q.text) $('#searchClear').onclick = () => { $('#shopSearch').value = ''; shopQuery = ''; renderShop(); };
   const hints = $('#searchHints');
-  if(Q.text || S.products.length < 4){ hints.hidden = true; return; }
+  if(true){ hints.hidden = true; return; }   /* kept simple: the search box explains itself */
   hints.hidden = false;
   const prices = S.products.map(p => p.price).sort((a,b) => a-b), mid = prices[Math.floor(prices.length/2)];
   const budget = Math.max(500, Math.round(mid / 500) * 500);
@@ -1195,8 +1282,10 @@ async function loadFiles(files){
     const r = await loadImage(f); if(!r) continue;
     savePhotoState(); curPhoto = -1;
     srcImage = limitSize(r.im, 1600); photoTilt = 0; buildWork(); runAutoMask();
-    photos.push({file:f, url:r.url, img:srcImage, work:{...work}, mask, cut, tilt:0});
+    matte = null;
+    photos.push({file:f, url:r.url, img:srcImage, work:{...work}, mask, cut, tilt:0, matte:null});
     curPhoto = photos.length - 1;
+    queuePrecise(photos[curPhoto]);
     await new Promise(r => setTimeout(r, 0));
   }
   if(!photos.length){ resetPhotos(); return; }
@@ -1206,7 +1295,7 @@ async function loadFiles(files){
   const pick = curPhoto; curPhoto = -1; selectPhoto(pick);
   if(first){ renderScenePicker(); enhance(); detectCategory(); }
 }
-function savePhotoState(){ const p = photos[curPhoto]; if(p) Object.assign(p, {work:{...work}, mask, cut, tilt:photoTilt}); }
+function savePhotoState(){ const p = photos[curPhoto]; if(p) Object.assign(p, {work:{...work}, mask, cut, tilt:photoTilt, matte}); }
 let photoTilt = 0;
 function limitSize(im, lim){
   const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, r = Math.min(1, lim/Math.max(w, h));
@@ -1217,8 +1306,8 @@ function limitSize(im, lim){
 function selectPhoto(i){
   savePhotoState();
   const p = photos[i]; if(!p) return;
-  curPhoto = i; srcImage = p.img; Object.assign(work, p.work); mask = p.mask; cut = p.cut; photoTilt = p.tilt || 0;
-  maskHistory = []; $('#btnUndoBg').disabled = true;
+  curPhoto = i; srcImage = p.img; Object.assign(work, p.work); mask = p.mask; cut = p.cut; photoTilt = p.tilt || 0; matte = p.matte || null;
+  maskHistory = []; $('#btnUndoBg').disabled = true; syncSegUi();
   $('#tilt').value = photoTilt; $('#tiltVal').textContent = `${photoTilt}°`;
   $('#imgBefore').src = p.url; enhance(); renderThumbs();
 }
@@ -1241,21 +1330,21 @@ function renderThumbs(){
 }
 function resetPhotos(){
   photos.forEach(p => URL.revokeObjectURL(p.url));
-  photos = []; curPhoto = -1; srcImage = null; srcFile = null; mask = null; cut = null; xform = null;
+  photos = []; curPhoto = -1; srcImage = null; srcFile = null; mask = null; cut = null; xform = null; matte = null;
   $('#compare').hidden = true; $('#backdropRow').hidden = true; $('#thumbs').hidden = true; $('#photoCount').textContent = '';
   drop.querySelector('b').textContent = 'Tap to choose photos';
 }
 /* run a drawing function as if photo i were selected */
 function withPhoto(i, fn){
   savePhotoState();
-  const keep = curPhoto, prev = {srcImage, mask, cut, work:{...work}, tilt:photoTilt}, p = photos[i];
-  srcImage = p.img; mask = p.mask; cut = p.cut; Object.assign(work, p.work); photoTilt = p.tilt || 0; curPhoto = -1;
-  try{ return fn(); } finally { srcImage = prev.srcImage; mask = prev.mask; cut = prev.cut; Object.assign(work, prev.work); photoTilt = prev.tilt; curPhoto = keep; }
+  const keep = curPhoto, prev = {srcImage, mask, cut, work:{...work}, tilt:photoTilt, matte}, p = photos[i];
+  srcImage = p.img; mask = p.mask; cut = p.cut; Object.assign(work, p.work); photoTilt = p.tilt || 0; matte = p.matte || null; curPhoto = -1;
+  try{ return fn(); } finally { srcImage = prev.srcImage; mask = prev.mask; cut = prev.cut; Object.assign(work, prev.work); photoTilt = prev.tilt; matte = prev.matte; curPhoto = keep; }
 }
 
 /* ---------- background removal (runs on the device) ---------- */
 const work = {w:0,h:0,px:null};
-let mask = null, maskHistory = [], cut = null, xform = null;
+let mask = null, maskHistory = [], cut = null, xform = null, matte = null;
 draft.removeBg = true;
 function buildWork(){
   const r = Math.min(1, 640/Math.max(srcImage.width, srcImage.height));
@@ -1388,7 +1477,7 @@ async function aiFindProduct(){
   }catch(e){ toast(e && e.code === 'not_granted' ? 'AI was not allowed' : 'AI could not find the product. Try the slider or taps.'); }
   btn.disabled = false; btn.textContent = '✨ AI: find the product';
 }
-function keepMain(m, w, h){
+function keepMain(m, w, h, frac = 0.2){
   const lab = new Int32Array(w*h), sizes = [0]; let id = 0; const q = new Int32Array(w*h);
   for(let s=0;s<w*h;s++){
     if(!m[s] || lab[s]) continue;
@@ -1398,7 +1487,7 @@ function keepMain(m, w, h){
     sizes.push(n);
   }
   const big = Math.max(0, ...sizes);
-  for(let i=0;i<w*h;i++) if(m[i] && sizes[lab[i]] < big*0.2) m[i]=0;
+  for(let i=0;i<w*h;i++) if(m[i] && sizes[lab[i]] < big*frac) m[i]=0;
 }
 let tapKeep = false;
 function tapRemove(x, y){
@@ -1419,6 +1508,7 @@ function syncTapMode(){ $$('#tapMode .chip').forEach(b => b.setAttribute('aria-p
 $$('#tapMode .chip').forEach(b => b.onclick = () => { tapKeep = b.dataset.tap === 'keep'; syncTapMode(); });
 syncTapMode();
 function makeCut(){
+  if(matte && srcImage){ const c = preciseCutCanvas(); if(c !== false) return; }
   const {w,h,px} = work;
   let a = new Float32Array(w*h); for(let i=0;i<w*h;i++) a[i] = mask[i]*255;
   for(let pass=0; pass<2; pass++){ // soften edges
@@ -1436,6 +1526,145 @@ function makeCut(){
   cut = {canvas:c, x:x0, y:y0, w:x1-x0+1, h:y1-y0+1};
   if(photos[curPhoto]){ photos[curPhoto].cut = cut; photos[curPhoto].mask = mask; }
 }
+/* ---------- precise cut-out: a background-removal AI that runs on the phone ----------
+   Model: ISNet (DIS, general objects), 44 MB, downloaded once and kept on the phone. */
+const SEG = { model:'https://huggingface.co/onnx-community/ISNet-ONNX/resolve/main/onnx/model_quantized.onnx',
+  ort:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/', size:1024, cache:'walltok-ai-v1' };
+let segP = null, segQ = Promise.resolve(), segBusy = 0, segFailed = false;
+function segNote(t){ const el = $('#segNote'); if(!el) return; el.textContent = t || ''; el.hidden = !t; }
+function syncSegUi(){ const r = $('#tolRow'); if(r) r.hidden = !!matte; }
+function loadScript(src){ return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error('Could not load ' + src)); document.head.append(el); }); }
+async function segModelBytes(){
+  let cache = null;
+  try{ cache = await caches.open(SEG.cache); const hit = await cache.match(SEG.model); if(hit) return new Uint8Array(await hit.arrayBuffer()); }catch(e){ cache = null; }
+  const r = await fetch(SEG.model); if(!r.ok) throw new Error('model ' + r.status);
+  const total = +r.headers.get('content-length') || 44342436;
+  let got = 0, parts = [];
+  if(r.body && r.body.getReader){ const rd = r.body.getReader();
+    for(;;){ const { done, value } = await rd.read(); if(done) break; parts.push(value); got += value.length;
+      segNote(`Getting the precise cut-out ready… ${Math.min(99, Math.round(got/total*100))}% (first time only, ${Math.round(total/1e6)} MB)`); } }
+  else { parts = [new Uint8Array(await r.arrayBuffer())]; got = parts[0].length; }
+  const buf = new Uint8Array(got); let o = 0; for(const p of parts){ buf.set(p, o); o += p.length; }
+  try{ if(cache) await cache.put(SEG.model, new Response(buf, { headers:{ 'Content-Type':'application/octet-stream' } })); }catch(e){}
+  return buf;
+}
+function loadSeg(){
+  if(!segP) segP = (async () => {
+    if(!window.ort) await loadScript(SEG.ort + 'ort.wasm.min.js');
+    ort.env.wasm.wasmPaths = SEG.ort;
+    ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
+    const bytes = await segModelBytes();
+    return ort.InferenceSession.create(bytes, { executionProviders:['wasm'], graphOptimizationLevel:'all' });
+  })();
+  segP.catch(() => { segP = null; });
+  return segP;
+}
+/* the AI's guess for every pixel: 0 = background, 255 = product (SEG.size x SEG.size) */
+async function aiMatte(img){
+  const ses = await loadSeg(), S = SEG.size, N = S*S;
+  const c = document.createElement('canvas'); c.width = S; c.height = S;
+  const g = c.getContext('2d', { willReadFrequently:true }); g.drawImage(img, 0, 0, S, S);
+  const d = g.getImageData(0, 0, S, S).data, inp = new Float32Array(3*N);
+  for(let i=0;i<N;i++){ inp[i] = d[i*4]/255 - 0.5; inp[i+N] = d[i*4+1]/255 - 0.5; inp[i+2*N] = d[i*4+2]/255 - 0.5; }
+  const out = await ses.run({ [ses.inputNames[0]]: new ort.Tensor('float32', inp, [1, 3, S, S]) });
+  const o = out[ses.outputNames[0]].data;
+  let mn = Infinity, mx = -Infinity; for(let i=0;i<N;i++){ const v = o[i]; if(v < mn) mn = v; if(v > mx) mx = v; }
+  const logits = mn < -0.01 || mx > 1.01, a = new Uint8Array(N);
+  let lo = logits ? 1/(1+Math.exp(-mn)) : mn, hi = logits ? 1/(1+Math.exp(-mx)) : mx; if(hi - lo < 1e-6){ lo = 0; hi = 1; }
+  for(let i=0;i<N;i++){ const v = logits ? 1/(1+Math.exp(-o[i])) : o[i]; a[i] = Math.max(0, Math.min(255, Math.round((v - lo)/(hi - lo)*255))); }
+  settleUnsure(a, d, S); firmMatte(a);
+  return { a, S };
+}
+/* where the AI is unsure over a whole area (not just a thin edge), like the gap inside a bag handle,
+   decide by colour: does it look like the product or like the background around it? */
+function settleUnsure(a, d, S){
+  const N = S*S, U = new Uint8Array(N);
+  let any = 0; for(let i=0;i<N;i++) if(a[i] > 38 && a[i] < 217){ U[i] = 1; any++; }
+  if(any < N*0.0005) return;
+  let core = U; for(let k=0;k<3;k++) core = erode(core, S, S);
+  for(let k=0;k<4;k++){ core = dilate(core, S, S); for(let i=0;i<N;i++) core[i] &= U[i]; }
+  const step = Math.max(1, Math.floor(N/8000)), fgS = [], bgS = [];
+  for(let i=0;i<N;i+=step){ const p = [d[i*4], d[i*4+1], d[i*4+2]]; if(a[i] > 235) fgS.push(p); else if(a[i] < 20) bgS.push(p); }
+  if(fgS.length < 40 || bgS.length < 40) return;
+  const fgC = kmeans(fgS, 6), bgC = kmeans(bgS, 8);
+  const near = (i, cs) => { let b = 1e12; for(const c of cs){ const v = (d[i*4]-c[0])**2 + (d[i*4+1]-c[1])**2 + (d[i*4+2]-c[2])**2; if(v < b) b = v; } return b; };
+  /* thin unsure bits far from the solid product (ghost outlines inside a gap) are decided the same way */
+  let fgNear = new Uint8Array(N); for(let i=0;i<N;i++) if(a[i] > 235) fgNear[i] = 1;
+  for(let k=0;k<5;k++) fgNear = dilate(fgNear, S, S);
+  const dec = new Uint8Array(N); let T = new Uint8Array(N);
+  for(let i=0;i<N;i++) if(core[i] || (U[i] && !fgNear[i])){ dec[i] = 1; T[i] = near(i, fgC) < near(i, bgC) ? 1 : 0; }
+  /* thin lines that only look like the product (blurred outlines of a pattern) are not the product */
+  for(let i=0;i<N;i++) if(!dec[i] && a[i] > 127) T[i] = 1;
+  T = dilate(dilate(erode(erode(T, S, S), S, S), S, S), S, S);
+  for(let i=0;i<N;i++) if(dec[i]) a[i] = T[i] ? 255 : 0;
+}
+/* faint leftovers go, nearly solid becomes solid, real edges stay soft */
+function firmMatte(a){ for(let i=0;i<a.length;i++){ const v = a[i]; a[i] = v < 40 ? 0 : v > 215 ? 255 : Math.round((v - 40)/175*255); } }
+/* resample the matte to any size (smooth) */
+function matteAt(m, W, H){
+  const c = document.createElement('canvas'); c.width = m.S; c.height = m.S;
+  const g = c.getContext('2d'), id = g.createImageData(m.S, m.S);
+  for(let i=0;i<m.a.length;i++){ id.data[i*4+3] = m.a[i]; } g.putImageData(id, 0, 0);
+  const c2 = document.createElement('canvas'); c2.width = W; c2.height = H;
+  const g2 = c2.getContext('2d', { willReadFrequently:true }); g2.imageSmoothingQuality = 'high'; g2.drawImage(c, 0, 0, W, H);
+  const d = g2.getImageData(0, 0, W, H).data, a = new Uint8Array(W*H); for(let i=0;i<W*H;i++) a[i] = d[i*4+3];
+  return a;
+}
+/* the cut-out mask for editing; small loose bits the AI marked (a pattern inside a gap) are dropped */
+function maskFromMatte(m){
+  const { w, h } = work, a = matteAt(m, w, h), r = new Uint8Array(w*h);
+  for(let i=0;i<w*h;i++) r[i] = a[i] > 127 ? 1 : 0;
+  const raw = r.slice(); keepMain(r, w, h, 0.02);
+  let drop = new Uint8Array(w*h); for(let i=0;i<w*h;i++) drop[i] = raw[i] && !r[i] ? 1 : 0;
+  drop = dilate(dilate(drop, w, h), w, h); for(let i=0;i<w*h;i++) if(r[i]) drop[i] = 0;
+  m.base = r.slice(); m.drop = drop; m.bw = w;
+  return r;
+}
+/* the cut-out at up to 1280 px, soft edges from the AI, your taps on top, no background colour on the edges */
+function preciseCutCanvas(){
+  const { w, h } = work;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(mask[y*w+x]){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  if(x1 < 0){ cut = null; if(photos[curPhoto]){ photos[curPhoto].cut = null; photos[curPhoto].mask = mask; } return true; }
+  const sw = srcImage.naturalWidth || srcImage.width, sh = srcImage.naturalHeight || srcImage.height;
+  const k = Math.max(1, Math.min(1280, Math.max(sw, sh)) / Math.max(w, h));
+  const W = Math.round(w*k), H = Math.round(h*k);
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently:true }); g.drawImage(srcImage, 0, 0, W, H);
+  const id = g.getImageData(0, 0, W, H), d = id.data, a = matteAt(matte, W, H);
+  if(!matte.base || matte.bw !== w) maskFromMatte(matte);
+  const base = matte.base, drop = matte.drop;
+  for(let Y=0;Y<H;Y++){ const my = Math.min(h-1, (Y/k)|0); for(let X=0;X<W;X++){
+    const i = Y*W+X, j = my*w + Math.min(w-1, (X/k)|0);
+    d[i*4+3] = mask[j] !== base[j] ? (mask[j] ? 255 : 0) : drop[j] ? 0 : a[i]; } }
+  /* edge pixels still carry some background colour: borrow it from the solid product next to them */
+  const R = Math.max(2, Math.round(k*1.5));
+  for(let Y=0;Y<H;Y++) for(let X=0;X<W;X++){ const i = Y*W+X, al = d[i*4+3]; if(al <= 6 || al >= 246) continue;
+    let r = 0, gg = 0, b = 0, n = 0;
+    for(let dy=-R; dy<=R; dy++){ const yy = Y+dy; if(yy<0||yy>=H) continue; for(let dx=-R; dx<=R; dx++){ const xx = X+dx; if(xx<0||xx>=W) continue; const j = yy*W+xx; if(d[j*4+3] >= 246){ r += d[j*4]; gg += d[j*4+1]; b += d[j*4+2]; n++; } } }
+    if(n){ const t = 1 - al/255; d[i*4] = Math.round(d[i*4]*(1-t) + r/n*t); d[i*4+1] = Math.round(d[i*4+1]*(1-t) + gg/n*t); d[i*4+2] = Math.round(d[i*4+2]*(1-t) + b/n*t); } }
+  g.putImageData(id, 0, 0);
+  cut = { canvas:c, x:x0, y:y0, w:x1-x0+1, h:y1-y0+1, k:W/w };
+  if(photos[curPhoto]){ photos[curPhoto].cut = cut; photos[curPhoto].mask = mask; photos[curPhoto].matte = matte; }
+  return true;
+}
+/* one photo at a time: the quick cut shows straight away, the precise one replaces it a few seconds later */
+function queuePrecise(p){
+  if(!p || segFailed || !window.fetch || !window.WebAssembly) return;
+  const img = p.img; segBusy++;
+  segQ = segQ.then(async () => {
+    if(!photos.includes(p) || p.img !== img || p.matte) return;
+    if(!segP) segNote('Making the cut-out precise…');
+    try{
+      const m = await aiMatte(img);
+      if(!photos.includes(p) || p.img !== img) return;
+      const i = photos.indexOf(p);
+      if(i === curPhoto){ matte = m; mask = maskFromMatte(m); maskHistory = []; $('#btnUndoBg').disabled = true; makeCut(); syncSegUi(); enhance(); }
+      else { p.matte = m; p.mask = withPhoto(i, () => maskFromMatte(m)); p.cut = withPhoto(i, () => { makeCut(); return cut; }); }
+    }catch(e){ console.warn('Precise cut-out not available:', e); segFailed = true; }
+  }).finally(() => { if(--segBusy <= 0){ segBusy = 0; segNote(segFailed ? '' : photos.some(x => x.matte) ? '✓ Precise cut-out' : ''); } else segNote('Making the cut-out precise…'); });
+}
+
 function runAutoMask(){
   const tol = Number($('#tol').value); $('#tolVal').textContent = '';
   mask = autoMask(tol); maskHistory = []; $('#btnUndoBg').disabled = true; makeCut();
@@ -1445,7 +1674,7 @@ function runAutoMask(){
 let tolTimer;
 $('#tol').oninput = () => { clearTimeout(tolTimer); tolTimer = setTimeout(()=>{ if(srcImage){ runAutoMask(); enhance(); } }, 180); };
 $('#btnUndoBg').onclick = () => { if(!maskHistory.length) return; mask = maskHistory.pop(); $('#btnUndoBg').disabled = !maskHistory.length; makeCut(); enhance(); };
-$('#btnResetBg').onclick = () => { if(srcImage){ runAutoMask(); enhance(); } };
+$('#btnResetBg').onclick = () => { if(!srcImage) return; if(matte){ mask = maskFromMatte(matte); maskHistory = []; $('#btnUndoBg').disabled = true; makeCut(); } else runAutoMask(); enhance(); };
 function syncBgMode(){ $$('#bgMode .chip').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.mode==='remove')===draft.removeBg)); $('#bgTools').hidden = !draft.removeBg; }
 $$('#bgMode .chip').forEach(b => b.onclick = () => { draft.removeBg = b.dataset.mode==='remove'; syncBgMode(); enhance(); });
 syncBgMode();
@@ -1475,7 +1704,7 @@ function rotateCurrent(dir){
   g.translate(c.width/2, c.height/2); g.rotate(dir*Math.PI/2); g.drawImage(src, -sw/2, -sh/2);
   if(p.url && p.url.startsWith('blob:')) URL.revokeObjectURL(p.url);
   p.img = c; p.url = c.toDataURL('image/jpeg', .88);
-  srcImage = c; buildWork(); runAutoMask(); savePhotoState();
+  matte = null; p.matte = null; srcImage = c; buildWork(); runAutoMask(); savePhotoState(); queuePrecise(p);
   $('#imgBefore').src = p.url; enhance(); renderThumbs();
   c.toBlob(b => { if(b){ p.file = new File([b], 'photo.jpg', {type:'image/jpeg'}); srcFile = photos[0].file; } }, 'image/jpeg', .88);
 }
@@ -1514,9 +1743,9 @@ function fxCanvas(src){
 }
 /* draw the cut-out product with filter and straighten applied */
 function drawCut(g, x, y, dw, dh){
-  const src = fxCanvas(cut.canvas);
-  if(!photoTilt){ g.drawImage(src, cut.x, cut.y, cut.w, cut.h, x, y, dw, dh); return; }
-  g.save(); g.translate(x + dw/2, y + dh/2); g.rotate(photoTilt*Math.PI/180); g.drawImage(src, cut.x, cut.y, cut.w, cut.h, -dw/2, -dh/2, dw, dh); g.restore();
+  const src = fxCanvas(cut.canvas), k = cut.k || 1;
+  if(!photoTilt){ g.drawImage(src, cut.x*k, cut.y*k, cut.w*k, cut.h*k, x, y, dw, dh); return; }
+  g.save(); g.translate(x + dw/2, y + dh/2); g.rotate(photoTilt*Math.PI/180); g.drawImage(src, cut.x*k, cut.y*k, cut.w*k, cut.h*k, -dw/2, -dh/2, dw, dh); g.restore();
 }
 /* draw the whole photo (Keep original) filling a box, with filter and straighten */
 function drawPhotoIn(g, cx, cy, bw, bh){
@@ -2000,6 +2229,9 @@ $('#btnMake').onclick = async () => {
   $('#btnMake').disabled = true;
   const capP = writeCaption(info, false);
   await document.fonts.ready.catch(()=>{});
+  /* the precise cut-out is still running: wait for it (up to a minute) so the video uses it */
+  if(segBusy && draft.removeBg){ const label = $('#btnMake').textContent; $('#btnMake').textContent = 'Finishing the cut-out…';
+    await Promise.race([segQ, new Promise(r => setTimeout(r, 60000))]); $('#btnMake').textContent = label; }
   await capP;
   info.name = $('#fName').value.trim() || info.name;
   $('#recNote').textContent = 'Preparing your photos…';
@@ -2120,7 +2352,7 @@ $('#pdFinish').onclick = () => {
   (postMode === 'talk' ? $('#btnPublishV') : $('#btnPublish')).click();
   const added = S.products.find(p => !before.has(p.id)); if(added){ added.ttAt = Date.now(); save(); }
 };
-if(!inClaude && !window.claude){ $('#btnAiBox').hidden = true; $('#aiBoxNote').hidden = true; }
+if(inClaude || window.claude){ $('#btnAiBox').hidden = false; $('#aiBoxNote').hidden = false; }
 
 /* ---------- talking-video mode ---------- */
 let studioMode = 'photo';
@@ -2508,7 +2740,7 @@ function renderOrders(){
   const FILTERS = { all:['All', () => true], today:['Paid today', paidToday], cod:['COD to collect', codDue] };
   STATUSES.forEach(st => FILTERS[st] = [st==='paid' ? 'Completed' : st[0].toUpperCase()+st.slice(1), o => o.status === st]);
   if(!FILTERS[orderFilter]) orderFilter = 'all';
-  Object.keys(FILTERS).forEach(s => { const n = S.orders.filter(FILTERS[s][1]).length; const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=`${FILTERS[s][0]} (${n})`; b.setAttribute('aria-pressed', s===orderFilter); b.onclick=()=>{orderFilter=s; renderOrders();}; f.append(b); });
+  Object.keys(FILTERS).forEach(s => { const n = S.orders.filter(FILTERS[s][1]).length; if(!n && s !== 'all' && s !== orderFilter) return; const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=`${FILTERS[s][0]} (${n})`; b.setAttribute('aria-pressed', s===orderFilter); b.onclick=()=>{orderFilter=s; renderOrders();}; f.append(b); });
   const list = $('#orderList');
   const rows = S.orders.filter(FILTERS[orderFilter][1]).sort((a,b)=>b.created-a.created);
   const sum = document.createElement('p'); sum.className = 'small muted';
@@ -2864,7 +3096,7 @@ var Cloud = (() => {
       <p class="small muted" style="text-align:center">No password. Your products and orders come with you.</p>`;
     $('#waModal').hidden = false;
     $('#waGo').onclick = () => waStart('login');
-    $('#gGo').onclick = () => { if(IN_APP){ $('#waModal').hidden = true; showInApp(); return; } sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/' } }); };
+    $('#gGo').onclick = () => { if(IN_APP){ $('#waModal').hidden = true; showInApp(); return; } sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/?app=1' } }); };
   }
 
   /* WhatsApp: seller sends "LOGIN 7Q2K" to WallTok's login number; we watch for it */
@@ -2927,7 +3159,7 @@ var Cloud = (() => {
     if(r.status === 'linked'){
       S.shop.whatsapp = num; S.verifiedWa = num; save();
       $('#waModal').hidden = true; toast(`WhatsApp ${num} confirmed ✓ Orders will come to this number.`);
-      render(['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home'); return;
+      render(curView()); return;
     }
     $('#waBody').innerHTML = '<p class="muted">Signing you in…</p>';
     let res = await sb.auth.verifyOtp({ token_hash:r.token_hash, type:'email' });
@@ -2941,7 +3173,7 @@ var Cloud = (() => {
     if(!S.shop.whatsapp){ S.shop.whatsapp = num; save(); }
     $('#waModal').hidden = true;
     if(firstShop) { go('settings'); toast(`Welcome! Your shop is live at ${shopUrl()}. Give it your shop's name here.`); }
-    else { toast('Signed in with WhatsApp ✓'); render(['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home'); }
+    else { toast('Signed in with WhatsApp ✓'); render(curView()); }
   }
   async function signOut(){
     await sb.auth.signOut();
@@ -2955,7 +3187,7 @@ var Cloud = (() => {
     $('#inappBarName').textContent = IN_APP === 'another app' ? "another app's browser" : IN_APP;
     $('#claimCard').hidden = !enabled || live || !!user;
     $('#claimUrl').textContent = shopUrl();
-    $('#linkState').textContent = live ? 'Live · put it in your TikTok bio' : enabled ? 'Not live yet' : 'Put it in your TikTok bio';
+    $('#linkState').textContent = live ? 'Live ✓' : enabled ? 'Not live yet' : '';
     $('#slugRow').hidden = !live;
     $('#acctCard').hidden = !enabled;
     $('#btnClaim2').hidden = live || !!user;
@@ -2963,8 +3195,9 @@ var Cloud = (() => {
     const verified = S.verifiedWa && S.shop.whatsapp && S.verifiedWa.replace(/\D/g, '') === waNumber();
     $('#waBadge').hidden = !verified;
     $('#btnWaLink').hidden = !live || !!verified;
-    $('#acctText').textContent = live ? `Signed in as ${user.email}. Your shop, orders and views are saved online, so you can use them on any phone.`
-      : 'Your shop is saved on this phone only. Make it live so customers can open your shop link and you see real views.';
+    const who = S.verifiedWa || (user && user.email && !/@users\.walltok\.com$/.test(user.email) ? user.email : '');
+    $('#acctText').textContent = live ? `Signed in${who ? ' as ' + who : ''}. Saved online, so it works on any phone.` : 'Saved on this phone only.';
+    $('#slugLine').hidden = live;
     if(live) $('#viewsNote').textContent = 'A view is counted when a customer opens a product on your shop link (once per customer per day). Your own visits are not counted. Tap a product to see its page.';
     if(live && (view === 'home' || view === 'views')) refreshViews(view);
   }
@@ -3010,8 +3243,8 @@ var Cloud = (() => {
       catch(e){ console.warn(e); state('Offline · saved on this phone'); toast('Could not reach your online shop. Working on this phone for now.'); }
       if(location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
     }
-    const cur = ['home','studio','shop','orders','settings','views'].find(v => !$('#view-' + v).hidden) || 'home';
-    render(cur);
+    const cur = curView();
+    chrome(cur); render(cur);
     /* tapped the sign-in link in WallTok's WhatsApp reply */
     const wl = QS.get('walogin');
     if(wl){
@@ -3030,13 +3263,20 @@ var Cloud = (() => {
   }
 
   async function token(){ const { data } = await sb.auth.getSession(); return data?.session?.access_token || ''; }
+  async function explore(from, n){
+    const { data, error } = await sb.from('products').select('*').order('created_at', { ascending:false }).range(from, from + n - 1);
+    if(error) throw error;
+    const ids = [...new Set((data || []).map(r => r.shop_id))];
+    const { data:shops } = ids.length ? await sb.from('shops').select('id,slug,name,location').in('id', ids) : { data:[] };
+    return { rows:data || [], shops:shops || [] };
+  }
   async function tiktokPosts(pid){
     if(!shopId) return [];
     const { data } = await sb.from('tiktok_posts').select('status,created_at,post_url,privacy_level').eq('product_id', pid).order('created_at', { ascending:false });
     return data || [];
   }
   $('#btnWaLink').onclick = () => waStart('link');
-  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, token, tiktokPosts, viewsRange, enabled, signedIn: () => !!shopId };
+  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, token, tiktokPosts, viewsRange, explore, enabled, signedIn: () => !!shopId };
 })();
 document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
 
@@ -3305,7 +3545,13 @@ var TT = (() => {
 })();
 $('#btnSignOut').onclick = () => Cloud.signOut();
 
-if(!PUB_SLUG) go('home');
+/* walltok.com opens on the shops page; sellers coming back from sign-in, TikTok or a reload stay in their app */
+if(!PUB_SLUG){
+  let last = ''; try{ last = sessionStorage.getItem('wt-view') || ''; }catch(e){}
+  const back = ['app','tiktok','walogin','code'].some(k => QS.has(k)) || location.hash.includes('access_token');
+  if(QS.has('app')) history.replaceState(null, '', location.pathname + location.hash);
+  go(!Cloud.enabled ? 'home' : back ? (VIEWS.includes(last) && last !== 'explore' ? last : 'home') : (VIEWS.includes(last) ? last : 'explore'));
+}
 Cloud.start();
 </script>
 
