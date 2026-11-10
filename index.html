@@ -692,6 +692,7 @@ html.noTabs .app{padding-bottom:24px}
       <div><label for="sLoc">Location</label><input id="sLoc" placeholder="New Road, Kathmandu"></div>
       <div id="slugRow" hidden><label for="sSlug">Shop link</label><div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><span class="small muted">walltok.com/</span><input id="sSlug" autocapitalize="off" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"></div><p class="small muted">If you change it, update your TikTok bio too.</p></div>
       <p class="small muted" id="slugLine">Shop link: <b id="slugPreview"></b></p>
+      <p class="small" id="slugMsg" aria-live="polite"></p>
       <button class="btn indigo" id="btnSaveSettings" type="button">Save</button>
     </div>
     <div class="card stack" id="acctCard">
@@ -907,7 +908,9 @@ function chrome(view){
   $('#btnSell').hidden = !(ex && !signed);
 }
 $('#brandLink').onclick = e => { if(window.Cloud && Cloud.enabled && !PUB_SLUG){ e.preventDefault(); go('explore'); } else if(!ON_SITE || !(window.Cloud && Cloud.enabled)){ e.preventDefault(); if(!PUB_SLUG) go('home'); } };
-$('#btnSell').onclick = e => { e.preventDefault(); go('home'); };
+$('#btnSell').onclick = e => { e.preventDefault();
+  /* someone who already made products on this phone keeps them; everyone else signs in first */
+  if(!(window.Cloud && Cloud.enabled) || S.products.some(p => !p.example)) go('home'); else Cloud.signIn(true); };
 $$('[data-tab]').forEach(b => b.onclick = () => go(b.dataset.tab));
 document.addEventListener('click', e => {
   const g = e.target.closest('[data-go]'); if(g){ if(g.dataset.filter) orderFilter = g.dataset.filter; go(g.dataset.go); }
@@ -923,7 +926,7 @@ function render(view){
   if(view==='shop') renderShop();
   if(view==='orders') renderOrders();
   if(view==='views') renderViews();
-  if(view==='settings'){ $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; }
+  if(view==='settings'){ slugTouched = false; slugOk = true; $('#slugMsg').innerHTML = ''; $('#btnSaveSettings').disabled = false; $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; }
   if(window.Cloud) Cloud.paint(view);
 }
 function renderHome(){
@@ -1046,12 +1049,14 @@ function renderProductPage(p){
       <div class="b">
         <div class="section-h"><h2>${esc(p.name)}</h2><span class="code">${esc(p.code)}</span></div>
         ${priceHtml(p)}
+        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? `<p class="small muted pstats">👁 <b>${(p.views || 0).toLocaleString('en-IN')}</b> visit${p.views === 1 ? '' : 's'} · 💬 <b>${(p.waClicks || 0).toLocaleString('en-IN')}</b> tapped Order on WhatsApp</p>` : ''}
         <p class="muted">${esc(p.desc || '')}</p>
         <p class="small"><b>Sizes:</b> ${esc(p.sizes.join(' · '))}${p.stock<=3 && p.stock>0 ? ` · <b style="color:var(--warn)">Only ${p.stock} left</b>` : ''}${p.stock===0 ? ' · <b style="color:var(--warn)">Sold out</b>' : ''}</p>
-        <p class="small muted">Cash on delivery · eSewa · Khalti</p>
-        <a class="btn primary big" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
+        <a class="btn primary big" id="pOrder" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
         <a class="btn ink" id="pWatchTT" href="${esc(p.ttUrl || '#')}" target="_blank" rel="noopener" ${p.ttUrl ? '' : 'hidden'}><span class="tt-logo" aria-hidden="true">♪</span> Watch on TikTok</a>
-        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist"></span><div id="pTTLinks" class="stack" style="gap:6px"></div></div>` : ''}
+        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? (p.ttAt
+          ? `<div class="ttbox stack" style="gap:6px"><b><span class="tt-logo" aria-hidden="true">♪</span> On TikTok</b><span class="small muted" id="pTTHist">Posted ${new Date(p.ttAt).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}</span><div id="pTTLinks" class="stack" style="gap:6px"></div><button class="linkbtn" type="button" id="pPostTT">Post again ›</button></div>`
+          : `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist">Not on TikTok yet</span><div id="pTTLinks" class="stack" style="gap:6px"></div></div>`) : ''}
         ${!PUB_SLUG ? `<details class="small" id="pTTPaste"><summary>${p.ttUrl ? 'Change the TikTok link' : 'Posted this from the TikTok app? Add the link'}</summary>
           <div class="otp" style="margin-top:6px"><input id="pTTUrl" inputmode="url" placeholder="https://www.tiktok.com/@you/video/…" value="${esc(p.ttUrl || '')}"><button class="btn small" type="button" id="pTTSave">Save</button></div>
           <p class="small muted">Customers see a <b>Watch on TikTok</b> button on this product.${p.ttUrl ? ' Leave it empty and Save to remove it.' : ''}</p></details>` : ''}
@@ -1063,6 +1068,7 @@ function renderProductPage(p){
   $('#pBack').onclick = () => { shopOpen = null; if(PUB_SLUG && ON_SITE) history.pushState({}, '', `/${PUB_SLUG}`); renderShop(); window.scrollTo(0,0); };
   $('#pCopyLink').onclick = async () => { const url = 'https://' + productUrl(p); if(navigator.share){ try{ await navigator.share({ title:p.name, url }); return; }catch(e){ if(e && e.name === 'AbortError') return; } } copyText(url); };
   $('#pMore').onclick = () => $('#pBack').click();
+  if(PUB_SLUG) $('#pOrder').addEventListener('click', () => { if(window.Cloud) Cloud.recordWaClick(p.id); });
   if($('#pPostTT')){ $('#pPostTT').onclick = () => TT.open(p.id); TT.history(p.id); }
   if($('#pTTSave')) $('#pTTSave').onclick = () => {
     const v = $('#pTTUrl').value.trim();
@@ -2843,8 +2849,29 @@ $('#btnSaveOrder').onclick = () => {
 };
 
 /* ---------- settings ---------- */
-$('#sName').oninput = () => $('#slugPreview').textContent = DOMAIN + '/' + (S.shop.slug || slugify($('#sName').value));
+/* shop links are unique: check while the seller types */
+let slugTimer = null, slugOk = true, slugTouched = false, slugSeq = 0;
+const autoSlug = () => !S.shop.slug || /^shop[0-9]{0,6}$/.test(S.shop.slug) || S.shop.slug === slugify(S.shop.name);
+function wantedSlug(){ return window.Cloud && Cloud.signedIn() ? slugify($('#sSlug').value) : slugify($('#sName').value); }
+function slugCheck(){
+  clearTimeout(slugTimer); const msg = $('#slugMsg'), want = wantedSlug(), me = ++slugSeq;
+  const done = (ok, html) => { if(me !== slugSeq) return; slugOk = ok; msg.innerHTML = html; $('#btnSaveSettings').disabled = !ok; };
+  if(!(window.Cloud && Cloud.enabled) || want === S.shop.slug){ done(true, ''); return; }
+  if(want.length < 3){ done(false, '<span style="color:var(--warn)">Use at least 3 letters or numbers.</span>'); return; }
+  msg.textContent = 'Checking…';
+  slugTimer = setTimeout(async () => {
+    let taken = false; try{ taken = await Cloud.slugTaken(want); }catch(e){ done(true, ''); return; }
+    done(!taken, taken ? `<span style="color:var(--warn)"><b>walltok.com/${esc(want)}</b> is already taken. Choose a different name.</span>` : `<span style="color:var(--good)">✓ walltok.com/${esc(want)} is free</span>`);
+  }, 350);
+}
+$('#sName').oninput = () => {
+  if(window.Cloud && Cloud.signedIn() && !slugTouched && autoSlug()) $('#sSlug').value = slugify($('#sName').value);
+  $('#slugPreview').textContent = DOMAIN + '/' + (S.shop.slug || slugify($('#sName').value));
+  slugCheck();
+};
+$('#sSlug').oninput = () => { slugTouched = true; slugCheck(); };
 $('#btnSaveSettings').onclick = async () => {
+  if(!slugOk){ toast('That shop name is taken. Choose a different one.'); return; }
   if(window.Cloud && Cloud.signedIn()){ const want = slugify($('#sSlug').value); if(want !== S.shop.slug && !(await Cloud.changeSlug(want))) return; }
   S.shop.name = $('#sName').value.trim() || 'My Shop'; S.shop.whatsapp = $('#sWa').value.trim(); S.shop.location = $('#sLoc').value.trim() || 'Nepal';
   save(); toast('Saved'); go('home');
@@ -2872,7 +2899,7 @@ var Cloud = (() => {
     images:imagesOf(p), caption:p.caption || null, created_at:iso(p.created || (p.created = Date.now())), ...(noTT ? {} : { tiktok_posted_at:iso(p.ttAt), tiktok_url:p.ttUrl || null }) });
   const prodLocal = r => { const imgs = r.images || []; return { id:r.id, code:r.code, name:r.name, price:r.price, oldPrice:r.old_price || undefined,
     offer:r.offer || undefined, stock:r.stock, sizes:r.sizes || [], category:r.category || 'Other', desc:r.description || '',
-    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), ttAt:ms(r.tiktok_posted_at), ttUrl:r.tiktok_url || '', views:r.views || 0, viewLog:{} }; };
+    img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), ttAt:ms(r.tiktok_posted_at), ttUrl:r.tiktok_url || '', waClicks:r.wa_clicks || 0, views:r.views || 0, viewLog:{} }; };
   const orderRow = o => ({ id:o.id, shop_id:shopId, product_id:(S.sync.p[o.productId] ? o.productId : null), customer:o.customer, place:o.place,
     size:o.size, pay:o.pay, status:o.status, price:+o.price||0, delivery:+o.delivery||0, created_at:iso(o.created), paid_at:iso(o.paidAt) });
   const orderLocal = r => ({ id:r.id, productId:r.product_id, customer:r.customer, place:r.place, size:r.size, pay:r.pay, status:r.status,
@@ -3084,16 +3111,16 @@ var Cloud = (() => {
   $('#inappCopy').onclick = () => copyText(location.origin + '/');
 
   /* sign-in sheet: WhatsApp first inside TikTok/Instagram (Google is blocked there), Google first in a normal browser */
-  function signIn(){
+  function signIn(start){
     if(!enabled){ toast('Online shop is available on walltok.com'); return; }
     saveLocal();
     const wa = `<button class="btn wa-big" type="button" id="waGo">Continue with WhatsApp <span class="freepill">FREE</span></button>`;
     const g = IN_APP ? `<button class="btn g-btn" type="button" id="gGo" style="opacity:.7"><span class="gdot"></span>Google: open in your browser first</button>`
                      : `<button class="btn g-btn" type="button" id="gGo"><span class="gdot"></span>Continue with Google</button>`;
-    $('#waH').textContent = 'Make your shop link live';
-    $('#waBody').innerHTML = `<p class="small">So customers from TikTok can open your shop link, see your products and order.${IN_APP ? ` You're inside ${IN_APP === 'another app' ? 'an app' : IN_APP}, so WhatsApp is the quickest way here.` : ''}</p>
+    $('#waH').textContent = start ? 'Start selling on WallTok' : 'Make your shop link live';
+    $('#waBody').innerHTML = `<p class="small">${start ? 'Free. Get your own shop link for your TikTok bio, add products, and get orders on your WhatsApp.' : 'So customers from TikTok can open your shop link and order.'}</p>
       ${IN_APP ? wa + g : g + wa}
-      <p class="small muted" style="text-align:center">No password. Your products and orders come with you.</p>`;
+      <p class="small muted" style="text-align:center">No password needed.</p>`;
     $('#waModal').hidden = false;
     $('#waGo').onclick = () => waStart('login');
     $('#gGo').onclick = () => { if(IN_APP){ $('#waModal').hidden = true; showInApp(); return; } sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/?app=1' } }); };
@@ -3172,7 +3199,7 @@ var Cloud = (() => {
     try{ await afterLogin(); state('Saved ✓'); }catch(e){ console.warn(e); state('Offline · saved on this phone'); }
     if(!S.shop.whatsapp){ S.shop.whatsapp = num; save(); }
     $('#waModal').hidden = true;
-    if(firstShop) { go('settings'); toast(`Welcome! Your shop is live at ${shopUrl()}. Give it your shop's name here.`); }
+    if(firstShop) { go('settings'); toast('Welcome! Give your shop its name.'); }
     else { toast('Signed in with WhatsApp ✓'); render(curView()); }
   }
   async function signOut(){
@@ -3225,6 +3252,15 @@ var Cloud = (() => {
       shopOpen = p ? p.id : null; renderShop();
     });
   }
+  function recordWaClick(id){
+    const k = 'wt-wa-' + id + '-' + dayKey(new Date());
+    try{ if(localStorage.getItem(k)) return; localStorage.setItem(k, '1'); }catch(e){}
+    sb && sb.rpc('record_wa_click', { p_product:id }).then(() => {}, () => {});
+  }
+  async function slugTaken(slug){
+    const { data } = await sb.from('shops').select('id').eq('slug', slug).maybeSingle();
+    return !!data && data.id !== shopId;
+  }
   function recordView(id){
     const k = 'wt-viewed-' + id + '-' + dayKey(new Date());
     try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); }catch(e){}
@@ -3242,6 +3278,7 @@ var Cloud = (() => {
       try{ await afterLogin(); state('Saved ✓'); }
       catch(e){ console.warn(e); state('Offline · saved on this phone'); toast('Could not reach your online shop. Working on this phone for now.'); }
       if(location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
+      if(firstShop){ go('settings'); toast('Welcome! Give your shop its name.'); }
     }
     const cur = curView();
     chrome(cur); render(cur);
@@ -3276,7 +3313,7 @@ var Cloud = (() => {
     return data || [];
   }
   $('#btnWaLink').onclick = () => waStart('link');
-  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, token, tiktokPosts, viewsRange, explore, enabled, signedIn: () => !!shopId };
+  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, recordWaClick, slugTaken, token, tiktokPosts, viewsRange, explore, enabled, signedIn: () => !!shopId };
 })();
 document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
 
