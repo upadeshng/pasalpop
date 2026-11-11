@@ -290,6 +290,7 @@ html.noTabs .app{padding-bottom:24px}
       <h1>Shop from TikTok sellers</h1>
       <form class="visit" id="visitForm" role="search"><label class="vpre" for="visitSlug">walltok.com/</label><input id="visitSlug" placeholder="shop  or  shop F12" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"><button class="btn primary small" type="submit">Visit</button></form>
     </div>
+    <div class="card stack" id="exNote" hidden></div>
     <div class="pgrid" id="exGrid"></div>
     <p class="muted small" id="exMsg" style="text-align:center"></p>
     <div id="exMore" style="height:1px"></div>
@@ -1031,6 +1032,20 @@ function exCard(p, sh){
   return el;
 }
 function paintExplore(rows){ const g = $('#exGrid'); rows.forEach(p => g.append(exCard(p, EX.shops.get(p.shop_id)))); }
+/* a shop link that doesn't exist: say so, suggest look-alikes, and show WallTok's shops page */
+async function showMissing(slug){
+  ['home','studio','shop','orders','settings','views'].forEach(v => $('#view-' + v).hidden = true);
+  $('#view-explore').hidden = false; document.title = `${DOMAIN}`;
+  history.replaceState(null, '', '/');
+  const note = $('#exNote'); note.hidden = false;
+  note.innerHTML = `<h3>No shop at ${esc(DOMAIN)}/${esc(slug)}</h3><p class="small muted">Check the spelling, or find the shop below.</p><div id="exSug" class="stack" style="gap:6px"></div>`;
+  $('#visitSlug').value = slug;
+  chrome('explore'); renderExplore();
+  try{
+    const sug = await Cloud.similarShops(slug);
+    if(sug.length) $('#exSug').innerHTML = '<span class="small"><b>Did you mean:</b></span>' + sug.map(sh => `<a class="btn" style="flex-direction:column;align-items:flex-start;gap:2px;text-align:left" href="/${sh.slug}${PUB_CODE ? '/' + encodeURIComponent(PUB_CODE.toLowerCase()) : ''}"><b>${esc(sh.name)} ›</b><span class="muted small" style="font-weight:500">${esc(DOMAIN)}/${esc(sh.slug)}</span></a>`).join('');
+  }catch(e){}
+}
 function renderExplore(){
   const g = $('#exGrid');
   if(!(window.Cloud && Cloud.enabled)){ g.innerHTML = ''; $('#exMsg').textContent = 'Open walltok.com to see shops.'; return; }
@@ -3299,7 +3314,7 @@ var Cloud = (() => {
     if(!enabled){ box.innerHTML = '<p class="pubmsg muted">This shop is not available right now.</p>'; return; }
     box.innerHTML = '<p class="pubmsg muted">Loading shop…</p>';
     const { data:shop } = await sb.from('shops').select('id,slug,name,whatsapp,location').eq('slug', PUB_SLUG).maybeSingle();
-    if(!shop){ $('#pubName').textContent = 'Shop not found'; $('#pubMeta').textContent = `There is no shop at ${DOMAIN}/${PUB_SLUG}. Check the link in the seller's TikTok bio.`; box.innerHTML = ''; $('#shopSearch').hidden = true; return; }
+    if(!shop){ showMissing(PUB_SLUG); return; }
     const { data:rows } = await fetchAll(() => sb.from('products').select('*').eq('shop_id', shop.id));
     S.shop = { name:shop.name, whatsapp:shop.whatsapp, location:shop.location, slug:shop.slug };
     S.products = (rows || []).map(prodLocal);
@@ -3361,6 +3376,15 @@ var Cloud = (() => {
   }
 
   async function token(){ const { data } = await sb.auth.getSession(); return data?.session?.access_token || ''; }
+  /* shops whose name looks like what was typed ("cnova" → clubnovafashion) */
+  async function similarShops(q){
+    const { data } = await sb.from('shops').select('slug,name').range(0, 1999);
+    const sub = (a, b) => { let i = 0; for(const ch of b) if(ch === a[i]) i++; return i === a.length; };
+    const score = sh => { const sl = sh.slug, nm = slugify(sh.name);
+      if(sl.includes(q) || nm.includes(q)) return 3; if(q.includes(sl) && sl.length >= 3) return 2.5;
+      if(q.length >= 3 && (sub(q, sl) || sub(q, nm))) return 2; return 0; };
+    return (data || []).map(sh => [score(sh), sh]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0] || a[1].slug.length - b[1].slug.length).slice(0, 4).map(x => x[1]);
+  }
   async function explore(from, n){
     const { data, error } = await sb.from('products').select('*').order('created_at', { ascending:false }).range(from, from + n - 1);
     if(error) throw error;
@@ -3374,7 +3398,7 @@ var Cloud = (() => {
     return data || [];
   }
   $('#btnWaLink').onclick = () => waStart('link');
-  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, recordWaClick, slugTaken, token, tiktokPosts, viewsRange, explore, enabled, signedIn: () => !!shopId };
+  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, recordWaClick, slugTaken, similarShops, token, tiktokPosts, viewsRange, explore, enabled, signedIn: () => !!shopId };
 })();
 document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
 
