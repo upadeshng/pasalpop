@@ -268,6 +268,8 @@ html.noTabs .app{padding-bottom:24px}
 .shoplink{color:var(--indigo);font-weight:600;text-decoration:none;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .linkbtn{background:none;border:0;padding:6px 0;font:inherit;font-weight:600;color:var(--indigo);cursor:pointer;text-decoration:none;align-self:flex-start}
 .moreshop{text-align:center;padding:14px;font-weight:600}
+.pinc{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.pinc code{font-family:inherit;font-weight:700;font-size:.9rem;word-break:break-word}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -286,7 +288,7 @@ html.noTabs .app{padding-bottom:24px}
   <section id="view-explore" class="stack" hidden>
     <div class="ex-hero stack">
       <h1>Shop from TikTok sellers</h1>
-      <form class="visit" id="visitForm" role="search"><label class="vpre" for="visitSlug">walltok.com/</label><input id="visitSlug" placeholder="shop name" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"><button class="btn primary small" type="submit">Visit</button></form>
+      <form class="visit" id="visitForm" role="search"><label class="vpre" for="visitSlug">walltok.com/</label><input id="visitSlug" placeholder="shop  or  shop F12" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"><button class="btn primary small" type="submit">Visit</button></form>
     </div>
     <div class="pgrid" id="exGrid"></div>
     <p class="muted small" id="exMsg" style="text-align:center"></p>
@@ -688,7 +690,8 @@ html.noTabs .app{padding-bottom:24px}
     <div class="card stack">
       <div><label for="sName">Shop name</label><input id="sName"></div>
       <div><label for="sWa">WhatsApp number for orders <span id="waBadge" class="small" style="color:var(--good);font-weight:700" hidden>✓ verified</span></label><input id="sWa" inputmode="tel" placeholder="98XXXXXXXX">
-        <button class="btn small wa-btn" type="button" id="btnWaLink" hidden style="margin-top:6px">Confirm with WhatsApp</button></div>
+        <button class="btn small wa-btn" type="button" id="btnWaLink" hidden style="margin-top:6px">Confirm with WhatsApp</button>
+        <label class="small" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-weight:500"><input type="checkbox" id="sWaVid" style="width:auto"> Show this number at the end of my videos</label></div>
       <div><label for="sLoc">Location</label><input id="sLoc" placeholder="New Road, Kathmandu"></div>
       <div id="slugRow" hidden><label for="sSlug">Shop link</label><div class="row" style="gap:6px;align-items:center;flex-wrap:nowrap"><span class="small muted">walltok.com/</span><input id="sSlug" autocapitalize="off" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"></div><p class="small muted">If you change it, update your TikTok bio too.</p></div>
       <p class="small muted" id="slugLine">Shop link: <b id="slugPreview"></b></p>
@@ -926,7 +929,7 @@ function render(view){
   if(view==='shop') renderShop();
   if(view==='orders') renderOrders();
   if(view==='views') renderViews();
-  if(view==='settings'){ slugTouched = false; slugOk = true; $('#slugMsg').innerHTML = ''; $('#btnSaveSettings').disabled = false; $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; }
+  if(view==='settings'){ slugTouched = false; slugOk = true; $('#slugMsg').innerHTML = ''; $('#btnSaveSettings').disabled = false; $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; $('#sWaVid').checked = S.waOnVideo !== false; }
   if(window.Cloud) Cloud.paint(view);
 }
 function renderHome(){
@@ -1036,10 +1039,23 @@ function renderExplore(){
 }
 $('#visitForm').onsubmit = e => {
   e.preventDefault();
-  let v = $('#visitSlug').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^(www\.)?walltok\.com\/?/, '').split(/[/?#]/)[0].replace(/[^a-z0-9]/g, '');
-  if(!v){ $('#visitSlug').focus(); return; }
-  location.href = '/' + v;
+  /* "cnova", "walltok.com/cnova", "cnova F12" or "cnova/f12" */
+  const raw = $('#visitSlug').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^(www\.)?walltok\.com\/?/, '');
+  const parts = raw.split(/[\s/?#]+/).filter(Boolean);
+  let shop = (parts[0] || '').replace(/[^a-z0-9]/g, ''), code = (parts[1] || '').replace(/[^a-z0-9]/g, '');
+  if(!shop){ $('#visitSlug').focus(); return; }
+  location.href = '/' + shop + (code ? '/' + code : '');
 };
+
+/* TikTok can't add or pin a comment for sellers, so WallTok hands them the text */
+function prodInfo(p){
+  const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
+  return { shop:S.shop.name, loc:S.shop.location, price:npr(p.price), sizes:(p.sizes||[]).join(', '), category:p.category, rawName:p.name, notes:'', name:p.name,
+    code:p.code, oldPrice:pct ? npr(p.oldPrice) : '', pct, offer:p.offer || '', stock:p.stock, lang:(typeof captionLang !== 'undefined' && captionLang) || 'roman' };
+}
+const pinText = p => pinnedComment(prodInfo(p));
+function pinBox(p){ return `<div class="pinc"><span class="small muted">Comment this on your TikTok post and pin it:</span><code>${esc(pinText(p))}</code><button class="btn small" type="button" data-copypin="${esc(p.id)}" style="align-self:flex-start">Copy comment</button></div>`; }
+document.addEventListener('click', e => { const b = e.target.closest('[data-copypin]'); if(b) copyText(pinText(prodById(b.dataset.copypin))); });
 
 function renderProductPage(p){
   $('#shopBrowse').hidden = true;
@@ -1055,7 +1071,7 @@ function renderProductPage(p){
         <a class="btn primary big" id="pOrder" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
         <a class="btn ink" id="pWatchTT" href="${esc(p.ttUrl || '#')}" target="_blank" rel="noopener" ${p.ttUrl ? '' : 'hidden'}><span class="tt-logo" aria-hidden="true">♪</span> Watch on TikTok</a>
         ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? (p.ttAt
-          ? `<div class="ttbox stack" style="gap:6px"><b><span class="tt-logo" aria-hidden="true">♪</span> On TikTok</b><span class="small muted" id="pTTHist">Posted ${new Date(p.ttAt).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}</span><div id="pTTLinks" class="stack" style="gap:6px"></div><button class="linkbtn" type="button" id="pPostTT">Post again ›</button></div>`
+          ? `<div class="ttbox stack" style="gap:6px"><b><span class="tt-logo" aria-hidden="true">♪</span> On TikTok</b><span class="small muted" id="pTTHist">Posted ${new Date(p.ttAt).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}</span><div id="pTTLinks" class="stack" style="gap:6px"></div>${pinBox(p)}<button class="linkbtn" type="button" id="pPostTT">Post again ›</button></div>`
           : `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist">Not on TikTok yet</span><div id="pTTLinks" class="stack" style="gap:6px"></div></div>`) : ''}
         ${!PUB_SLUG ? `<details class="small" id="pTTPaste"><summary>${p.ttUrl ? 'Change the TikTok link' : 'Posted this from the TikTok app? Add the link'}</summary>
           <div class="otp" style="margin-top:6px"><input id="pTTUrl" inputmode="url" placeholder="https://www.tiktok.com/@you/video/…" value="${esc(p.ttUrl || '')}"><button class="btn small" type="button" id="pTTSave">Save</button></div>
@@ -2033,6 +2049,50 @@ function drawFrame(g, t, comp, info, T = 8){
     g.fillStyle = dark ? '#ffffff' : '#1b1d3a'; roundRect(g, (W-cw)/2, 446 + (1-c)*16, cw, 62, 31); g.fill();
     g.fillStyle = dark ? '#1b1d3a' : '#ffffff'; g.fillText(label, W/2, 488 + (1-c)*16); g.globalAlpha = 1;
   }
+  endCard(g, t, info, T);
+}
+/* last 2 seconds: how to reach the shop, the two ways everyone knows: Google and WhatsApp */
+const END_TXT = {
+  roman:   { g:'Google ma type garnus 👇', or:'or', wa:'Code pathaunus, hami link pathauchhau', bio:'Wa bio ko link thichnus' },
+  nepali:  { g:'Google मा टाइप गर्नुहोस् 👇', or:'वा', wa:'कोड पठाउनुहोस्, हामी लिङ्क पठाउँछौं', bio:'वा बायोको लिङ्क थिच्नुहोस्' },
+  english: { g:'Type in Google 👇', or:'or', wa:'Send the code, we reply with the link', bio:'or tap the link in bio' }
+};
+function waDisplay(){
+  const raw = String(S.shop.whatsapp || '').trim(), d = raw.replace(/\D/g, '');
+  if(!d || d === '9800000000') return '';
+  const nat = d.startsWith('977') && d.length === 13 ? d.slice(3) : (!raw.startsWith('+') && d.length === 10 ? d : '');
+  return nat ? nat.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1 $2 $3') : '+' + d;
+}
+function endCard(g, t, info, T){
+  const e = Math.min(1, Math.max(0, (t - (T - 2)) / 0.35)); if(e <= 0) return;
+  const W = 720, H = 1280, url = shopUrl(), tx = END_TXT[info.lang] || END_TXT.roman;
+  const wa = S.waOnVideo !== false ? waDisplay() : '';
+  g.save(); g.globalAlpha = e;
+  const bgd = g.createLinearGradient(0, 0, 0, H); bgd.addColorStop(0, '#2b2f7a'); bgd.addColorStop(1, '#14163a');
+  g.fillStyle = bgd; g.fillRect(0, 0, W, H);
+  g.textAlign = 'center';
+  if(info.shop){ g.font = '700 30px "Bricolage Grotesque", sans-serif'; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText(info.shop, W/2, 330); }
+  g.fillStyle = '#ffffff'; fitFont(g, tx.g, 700, 40, '"Bricolage Grotesque", sans-serif', 640); g.fillText(tx.g, W/2, 420);
+  /* a search bar people recognise from their phone's home screen */
+  fitFont(g, url, 800, 50, '"Bricolage Grotesque", sans-serif', 520);
+  const tw = g.measureText(url).width, bw = Math.min(680, tw + 150), bx = (W - bw)/2, by = 460, bh = 104;
+  g.fillStyle = '#ffffff'; roundRect(g, bx, by, bw, bh, 52); g.fill();
+  g.strokeStyle = '#5f6368'; g.lineWidth = 6; g.beginPath(); g.arc(bx + 58, by + 48, 16, 0, Math.PI*2); g.stroke();
+  g.beginPath(); g.moveTo(bx + 70, by + 60); g.lineTo(bx + 84, by + 74); g.stroke();
+  g.fillStyle = '#1b1d3a'; g.textAlign = 'left'; g.fillText(url, bx + 108, by + 70);
+  if(Math.floor(t * 2.5) % 2 === 0){ g.fillStyle = '#1a73e8'; g.fillRect(bx + 108 + tw + 6, by + 28, 4, 50); }
+  g.textAlign = 'center';
+  if(info.code) pill(g, W/2, 650, 74, `Code ${info.code}`, '800 40px "Bricolage Grotesque", sans-serif', '#e8b04b', '#1b1d3a', 'center');
+  const y0 = info.code ? 790 : 700;
+  if(wa){
+    g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 2; g.beginPath(); g.moveTo(140, y0); g.lineTo(300, y0); g.moveTo(420, y0); g.lineTo(580, y0); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '600 30px Hind, sans-serif'; g.fillText(tx.or, W/2, y0 + 10);
+    pill(g, W/2, y0 + 80, 80, `💬 WhatsApp ${wa}${info.code ? ' · ' + info.code : ''}`, '700 34px "Bricolage Grotesque", sans-serif', '#25a366', '#ffffff', 'center');
+    g.fillStyle = 'rgba(255,255,255,.75)'; fitFont(g, tx.wa, 500, 28, 'Hind, sans-serif', 620); g.fillText(tx.wa, W/2, y0 + 216);
+  } else {
+    g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '500 30px Hind, sans-serif'; g.fillText(tx.bio, W/2, y0 + 10);
+  }
+  g.restore();
 }
 function makeVideo(info, comps){
   const stage = $('#stage'), g = stage.getContext('2d');
@@ -2076,9 +2136,9 @@ function templateCaption(info){
     nepali: info.oldPrice ? `🔥 ${info.offer||'अफर'}: ${info.oldPrice} को ${info.price} मात्र (${info.pct}% छुट)!` : `${info.price} मात्र!`,
     english: info.oldPrice ? `🔥 ${info.offer||'Offer'}: was ${info.oldPrice}, now ${info.price} (${info.pct}% off)!` : `Only ${info.price}!` }[info.lang||'roman'];
   const body = {
-    roman: `Naya ${n} aayo ✨ ${deal}\nSizes: ${info.sizes}. Valley bhitra 1 din ma delivery, COD available.${low ? `\nStock ${info.stock} piece matra baki!` : ''}\nOrder garna bio ko link click garnus 🛍️`,
-    nepali: `नयाँ ${info.name} आयो ✨ ${deal}\nसाइज: ${info.sizes}। उपत्यकाभित्र १ दिनमा डेलिभरी, क्यास अन डेलिभरी उपलब्ध।${low ? `\nस्टक ${info.stock} वटा मात्र बाँकी!` : ''}\nअर्डर गर्न बायोको लिङ्कमा क्लिक गर्नुहोस् 🛍️`,
-    english: `New ${n} just in ✨ ${deal}\nSizes: ${info.sizes}. Delivery in 1 day inside the valley, cash on delivery available.${low ? `\nOnly ${info.stock} left!` : ''}\nTap the link in bio to order 🛍️`
+    roman: `Naya ${n} aayo ✨ ${deal}\nSizes: ${info.sizes}.${low ? `\nStock ${info.stock} piece matra baki!` : ''}\nOrder: ${shopUrl()}${info.code ? ` → code ${info.code}` : ''} (link in bio) 🛍️`,
+    nepali: `नयाँ ${info.name} आयो ✨ ${deal}\nसाइज: ${info.sizes}।${low ? `\nस्टक ${info.stock} वटा मात्र बाँकी!` : ''}\nअर्डर: ${shopUrl()}${info.code ? ` → कोड ${info.code}` : ''} (बायोको लिङ्क) 🛍️`,
+    english: `New ${n} just in ✨ ${deal}\nSizes: ${info.sizes}.${low ? `\nOnly ${info.stock} left!` : ''}\nOrder: ${shopUrl()}${info.code ? ` → code ${info.code}` : ''} (link in bio) 🛍️`
   }[info.lang||'roman'];
   const codeLine = info.code ? `\n${{roman:'Order', nepali:'अर्डर', english:'Order'}[info.lang||'roman']}: ${productUrl(info)} (${{roman:'code', nepali:'कोड', english:'code'}[info.lang||'roman']} ${info.code})` : '';
   return body + codeLine + '\n\n' + tags.map(t=>'#'+t.replace(/\s+/g,'')).join(' ');
@@ -2087,9 +2147,9 @@ async function aiCaption(info, fresh, image){
   const sample = samplePromise ? await samplePromise : null;
   if(!sample || !image) return null;
   const prompt = `You write TikTok captions for a small online clothing and goods shop in Nepal. Look at the product photo.
-Shop: ${info.shop} (${info.loc}). Price: ${info.price}. Sizes: ${info.sizes}. Category: ${info.category}. Seller's product name (may be empty): "${info.rawName}". What's special, from the seller (may be empty): "${info.notes||''}".${info.script ? `\nThe seller's spoken script in the video: "${info.script}"` : ''}
+Shop: ${info.shop} (${info.loc}). Shop link: ${shopUrl()}. Price: ${info.price}. Sizes: ${info.sizes}. Category: ${info.category}. Seller's product name (may be empty): "${info.rawName}". What's special, from the seller (may be empty): "${info.notes||''}".${info.script ? `\nThe seller's spoken script in the video: "${info.script}"` : ''}
 ${info.oldPrice || info.offer ? `Offer: ${info.offer || 'discount'}${info.oldPrice ? `, old price ${info.oldPrice}, now ${info.price} (${info.pct}% off)` : ''}. Make the offer the first thing people read.\n` : ''}${info.stock > 0 && info.stock <= 3 ? `Only ${info.stock} left in stock: mention it to create urgency.\n` : ''}${info.code ? `Product code: ${info.code}. Customers type this code on the shop link in bio to find the product, so end the caption with "Code ${info.code}".\n` : ''}Caption language: ${LANG_RULE[info.lang||'roman']}
-Reply with only JSON: {"name": short English product name, max 4 words, describing what you see; "caption": 2-3 short lines in the caption language above, include the price and sizes, mention cash on delivery and the link in bio, 1-2 emoji, no hashtags; "hashtags": array of 6 lowercase hashtags without #, mixing Nepal shopping tags and the product; "description": one plain English sentence for the shop page, max 20 words}.`;
+Reply with only JSON: {"name": short English product name, max 4 words, describing what you see; "caption": 2-3 short lines in the caption language above, include the price and sizes, and end with the shop link and product code given above, 1-2 emoji, no hashtags; "hashtags": array of 6 lowercase hashtags without #, mixing Nepal shopping tags and the product; "description": one plain English sentence for the shop page, max 20 words}.`;
   try{
     const r = await sample.json(prompt, {images:[image], modelTier:'quick', cache: fresh ? false : true});
     if(!r || !r.caption) return null;
@@ -2177,7 +2237,7 @@ function orderSlide(g, comp, info){
   g.fillStyle = '#ffffff'; fitFont(g, info.name, 700, 46, '"Bricolage Grotesque", sans-serif', 620); g.fillText(info.name, 360, 474);
   pricePill(g, 360, 510, 100, info, 'center');
   g.textAlign = 'center'; g.font = '500 30px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.88)';
-  g.fillText(infoLine(info), 360, 670); g.fillText('Cash on delivery · eSewa · Khalti', 360, 714);
+  g.fillText(infoLine(info), 360, 670); g.fillText('Order on WhatsApp', 360, 714);
   pill(g, 360, 760, 72, info.code ? `Link in bio → code ${info.code}` : 'Tap the link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
   g.textAlign = 'center'; g.font = '500 28px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)';
   g.fillText(info.code ? productUrl(info) : shopUrl(), 360, 880); g.fillText(`${info.shop} · ${info.loc}`, 360, 922);
@@ -2413,7 +2473,7 @@ function templateScript(i){
     i.notes ? `${i.notes} — ekdam ramro quality cha.` : 'Quality ekdam ramro cha, design pani ekdam naya.',
     app ? `Sizes ${i.sizes} sabai available cha.` : 'Stock limited cha, chado order garnus.',
     i.oldPrice ? `${i.oldPrice} ko ahile ${i.price} matra!` : (i.price ? `Price chai ${i.price} matra!` : 'Price chai ekdam reasonable cha!'),
-    i.code ? `Order garna bio ko link ma code ${i.code} khojnus. Cash on delivery pani cha 🙏` : 'Order garna bio ko link click garnus. Cash on delivery pani cha 🙏'
+    i.code ? `Order garna ${shopUrl()} ma code ${i.code} khojnus 🙏` : `Order garna ${shopUrl()} ma janus 🙏`
   ];
 }
 $('#btnScript').onclick = async () => {
@@ -2503,7 +2563,7 @@ function grabFrame(time){
 /* drawing */
 function infoLine(info){
   const low = info.stock > 0 && info.stock <= 3 ? ` · Only ${info.stock} left!` : '';
-  return (APPAREL.includes(info.category) ? `Sizes: ${info.sizes}` : 'Cash on delivery available') + low;
+  return (APPAREL.includes(info.category) ? `Sizes: ${info.sizes}` : 'Order on WhatsApp') + low;
 }
 function offerLabel(info){
   if(info.offer && info.pct) return `${info.offer} · ${info.pct}% off`;
@@ -2568,7 +2628,7 @@ function drawStickers(g, t, info){
     const p = ease((t - vState.priceAt - 0.3)/0.35);
     if(p > 0){
       const low = info.stock > 0 && info.stock <= 3 ? ` · Only ${info.stock} left!` : '';
-      const txt = (APPAREL.includes(info.category) ? `Sizes: ${info.sizes} · COD` : 'Cash on delivery available') + low;
+      const txt = (APPAREL.includes(info.category) ? `Sizes: ${info.sizes}` : 'Order on WhatsApp') + low;
       g.save(); g.globalAlpha = p;
       pill(g, 32, py + (st.price && info.price ? 108 : 0), 54, txt, '600 28px Hind, sans-serif', 'rgba(27,29,58,.88)', '#ffffff');
       g.restore();
@@ -2596,7 +2656,7 @@ function drawEndCard(g, et, info, still, small){
   if(info.price) pricePill(g, W/2, 530, 100, info, 'center');
   pill(g, W/2, 668, 72, info.code ? `Link in bio → code ${info.code}` : 'Order now · link in bio', '700 34px "Bricolage Grotesque", sans-serif', '#ffffff', '#1b1d3a', 'center');
   g.font = '500 28px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'center';
-  g.fillText(info.code ? productUrl(info) : shopUrl(), W/2, 800); g.fillText('COD · eSewa · Khalti', W/2, 842);
+  g.fillText(info.code ? productUrl(info) : shopUrl(), W/2, 800); g.fillText('Order on WhatsApp', W/2, 842);
   g.restore();
 }
 
@@ -2719,13 +2779,13 @@ $('#btnPublishV').onclick = () => {
 /* ---------- pinned comment and product details ---------- */
 function pinnedComment(i){
   const app = APPAREL.includes(i.category), low = i.stock > 0 && i.stock <= 3;
-  if(i.lang === 'nepali') return `📌 ${i.code ? `कोड ${i.code} · ` : ''}मूल्य: ${i.price}${i.oldPrice ? ` (पहिले ${i.oldPrice}, ${i.pct}% छुट)` : ''}${app ? ` · साइज: ${i.sizes}` : ''} · क्यास अन डेलिभरी · उपत्यकाभित्र १ दिनमा डेलिभरी${low ? ` · ${i.stock} वटा मात्र बाँकी!` : ''} · अर्डर: ${i.code ? productUrl(i) + ' (बायोको लिङ्क)' : 'बायोको लिङ्क'} 🛍️`;
-  if(i.lang === 'english') return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (was ${i.oldPrice}, ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · Cash on delivery · 1-day delivery in the valley${low ? ` · Only ${i.stock} left!` : ''} · Order: ${i.code ? productUrl(i) + ' (link in bio)' : 'link in bio'} 🛍️`;
-  return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (${i.oldPrice} bata ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''} · COD available · Valley bhitra 1 din ma delivery${low ? ` · ${i.stock} piece matra baki!` : ''} · Order: ${i.code ? productUrl(i) + ' (link in bio)' : 'link in bio'} 🛍️`;
+  if(i.lang === 'nepali') return `📌 ${i.code ? `कोड ${i.code} · ` : ''}मूल्य: ${i.price}${i.oldPrice ? ` (पहिले ${i.oldPrice}, ${i.pct}% छुट)` : ''}${app ? ` · साइज: ${i.sizes}` : ''}${low ? ` · ${i.stock} वटा मात्र बाँकी!` : ''} · अर्डर: ${i.code ? productUrl(i) + ' (बायोको लिङ्क)' : 'बायोको लिङ्क'} 🛍️`;
+  if(i.lang === 'english') return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (was ${i.oldPrice}, ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''}${low ? ` · Only ${i.stock} left!` : ''} · Order: ${i.code ? productUrl(i) + ' (link in bio)' : 'link in bio'} 🛍️`;
+  return `📌 ${i.code ? `Code ${i.code} · ` : ''}Price: ${i.price}${i.oldPrice ? ` (${i.oldPrice} bata ${i.pct}% off)` : ''}${app ? ` · Sizes: ${i.sizes}` : ''}${low ? ` · ${i.stock} piece matra baki!` : ''} · Order: ${i.code ? productUrl(i) + ' (link in bio)' : 'link in bio'} 🛍️`;
 }
 function productDetails(p){
   const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
-  return `${p.name} (${p.code})\nPrice: ${npr(p.price)}${pct ? ` (was ${npr(p.oldPrice)}, ${pct}% off)` : ''}${APPAREL.includes(p.category) ? `\nSizes: ${p.sizes.join(', ')}` : ''}\nCash on delivery · eSewa · Khalti\nOrder here: https://${productUrl(p)}`;
+  return `${p.name} (${p.code})\nPrice: ${npr(p.price)}${pct ? ` (was ${npr(p.oldPrice)}, ${pct}% off)` : ''}${APPAREL.includes(p.category) ? `\nSizes: ${p.sizes.join(', ')}` : ''}\nOrder here: https://${productUrl(p)}`;
 }
 function fillProductSelect(sel, q = ''){
   const v = sel.value, t = q.trim().toLowerCase();
@@ -2874,6 +2934,7 @@ $('#btnSaveSettings').onclick = async () => {
   if(!slugOk){ toast('That shop name is taken. Choose a different one.'); return; }
   if(window.Cloud && Cloud.signedIn()){ const want = slugify($('#sSlug').value); if(want !== S.shop.slug && !(await Cloud.changeSlug(want))) return; }
   S.shop.name = $('#sName').value.trim() || 'My Shop'; S.shop.whatsapp = $('#sWa').value.trim(); S.shop.location = $('#sLoc').value.trim() || 'Nepal';
+  S.waOnVideo = $('#sWaVid').checked;
   save(); toast('Saved'); go('home');
 };
 $('#btnClearEx').onclick = () => {
@@ -3518,6 +3579,7 @@ var TT = (() => {
       if(r.status === 'PUBLISH_COMPLETE'){
         const id0 = pid, pp = prodById(id0); if(pp){ pp.ttAt = Date.now(); if(r.post_url && r.public) pp.ttUrl = r.post_url; save(); }
         el.textContent = priv === 'SELF_ONLY' ? 'Posted ✓ It is on your profile as “Only me”.' : 'Posted ✓ It is live on your TikTok.';
+        if(pp && !$('#ttPin')){ const d = document.createElement('div'); d.id = 'ttPin'; d.innerHTML = pinBox(pp); el.after(d); }
         busy = false; history(id0);
         if(r.post_url) showLink(r.post_url);
         else if(priv !== 'SELF_ONLY') { el.textContent += ' Getting the post link…'; linkLater(id, id0, 0); }
