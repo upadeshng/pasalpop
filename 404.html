@@ -268,6 +268,29 @@ html.noTabs .app{padding-bottom:24px}
 .shoplink{color:var(--indigo);font-weight:600;text-decoration:none;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .linkbtn{background:none;border:0;padding:6px 0;font:inherit;font-weight:600;color:var(--indigo);cursor:pointer;text-decoration:none;align-self:flex-start}
 .moreshop{text-align:center;padding:14px;font-weight:600}
+.askfab{position:fixed;right:16px;bottom:18px;z-index:40;background:var(--indigo);color:#fff;border:0;border-radius:999px;padding:12px 18px;font:inherit;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.3);cursor:pointer}
+html:not(.public) .askfab{display:none}
+.chatcard{display:flex;flex-direction:column;gap:10px;max-height:min(86vh,720px);width:min(560px,100%)}
+.chatlog{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:160px;padding:2px}
+.msg{max-width:86%;padding:9px 12px;border-radius:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word;font-size:.95rem}
+.msg.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.me{align-self:flex-end;background:var(--indigo);color:#fff;border-bottom-right-radius:4px}
+.msg.me .ph{font-size:.8rem;opacity:.85;display:block}
+.msg.typing{color:var(--muted)}
+.ccards{display:flex;flex-direction:column;gap:6px;align-self:flex-start;max-width:86%;width:100%}
+.ccard{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px;text-decoration:none;color:inherit}
+.ccard img{width:54px;height:54px;border-radius:8px;object-fit:cover;flex:none;background:var(--line)}
+.ccard span{display:flex;flex-direction:column;font-size:.85rem}
+.ocard{align-self:flex-start;max-width:86%;background:rgba(31,157,116,.12);border:1px solid var(--good);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:.9rem}
+.chatbar{display:flex;gap:6px;align-items:center}
+.chatbar input#chatIn{flex:1;min-width:0}
+.chatpic{display:flex;gap:8px;align-items:center}
+.chatpic img{width:56px;height:56px;object-fit:cover;border-radius:8px}
+.chatrow{display:flex;flex-direction:column;gap:4px;padding:10px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface)}
+.chatrow .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.tag-st{font-size:.72rem;font-weight:800;border-radius:99px;padding:2px 8px;background:var(--line)}
+.tag-st.needs_seller{background:#f6b93b;color:#1b1d3a}.tag-st.ordered{background:var(--good);color:#fff}
+.aihome{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .pinc{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .pinc code{font-family:inherit;font-weight:700;font-size:.9rem;word-break:break-word}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -320,6 +343,8 @@ html.noTabs .app{padding-bottom:24px}
       <div class="urlbar"><code id="homeUrl"></code><button class="btn small" type="button" data-copy-url>Copy</button></div>
     </div>
     <div class="stack">
+      <div class="card aihome" id="aiHome" hidden><div class="stack" style="gap:2px"><b>🤖 AI assistant</b><span class="small muted" id="aiHomeTxt">Answering customers on your shop</span></div>
+        <div class="row" style="gap:6px"><button class="btn small" type="button" id="btnAiChats">Chats</button><button class="btn small indigo" type="button" id="btnHelper">✨ Reply helper</button></div></div>
       <div class="section-h"><h3>Recent products</h3><button class="linkbtn" type="button" data-go="shop">See all ›</button></div>
       <div class="list" id="homeProducts"></div>
     </div>
@@ -652,7 +677,7 @@ html.noTabs .app{padding-bottom:24px}
 
   <!-- ORDERS -->
   <section id="view-orders" class="stack" hidden>
-    <div class="section-h"><h1>Orders</h1><button class="btn primary" id="btnAddOrder" type="button">+ Add order</button></div>
+    <div class="section-h"><h1>Orders</h1><div class="row" style="gap:6px"><button class="btn indigo" id="btnHelper2" type="button" hidden>✨ Reply helper</button><button class="btn primary" id="btnAddOrder" type="button">+ Add order</button></div></div>
     <div class="card stack" id="billBox" hidden>
       <div class="section-h"><h3>Order slip</h3><button class="btn small" id="btnBillClose" type="button">Close</button></div>
       <p class="small muted">Send it to the customer and give a copy to the delivery rider.</p>
@@ -699,6 +724,13 @@ html.noTabs .app{padding-bottom:24px}
       <p class="small" id="slugMsg" aria-live="polite"></p>
       <button class="btn indigo" id="btnSaveSettings" type="button">Save</button>
     </div>
+    <div class="card stack" id="aiCard" hidden>
+      <div class="section-h"><h3>AI assistant</h3><label class="small" style="display:flex;gap:6px;align-items:center;margin:0;font-weight:600"><input type="checkbox" id="sAiOn" style="width:auto"> On</label></div>
+      <p class="small muted">Answers customers on your shop page day and night, in Nepali or English, and takes orders for you to confirm.</p>
+      <div><label for="sAiNotes">What should it know? <span class="muted" style="font-weight:400">· write it your way</span></label>
+      <textarea id="sAiNotes" rows="5" maxlength="2500" placeholder="Delivery: Valley Rs 100 (1 day), outside Rs 150 (2–4 days)&#10;Payment: eSewa, Khalti or cash on delivery&#10;Exchange in 3 days if size doesn't fit&#10;Open 10am–8pm"></textarea></div>
+      <p class="small muted" id="aiUse"></p>
+    </div>
     <div class="card stack" id="acctCard">
       <h3>Your account</h3>
       <p class="small muted" id="acctText">Saved on this phone only.</p>
@@ -716,6 +748,33 @@ html.noTabs .app{padding-bottom:24px}
   <button type="button" data-tab="shop"><span>▦</span>Shop</button>
 </nav></div>
 <div class="toast" id="toast" hidden></div>
+<button class="askfab" id="askFab" type="button" hidden aria-label="Ask the shop">💬 Ask</button>
+<div class="inapp" id="chatModal" hidden role="dialog" aria-modal="true" aria-labelledby="chatH">
+  <div class="card chatcard">
+    <div class="section-h"><div><h3 id="chatH">Ask</h3><span class="small muted">AI assistant · replies in seconds</span></div><button class="btn small" type="button" id="chatClose">Close</button></div>
+    <div class="chatlog" id="chatLog" aria-live="polite"></div>
+    <div class="chips" id="chatChips"></div>
+    <div class="chatpic" id="chatPic" hidden><img alt=""><button class="btn small" type="button" id="chatPicX" aria-label="Remove photo">✕</button></div>
+    <form class="chatbar" id="chatForm">
+      <label class="btn icon" title="Send a photo" aria-label="Send a photo">📷<input type="file" accept="image/*" id="chatFile" hidden></label>
+      <button class="btn icon" type="button" id="chatMic" title="Speak" aria-label="Speak" hidden>🎤</button>
+      <input id="chatIn" autocomplete="off" placeholder="Type your question…" enterkeyhint="send" maxlength="900">
+      <button class="btn primary" type="submit" id="chatSend">Send</button>
+    </form>
+  </div>
+</div>
+<div class="inapp" id="helperModal" hidden role="dialog" aria-modal="true" aria-labelledby="helperH">
+  <div class="card stack ttcard">
+    <div class="section-h"><h3 id="helperH">✨ Reply helper</h3><button class="btn small" type="button" id="helperClose">Close</button></div>
+    <div id="helperBody" class="stack"></div>
+  </div>
+</div>
+<div class="inapp" id="aiChatsModal" hidden role="dialog" aria-modal="true" aria-labelledby="aiChatsH">
+  <div class="card stack ttcard">
+    <div class="section-h"><h3 id="aiChatsH">AI assistant chats</h3><button class="btn small" type="button" id="aiChatsClose">Close</button></div>
+    <div id="aiChatsBody" class="stack"></div>
+  </div>
+</div>
 <div class="inapp" id="waModal" hidden role="dialog" aria-modal="true" aria-labelledby="waH">
   <div class="card stack ttcard">
     <div class="section-h"><h3 id="waH">Make your shop link live</h3><button class="btn small" type="button" id="waClose">Close</button></div>
@@ -926,11 +985,12 @@ $('#btnSettings').onclick = () => go('settings');
 function render(view){
   $('#homeUrl').textContent = shopUrl(); $('#shopUrl').textContent = shopUrl();
   if(view==="explore") renderExplore();
-  if(view==='home') renderHome();
+  if(view==='home'){ renderHome(); paintAiHome(); }
+  if(view==='orders') $('#btnHelper2').hidden = !aiSeller();
   if(view==='shop') renderShop();
   if(view==='orders') renderOrders();
   if(view==='views') renderViews();
-  if(view==='settings'){ slugTouched = false; slugOk = true; $('#slugMsg').innerHTML = ''; $('#btnSaveSettings').disabled = false; $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; $('#sWaVid').checked = S.waOnVideo !== false; }
+  if(view==='settings'){ slugTouched = false; slugOk = true; $('#slugMsg').innerHTML = ''; $('#btnSaveSettings').disabled = false; $('#sName').value=S.shop.name; $('#sWa').value=S.shop.whatsapp; $('#sLoc').value=S.shop.location; $('#slugPreview').textContent=shopUrl(); $('#sSlug').value = S.shop.slug || ''; $('#sWaVid').checked = S.waOnVideo !== false; paintAiSettings(); }
   if(window.Cloud) Cloud.paint(view);
 }
 function renderHome(){
@@ -2841,7 +2901,8 @@ function renderOrders(){
     else if(next==='paid') act += `<button class="btn small" type="button" data-adv="${o.id}">Delivered ✓</button>`;
     else if(next) act += `<button class="btn small" type="button" data-adv="${o.id}">Mark ${next}</button>`;
     const d = document.createElement('div'); d.className='item order';
-    d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><div class="top"><b>${esc(o.customer)} · ${esc(p.name)}</b><span class="pill ${o.status}">${pillTxt}</span></div><span class="small muted"><span class="code">${esc(p.code || '')}</span> ${esc(o.size)} · ${esc(o.place)} · ${o.pay} · ordered ${when(o.created)}</span><span class="small">${money}</span><span class="small">${payTxt}</span></div><div class="acts"><button class="btn small" type="button" data-bill="${o.id}">Slip</button>${act}</div>`;
+    const ph = o.phone ? String(o.phone).replace(/\D/g, '') : '';
+    d.innerHTML = `<img alt="" src="${p.img}"><div class="t"><div class="top"><b>${esc(o.customer)} · ${esc(p.name)}</b><span class="pill ${o.status}">${pillTxt}</span></div><span class="small muted"><span class="code">${esc(p.code || '')}</span> ${esc(o.size)}${o.qty > 1 ? ' × ' + o.qty : ''} · ${esc(o.place)} · ${esc(o.pay)} · ordered ${when(o.created)}${o.source === 'ai' ? ' · <b style="color:var(--indigo)">🤖 AI</b>' : ''}</span>${ph ? `<a class="small" href="https://wa.me/${ph.length === 10 ? '977' + ph : ph}" target="_blank" rel="noopener">💬 ${esc(o.phone)}</a>` : ''}${o.note ? `<span class="small muted">Note: ${esc(o.note)}</span>` : ''}<span class="small">${money}</span><span class="small">${payTxt}</span></div><div class="acts"><button class="btn small" type="button" data-bill="${o.id}">Slip</button>${act}</div>`;
     return d;
   }, 30);
   if(sum.innerHTML) list.prepend(sum);
@@ -2950,6 +3011,7 @@ $('#btnSaveSettings').onclick = async () => {
   if(window.Cloud && Cloud.signedIn()){ const want = slugify($('#sSlug').value); if(want !== S.shop.slug && !(await Cloud.changeSlug(want))) return; }
   S.shop.name = $('#sName').value.trim() || 'My Shop'; S.shop.whatsapp = $('#sWa').value.trim(); S.shop.location = $('#sLoc').value.trim() || 'Nepal';
   S.waOnVideo = $('#sWaVid').checked;
+  if(!$('#aiCard').hidden){ S.shop.aiOn = $('#sAiOn').checked; S.shop.aiNotes = $('#sAiNotes').value.trim(); }
   save(); toast('Saved'); go('home');
 };
 $('#btnClearEx').onclick = () => {
@@ -2962,7 +3024,7 @@ $('#btnClearEx').onclick = () => {
 var Cloud = (() => {
   const enabled = !!(CLOUD.url && CLOUD.key && window.supabase && !IN_CLAUDE);
   const sb = enabled ? window.supabase.createClient(CLOUD.url, CLOUD.key) : null;
-  let user = null, shopId = null, authKnown = false, busy = false, again = false, timer = null, lastViews = 0, failed = false, noTT = false, firstShop = false;
+  let user = null, shopId = null, authKnown = false, noAI = false, busy = false, again = false, timer = null, lastViews = 0, failed = false, noTT = false, firstShop = false;
   const iso = t => t ? new Date(t).toISOString() : null;
   const ms = t => t ? Date.parse(t) : null;
   const state = txt => { const el = $('#syncState'); if(!el) return; el.hidden = !txt; el.textContent = txt || ''; };
@@ -2977,10 +3039,13 @@ var Cloud = (() => {
     offer:r.offer || undefined, stock:r.stock, sizes:r.sizes || [], category:r.category || 'Other', desc:r.description || '',
     img:imgs[0] || '', imgs:imgs.length > 1 ? imgs : null, caption:r.caption || '', created:ms(r.created_at), ttAt:ms(r.tiktok_posted_at), ttUrl:r.tiktok_url || '', waClicks:r.wa_clicks || 0, views:r.views || 0, viewLog:{} }; };
   const orderRow = o => ({ id:o.id, shop_id:shopId, product_id:(S.sync.p[o.productId] ? o.productId : null), customer:o.customer, place:o.place,
-    size:o.size, pay:o.pay, status:o.status, price:+o.price||0, delivery:+o.delivery||0, created_at:iso(o.created), paid_at:iso(o.paidAt) });
+    size:o.size, pay:o.pay, status:o.status, price:+o.price||0, delivery:+o.delivery||0, created_at:iso(o.created), paid_at:iso(o.paidAt),
+    ...(!noAI && (o.phone || o.qty > 1 || o.source || o.note) ? { phone:o.phone || null, qty:+o.qty || 1, source:o.source || null, note:o.note || null } : {}) });
   const orderLocal = r => ({ id:r.id, productId:r.product_id, customer:r.customer, place:r.place, size:r.size, pay:r.pay, status:r.status,
-    price:r.price, delivery:r.delivery, created:ms(r.created_at), paidAt:ms(r.paid_at) });
-  const shopRow = () => ({ name:S.shop.name, whatsapp:S.shop.whatsapp || '', location:S.shop.location || '', next_num:S.nextNum || 11, last_delivery:+S.lastDelivery || null });
+    price:r.price, delivery:r.delivery, created:ms(r.created_at), paidAt:ms(r.paid_at),
+    ...(r.phone || r.qty > 1 || r.source || r.note ? { phone:r.phone || '', qty:r.qty || 1, source:r.source || '', note:r.note || '' } : {}) });
+  const shopRow = () => ({ name:S.shop.name, whatsapp:S.shop.whatsapp || '', location:S.shop.location || '', next_num:S.nextNum || 11, last_delivery:+S.lastDelivery || null,
+    ...(!noAI && S.shop.aiOn !== undefined ? { ai_on:S.shop.aiOn !== false, ai_notes:S.shop.aiNotes || '' } : {}) });
   /* a short fingerprint of each row, to spot what changed without keeping a second copy */
   const digest = str => { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for(let i = 0; i < str.length; i++){ const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
     h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
@@ -3005,7 +3070,10 @@ var Cloud = (() => {
     busy = true; state('Saving…');
     try{
       const sr = shopRow();
-      if(h(sr) !== S.sync.shop){ const { error } = await sb.from('shops').update(sr).eq('id', shopId); if(error) throw error; S.sync.shop = h(sr); }
+      if(h(sr) !== S.sync.shop){
+        let { error } = await sb.from('shops').update(sr).eq('id', shopId);
+        if(error && /ai_(on|notes)/.test(error.message || '')){ noAI = true; delete sr.ai_on; delete sr.ai_notes; ({ error } = await sb.from('shops').update(sr).eq('id', shopId)); }   /* AI setup not run yet */
+        if(error) throw error; S.sync.shop = h(shopRow()); }
       /* photos first (each one is an upload), then rows in batches */
       for(const p of S.products){
         if(p.example) continue;
@@ -3020,6 +3088,10 @@ var Cloud = (() => {
           let { error } = await sb.from(table).upsert(part.map(x => x.row));
           if(error && table === 'products' && /tiktok_(posted_at|url)/.test(error.message || '') && !noTT){   /* database not updated yet */
             noTT = true; part.forEach(x => { delete x.row.tiktok_posted_at; delete x.row.tiktok_url; x.fp = h(x.row); });
+            ({ error } = await sb.from(table).upsert(part.map(x => x.row)));
+          }
+          if(error && table === 'orders' && /\b(phone|qty|source|note)\b/.test(error.message || '') && !noAI){
+            noAI = true; part.forEach(x => { ['phone','qty','source','note'].forEach(k => delete x.row[k]); x.fp = h(x.row); });
             ({ error } = await sb.from(table).upsert(part.map(x => x.row)));
           }
           if(error) throw error;
@@ -3108,6 +3180,34 @@ var Cloud = (() => {
     }catch(e){}
     saveLocal();
   }
+  /* orders the AI assistant took: check every minute while WallTok is open */
+  let orderTick = 0;
+  async function newOrders(){
+    if(!shopId || document.hidden || busy) return;
+    const since = new Date(Math.max(0, ...S.orders.map(o => o.created || 0)) - 60000).toISOString();
+    const { data, error } = await sb.from('orders').select('*').eq('shop_id', shopId).gte('created_at', since);
+    if(error || !data) return;
+    const fresh = data.filter(r => !S.orders.some(o => o.id === r.id) && !S.sync.o[r.id]);
+    if(!fresh.length) return;
+    fresh.forEach(r => { const o = orderLocal(r); S.orders.push(o); S.sync.o[o.id] = h(orderRow(o)); });
+    saveLocal();
+    const f = fresh[0], p = prodById(f.product_id);
+    toast(`🛒 New order${f.source === 'ai' ? ' from your AI assistant' : ''}: ${f.customer}${p ? ' · ' + p.code : ''}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''}`);
+    const v = curView(); if(['home','orders'].includes(v)) render(v);
+  }
+  function watchOrders(){ clearInterval(orderTick); orderTick = setInterval(newOrders, 60000); document.addEventListener('visibilitychange', () => { if(!document.hidden) newOrders(); }); }
+  /* AI chats and usage for the seller */
+  async function aiChats(){ const { data, error } = await sb.from('ai_chats').select('*').eq('shop_id', shopId).order('updated_at', { ascending:false }).limit(40); if(error) throw error; return data || []; }
+  async function aiDone(id){ await sb.from('ai_chats').update({ status:'done' }).eq('id', id); }
+  async function aiUsage(){ const m = new Date(Date.now() + 5.75*3600e3).toISOString().slice(0, 7); const { data } = await sb.from('ai_usage').select('chats').eq('shop_id', shopId).eq('month', m).maybeSingle(); return data ? data.chats : 0; }
+  async function aiCall(path, body, auth){
+    const headers = { 'Content-Type':'application/json', apikey:CLOUD.key };
+    if(auth){ const { data } = await sb.auth.getSession(); if(data && data.session) headers.Authorization = 'Bearer ' + data.session.access_token; }
+    const r = await fetch(`${CLOUD.url}/functions/v1/assistant/${path}`, { method:'POST', headers, body:JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok) throw Object.assign(new Error((j.error && j.error.message) || 'The assistant is busy. Try again.'), { code:j.error && j.error.code, status:r.status });
+    return j;
+  }
   function applyViews(prodRows){
     const byId = new Map(prodRows.map(r => [r.id, r]));
     S.products.forEach(p => { const r = byId.get(p.id); if(r) p.views = r.views || 0; p.viewLog = {}; });
@@ -3142,10 +3242,13 @@ var Cloud = (() => {
       if(!shop) throw new Error('Could not create shop');
     }
     shopId = shop.id;
-    S.shop = { name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', slug:shop.slug };
+    S.shop = { name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', slug:shop.slug,
+      ...('ai_on' in shop ? { aiOn:shop.ai_on !== false, aiNotes:shop.ai_notes || '' } : {}) };
+    if(!('ai_on' in shop)) noAI = true;
     S.nextNum = Math.max(S.nextNum || 11, shop.next_num || 11);
     if(shop.last_delivery) S.lastDelivery = S.lastDelivery || shop.last_delivery;
-    S.sync.shop = firstTime ? '' : h({ name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', next_num:shop.next_num, last_delivery:shop.last_delivery || null });
+    S.sync.shop = firstTime ? '' : h({ name:shop.name, whatsapp:shop.whatsapp || '', location:shop.location || '', next_num:shop.next_num, last_delivery:shop.last_delivery || null,
+      ...('ai_on' in shop ? { ai_on:shop.ai_on !== false, ai_notes:shop.ai_notes || '' } : {}) });
     const exIds = S.products.filter(p => p.example).map(p => p.id);
     S.products = S.products.filter(p => !p.example);
     if(firstTime && !S.products.length) S.nextNum = 11;   /* codes for real products start at 11 */
@@ -3325,11 +3428,11 @@ var Cloud = (() => {
     $('#view-shop').hidden = false;
     if(!enabled){ box.innerHTML = '<p class="pubmsg muted">This shop is not available right now.</p>'; return; }
     box.innerHTML = '<p class="pubmsg muted">Loading shop…</p>';
-    const { data:shop } = await sb.from('shops').select('id,slug,name,whatsapp,location').eq('slug', PUB_SLUG).maybeSingle();
+    const { data:shop } = await sb.from('shops').select('*').eq('slug', PUB_SLUG).maybeSingle();
     if(!shop){ showMissing(PUB_SLUG); return; }
     const { data:rows } = await fetchAll(() => sb.from('products').select('*').eq('shop_id', shop.id));
-    S.shop = { name:shop.name, whatsapp:shop.whatsapp, location:shop.location, slug:shop.slug };
-    sellerDoor();
+    S.shop = { name:shop.name, whatsapp:shop.whatsapp, location:shop.location, slug:shop.slug, aiOn:shop.ai_on === true };
+    sellerDoor(); $('#askFab').hidden = !S.shop.aiOn;
     S.products = (rows || []).map(prodLocal);
     document.title = `${shop.name} · ${DOMAIN}`;
     const hit = PUB_CODE && S.products.find(p => (p.code || '').toLowerCase() === PUB_CODE);
@@ -3373,7 +3476,7 @@ var Cloud = (() => {
     if(session){
       user = session.user;
       state('Loading…');
-      try{ await afterLogin(); state('Saved ✓'); }
+      try{ await afterLogin(); state('Saved ✓'); watchOrders(); }
       catch(e){ console.warn(e); state('Offline · saved on this phone'); toast('Could not reach your online shop. Working on this phone for now.'); }
       if(location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
       if(firstShop){ go('settings'); toast('Welcome! Give your shop its name.'); }
@@ -3422,7 +3525,7 @@ var Cloud = (() => {
     return data || [];
   }
   $('#btnWaLink').onclick = () => waStart('link');
-  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, recordWaClick, slugTaken, similarShops, token, tiktokPosts, viewsRange, explore, enabled, signedIn: () => !!shopId };
+  return { start, schedule, push, paint, signIn, signOut, changeSlug, recordView, recordWaClick, slugTaken, similarShops, aiChats, aiDone, aiUsage, aiCall, aiReady: () => !noAI, token, tiktokPosts, viewsRange, explore, enabled, signedIn: () => !!shopId };
 })();
 document.addEventListener('click', e => { if(e.target.closest('[data-claim]')) Cloud.signIn(); });
 
@@ -3691,6 +3794,152 @@ var TT = (() => {
   return { open, history, close };
 })();
 $('#btnSignOut').onclick = () => Cloud.signOut();
+
+/* ================= AI assistant ================= */
+const aiSeller = () => !!(window.Cloud && Cloud.enabled && Cloud.signedIn() && Cloud.aiReady());
+/* a photo small enough to send: 1024 px, JPEG */
+function photoData(file){
+  return new Promise((res, rej) => { const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { const k = Math.min(1, 1024 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width*k); c.height = Math.round(im.height*k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.82)); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('photo')); }; im.src = url; });
+}
+const sellerWaLink = text => `https://wa.me/${waNumber()}?text=${encodeURIComponent(text)}`;
+
+/* ---- customers: "Ask" on the shop and product pages ---- */
+const Chat = (() => {
+  let st = null, busy = false, pic = null, rec = null;
+  const key = () => 'wt-chat-' + (S.shop.slug || PUB_SLUG);
+  const cur = () => { const p = shopOpen && prodById(shopOpen); return p || null; };
+  function load(){ try{ st = JSON.parse(sessionStorage.getItem(key()) || 'null'); }catch(e){ st = null; } if(!st || !st.session) st = { session:uid() + uid(), msgs:[] }; }
+  function keep(){ try{ sessionStorage.setItem(key(), JSON.stringify({ session:st.session, msgs:st.msgs.slice(-40).map(m => ({ ...m, image:undefined, photo:m.photo || !!m.image })) })); }catch(e){} }
+  function chips(){
+    const p = cur(), list = p ? ['Size milchha?', 'Delivery kati?', 'Order garna chahanchhu'] : ['Ke ke chha?', 'Rs 2000 bhanda kam', 'Delivery kati?'];
+    $('#chatChips').innerHTML = list.map(t => `<button class="chip" type="button">${esc(t)}</button>`).join('');
+    $$('#chatChips .chip').forEach(b => b.onclick = () => send(b.textContent));
+    $('#chatChips').hidden = st.msgs.filter(m => m.role === 'user').length > 0;
+  }
+  function bubble(m){
+    if(m.role === 'user') return `<div class="msg me">${m.photo || m.image ? '<span class="ph">📷 photo</span>' : ''}${esc(m.text || '')}</div>`;
+    let h = `<div class="msg ai${m.typing ? ' typing' : ''}">${esc(m.text || '')}</div>`;
+    if(m.cards && m.cards.length) h += `<div class="ccards">${m.cards.map(c => `<a class="ccard" href="${esc(c.url)}"><img alt="" src="${esc(c.image || '')}" loading="lazy"><span><b>${esc(c.name)}</b><span>${esc(c.code)} · ${npr(c.price)}${c.stock === 0 ? ' · Sold out' : ''}</span></span></a>`).join('')}</div>`;
+    if(m.order) h += `<div class="ocard"><b>✓ Order sent to ${esc(S.shop.name)}</b><span>${esc(m.order.code)} ${esc(m.order.name)}${m.order.size ? ', size ' + esc(m.order.size) : ''} × ${m.order.qty} = ${npr(m.order.total)}</span><span class="small muted">The seller will confirm with you on WhatsApp or phone.</span>${m.seller ? `<a class="btn small wa-btn" href="${esc(m.seller)}" target="_blank" rel="noopener">Also send it on WhatsApp</a>` : ''}</div>`;
+    else if(m.seller) h += `<a class="btn small wa-btn" style="align-self:flex-start" href="${esc(m.seller)}" target="_blank" rel="noopener">💬 Message the seller on WhatsApp</a>`;
+    return h;
+  }
+  function paint(){ const log = $('#chatLog'); log.innerHTML = st.msgs.map(bubble).join('') + (busy ? bubble({ role:'assistant', text:'…', typing:true }) : ''); log.scrollTop = log.scrollHeight; chips(); }
+  function open(){
+    load();
+    if(!st.msgs.length) st.msgs.push({ role:'assistant', text:`Namaste 🙏 Ma ${S.shop.name} ko assistant. Price, size, delivery sodhnus, order pani yahi garna milchha.` });
+    $('#chatH').textContent = 'Ask ' + S.shop.name; $('#chatModal').hidden = false; $('#askFab').hidden = true; paint();
+    setTimeout(() => $('#chatIn').focus(), 60);
+  }
+  async function send(text, image){
+    text = String(text || '').trim(); if((!text && !image) || busy) return;
+    st.msgs.push({ role:'user', text, image }); busy = true; paint(); keep();
+    const msgs = st.msgs.map((m, i) => ({ role:m.role, text:m.text || '', ...(m.image && i === st.msgs.length - 1 ? { image:m.image } : {}) }));
+    let r;
+    try{ r = await Cloud.aiCall('chat', { slug:S.shop.slug || PUB_SLUG, session:st.session, product_code:cur() ? cur().code : '', messages:msgs }); }
+    catch(e){ r = { status:'error', reply:e.code === 'slow_down' ? 'Dherai message bhayo 🙏 Ekchin pachhi feri try garnus, wa seller lai WhatsApp garnus.' : 'Maaf garnus, ahile reply garna sakina 🙏 Seller lai WhatsApp ma sodhnus.', seller:sellerWaLink('Namaste!') }; }
+    busy = false;
+    const last = st.msgs[st.msgs.length - 1]; if(last && last.image){ delete last.image; last.photo = true; }
+    if(r.status === 'ok') st.msgs.push({ role:'assistant', text:r.reply, cards:r.cards, order:r.order, seller:r.order ? r.seller : r.handoff ? r.handoff.seller : null });
+    else if(r.status === 'limit' || r.status === 'off') st.msgs.push({ role:'assistant', text:'Yo kura seller sanga WhatsApp ma sodhnus hai 🙏', seller:r.seller || sellerWaLink('Namaste!') });
+    else st.msgs.push({ role:'assistant', text:r.reply || 'Seller lai WhatsApp ma sodhnus 🙏', seller:r.seller || sellerWaLink('Namaste!') });
+    keep(); paint();
+  }
+  $('#askFab').onclick = open;
+  $('#chatClose').onclick = () => { $('#chatModal').hidden = true; $('#askFab').hidden = !S.shop.aiOn; if(rec) try{ rec.stop(); }catch(e){} };
+  $('#chatForm').onsubmit = e => { e.preventDefault(); const t = $('#chatIn').value; const im = pic; $('#chatIn').value = ''; pic = null; $('#chatPic').hidden = true; send(t, im); };
+  $('#chatFile').onchange = async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if(!f) return;
+    try{ pic = await photoData(f); $('#chatPic img').src = pic; $('#chatPic').hidden = false; if(!$('#chatIn').value) $('#chatIn').value = 'Yo jasto chha?'; }catch(err){ toast('Could not open that photo'); } };
+  $('#chatPicX').onclick = () => { pic = null; $('#chatPic').hidden = true; };
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SR){ $('#chatMic').hidden = false;
+    $('#chatMic').onclick = () => {
+      if(rec){ try{ rec.stop(); }catch(e){} return; }
+      rec = new SR(); rec.lang = 'ne-NP'; rec.interimResults = true; rec.continuous = false;
+      $('#chatMic').textContent = '⏺'; const before = $('#chatIn').value;
+      rec.onresult = ev => { $('#chatIn').value = (before ? before + ' ' : '') + [...ev.results].map(x => x[0].transcript).join(' '); };
+      rec.onend = () => { rec = null; $('#chatMic').textContent = '🎤'; };
+      rec.onerror = () => {};
+      try{ rec.start(); }catch(e){ rec = null; $('#chatMic').textContent = '🎤'; }
+    }; }
+  return { open };
+})();
+
+/* ---- sellers: settings, home card, chats, reply helper ---- */
+async function paintAiSettings(){
+  const show = aiSeller(); $('#aiCard').hidden = !show; if(!show) return;
+  $('#sAiOn').checked = S.shop.aiOn !== false; $('#sAiNotes').value = S.shop.aiNotes || '';
+  try{ const n = await Cloud.aiUsage(); $('#aiUse').textContent = `This month: ${n} customer chat${n === 1 ? '' : 's'} answered.`; }catch(e){ $('#aiUse').textContent = ''; }
+}
+let aiChatsCache = null;
+async function paintAiHome(){
+  const show = aiSeller(); $('#aiHome').hidden = !show; if(!show) return;
+  if(S.shop.aiOn === false){ $('#aiHomeTxt').textContent = 'Off · turn it on in Shop settings'; return; }
+  try{
+    const rows = aiChatsCache = await Cloud.aiChats();
+    const today = rows.filter(r => dayKey(new Date(r.updated_at)) === dayKey(new Date()));
+    const need = rows.filter(r => r.status === 'needs_seller').length, ord = today.filter(r => r.status === 'ordered').length;
+    $('#aiHomeTxt').innerHTML = `Today: ${today.length} chat${today.length === 1 ? '' : 's'} · ${ord} order${ord === 1 ? '' : 's'}${need ? ` · <b style="color:var(--warn)">${need} need you</b>` : ''}`;
+  }catch(e){ $('#aiHomeTxt').textContent = 'Answering customers on your shop'; }
+}
+async function openAiChats(){
+  $('#aiChatsModal').hidden = false; const box = $('#aiChatsBody'); box.innerHTML = '<p class="muted">Loading…</p>';
+  let rows = []; try{ rows = aiChatsCache = await Cloud.aiChats(); }catch(e){ box.innerHTML = '<p>Could not load chats. Run the AI setup in Supabase first.</p>'; return; }
+  if(!rows.length){ box.innerHTML = '<p class="muted">No chats yet. When customers tap 💬 Ask on your shop, they show here.</p>'; return; }
+  const label = { open:'Chat', ordered:'Ordered', needs_seller:'Needs you', done:'Done' };
+  const lastTxt = r => { const m = (r.messages || []).filter(x => x.role === 'user').pop(); return m ? m.text : ''; };
+  box.innerHTML = rows.map(r => `<div class="chatrow" data-chat="${esc(r.id)}"><div class="top"><b>${esc(r.customer || 'Customer')}</b><span class="tag-st ${esc(r.status)}">${label[r.status] || r.status}</span></div>
+    <span class="small">${esc(r.summary || lastTxt(r) || '')}</span><span class="small muted">${ago(new Date(r.updated_at).getTime())}</span></div>`).join('');
+  $$('#aiChatsBody [data-chat]').forEach(el => el.onclick = () => showAiChat(rows.find(r => r.id === el.dataset.chat)));
+}
+function showAiChat(r){
+  const box = $('#aiChatsBody'), ph = r.phone ? String(r.phone).replace(/\D/g, '') : '';
+  box.innerHTML = `<button class="linkbtn" type="button" id="aiBack">‹ All chats</button>
+    ${r.summary ? `<div class="tip"><b>For you:</b> ${esc(r.summary)}</div>` : ''}
+    <div class="chatlog" style="max-height:50vh">${(r.messages || []).map(m => `<div class="msg ${m.role === 'user' ? 'me' : 'ai'}">${m.photo ? '<span class="ph">📷 photo</span>' : ''}${esc(m.text || '')}</div>`).join('')}</div>
+    <div class="row" style="gap:6px">${ph ? `<a class="btn wa-btn" href="https://wa.me/${ph}" target="_blank" rel="noopener">💬 WhatsApp ${esc(r.phone)}</a>` : ''}${r.status !== 'done' ? '<button class="btn" type="button" id="aiDone">Mark done</button>' : ''}</div>
+    ${!ph ? '<p class="small muted">The customer didn’t leave a number. If they message you on WhatsApp, you’ll see it there.</p>' : ''}`;
+  $('#aiBack').onclick = openAiChats;
+  if($('#aiDone')) $('#aiDone').onclick = async () => { await Cloud.aiDone(r.id); r.status = 'done'; toast('Marked done'); openAiChats(); paintAiHome(); };
+}
+let helperPic = null;
+function openHelper(){
+  $('#helperModal').hidden = false; helperPic = null;
+  $('#helperBody').innerHTML = `<p class="small muted">Paste a customer's message from WhatsApp or TikTok, or add a screenshot of the chat. You get a reply to send, and the order if they want to buy.</p>
+    <textarea id="hText" rows="4" placeholder="e.g. dai F12 size 39 chha? Kathmandu delivery kati? Gita 9801234567"></textarea>
+    <div class="row" style="gap:6px;align-items:center"><label class="btn small">📷 Chat screenshot<input type="file" accept="image/*" id="hFile" hidden></label><span class="small muted" id="hPicName"></span></div>
+    <button class="btn primary big" type="button" id="hGo">Write my reply</button><div id="hOut" class="stack"></div>`;
+  $('#hFile').onchange = async e => { const f = e.target.files && e.target.files[0]; if(!f) return; try{ helperPic = await photoData(f); $('#hPicName').textContent = '✓ Screenshot added'; }catch(err){ toast('Could not open that photo'); } };
+  $('#hGo').onclick = runHelper;
+  setTimeout(() => $('#hText').focus(), 60);
+}
+async function runHelper(){
+  const text = $('#hText').value.trim(); if(!text && !helperPic){ toast('Paste the message first'); return; }
+  $('#hGo').disabled = true; $('#hGo').textContent = 'Writing…'; $('#hOut').innerHTML = '';
+  let r; try{ r = await Cloud.aiCall('helper', { text, image:helperPic }, true); }
+  catch(e){ $('#hOut').innerHTML = `<p>${esc(e.message)}</p>`; $('#hGo').disabled = false; $('#hGo').textContent = 'Write my reply'; return; }
+  $('#hGo').disabled = false; $('#hGo').textContent = 'Write again';
+  const o = r.order, p = o && o.product_id ? prodById(o.product_id) : null;
+  $('#hOut').innerHTML = `${r.needs_seller ? `<div class="tip"><b>Check:</b> ${esc(r.needs_seller)}</div>` : ''}
+    <label for="hReply" style="margin:0">Reply</label><textarea id="hReply" rows="4">${esc(r.reply)}</textarea>
+    <div class="row" style="gap:6px"><button class="btn" type="button" id="hCopy">Copy reply</button>${r.wa ? `<a class="btn wa-btn" id="hWa" href="${esc(r.wa)}" target="_blank" rel="noopener">Send on WhatsApp</a>` : ''}</div>
+    ${o ? `<div class="ocard" style="max-width:100%"><b>Order found</b><span>${esc(p ? p.code + ' ' + p.name : o.product_code || 'Product?')}${o.size ? ', size ' + esc(o.size) : ''} × ${+o.quantity || 1}${o.price ? ' = ' + npr(o.price) : ''}</span>
+      <span class="small">${esc(o.customer_name || 'Name?')} · ${esc(o.phone || 'Phone?')} · ${esc(o.address || 'Address?')}</span>
+      ${p ? '<button class="btn small primary" type="button" id="hAdd" style="align-self:flex-start">Add to orders</button>' : '<span class="small muted">Couldn’t tell which product. Add it from Orders.</span>'}</div>` : ''}`;
+  $('#hCopy').onclick = () => copyText($('#hReply').value);
+  if($('#hWa')) $('#hReply').oninput = () => { $('#hWa').href = r.wa.split('?')[0] + '?text=' + encodeURIComponent($('#hReply').value); };
+  if($('#hAdd')) $('#hAdd').onclick = () => {
+    const qty = Math.max(1, +o.quantity || 1);
+    S.orders.push({ id:uid(), productId:p.id, customer:o.customer_name || 'Customer', place:o.address || '-', size:o.size || '-', pay:o.payment || 'COD', price:p.price*qty, delivery:0, status:'new', created:Date.now(), paidAt:null, phone:o.phone || '', qty, source:'helper', note:o.note || '' });
+    save(); toast('Order added ✓'); $('#hAdd').disabled = true; $('#hAdd').textContent = 'Added ✓'; if(curView() === 'orders') render('orders');
+  };
+}
+$('#helperClose').onclick = () => $('#helperModal').hidden = true;
+$('#aiChatsClose').onclick = () => $('#aiChatsModal').hidden = true;
+$('#btnHelper').onclick = openHelper; $('#btnHelper2').onclick = openHelper; $('#btnAiChats').onclick = openAiChats;
 
 /* walltok.com opens on the shops page; sellers coming back from sign-in, TikTok or a reload stay in their app */
 if(!PUB_SLUG){
