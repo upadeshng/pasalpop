@@ -2962,7 +2962,7 @@ $('#btnClearEx').onclick = () => {
 var Cloud = (() => {
   const enabled = !!(CLOUD.url && CLOUD.key && window.supabase && !IN_CLAUDE);
   const sb = enabled ? window.supabase.createClient(CLOUD.url, CLOUD.key) : null;
-  let user = null, shopId = null, busy = false, again = false, timer = null, lastViews = 0, failed = false, noTT = false, firstShop = false;
+  let user = null, shopId = null, authKnown = false, busy = false, again = false, timer = null, lastViews = 0, failed = false, noTT = false, firstShop = false;
   const iso = t => t ? new Date(t).toISOString() : null;
   const ms = t => t ? Date.parse(t) : null;
   const state = txt => { const el = $('#syncState'); if(!el) return; el.hidden = !txt; el.textContent = txt || ''; };
@@ -3299,12 +3299,12 @@ var Cloud = (() => {
     const live = !!shopId;
     $('#inappBar').hidden = !enabled || !IN_APP || !!user;
     $('#inappBarName').textContent = IN_APP === 'another app' ? "another app's browser" : IN_APP;
-    $('#claimCard').hidden = !enabled || live || !!user;
+    $('#claimCard').hidden = !enabled || !authKnown || live || !!user;   /* wait until we know who is here */
     $('#claimUrl').textContent = shopUrl();
-    $('#linkState').textContent = live ? 'Live ✓' : enabled ? 'Not live yet' : '';
+    $('#linkState').textContent = live ? 'Live ✓' : enabled && authKnown && !user ? 'Not live yet' : '';
     $('#slugRow').hidden = !live;
     $('#acctCard').hidden = !enabled;
-    $('#btnClaim2').hidden = live || !!user;
+    $('#btnClaim2').hidden = !authKnown || live || !!user;
     $('#btnSignOut').hidden = !user;
     const verified = S.verifiedWa && S.shop.whatsapp && S.verifiedWa.replace(/\D/g, '') === waNumber();
     $('#waBadge').hidden = !verified;
@@ -3368,6 +3368,7 @@ var Cloud = (() => {
         if(error && (error.status === 401 || error.status === 403 || /not.?found|invalid|expired|does not exist/i.test(error.message || ''))){ await sb.auth.signOut({ scope:'local' }).catch(() => {}); session = null; } }catch(e){}
     }
     /* signed out, but this phone still holds a copy of an online shop: it's safe online, so don't show it as if it lived here */
+    authKnown = true;
     if(!session && cloudCopyOnly()){ try{ localStorage.removeItem(KEY); }catch(e){} location.replace(location.pathname + location.search); return; }
     if(session){
       user = session.user;
