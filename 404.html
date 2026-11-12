@@ -297,10 +297,10 @@ html.noTabs .app{padding-bottom:24px}
   </section>
 
   <!-- HOME -->
-  <section id="view-home" class="stack">
+  <section id="view-home" class="stack" hidden>
     <div>
       <p class="muted small" id="todayLabel">Today</p>
-      <h1>Namaste, <span id="hShop">Sita Fashion</span></h1>
+      <h1>Namaste, <span id="hShop"></span></h1>
     </div>
     <div class="stats">
       <button class="stat" type="button" data-go="orders" data-filter="today"><b id="stSales">रु 0</b><span id="stSalesL">Sales today</span></button>
@@ -619,7 +619,7 @@ html.noTabs .app{padding-bottom:24px}
   <section id="view-shop" class="stack" hidden>
     <code id="shopUrl" hidden></code>
     <div class="shop-head stack">
-      <h1 id="pubName">Sita Fashion</h1>
+      <h1 id="pubName">&nbsp;</h1>
       <p id="pubMeta" style="opacity:.85"></p>
       <div class="chips" id="catChips"></div>
     </div>
@@ -3310,6 +3310,7 @@ var Cloud = (() => {
     const box = $('#pubGrid');
     S = { shop:{ name:'', whatsapp:'', location:'', slug:PUB_SLUG }, products:[], orders:[], sync:{ p:{}, o:{}, shop:'' } };
     ['home','studio','orders','settings','views'].forEach(v => $('#view-' + v).hidden = true);
+    $('#pubName').innerHTML = '&nbsp;'; $('#pubMeta').textContent = ''; $('#catChips').innerHTML = '';
     $('#view-shop').hidden = false;
     if(!enabled){ box.innerHTML = '<p class="pubmsg muted">This shop is not available right now.</p>'; return; }
     box.innerHTML = '<p class="pubmsg muted">Loading shop…</p>';
