@@ -291,6 +291,13 @@ html:not(.public) .askfab{display:none}
 .tag-st{font-size:.72rem;font-weight:800;border-radius:99px;padding:2px 8px;background:var(--line)}
 .tag-st.needs_seller{background:#f6b93b;color:#1b1d3a}.tag-st.ordered{background:var(--good);color:#fff}
 .aihome{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.fmgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fmtile{display:flex;flex-direction:column;gap:6px}
+.fmtile video{width:100%;aspect-ratio:9/16;border-radius:12px;background:#000;object-fit:cover}
+.fmtile .ph{width:100%;aspect-ratio:9/16;border-radius:12px;background:var(--line);display:grid;place-items:center;color:var(--muted);font-size:.85rem;text-align:center;padding:10px}
+.fmtile .row{display:flex;gap:6px}
+.fmtile .row .btn{flex:1}
+.fmtile.posted b::after{content:' · posted ✓';color:var(--good);font-weight:600}
 .pinc{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .pinc code{font-family:inherit;font-weight:700;font-size:.9rem;word-break:break-word}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -356,7 +363,7 @@ html:not(.public) .askfab{display:none}
     <div><h1>New product</h1><p class="muted" id="studioSub">Photo in, TikTok video and caption out.</p></div>
     <div class="seg" id="modeSeg">
       <button type="button" data-mode="photo" aria-pressed="true"><b>From a photo</b><span>Studio scene video</span></button>
-      <button type="button" data-mode="video" aria-pressed="false"><b>From my video</b><span>You holding the product</span></button>
+      <button type="button" data-mode="video" aria-pressed="false"><b>🎬 Film once</b><span>4 videos + photos from one video</span></button>
     </div>
 
     <div class="card stack" id="stepPhoto">
@@ -434,6 +441,18 @@ html:not(.public) .askfab{display:none}
       </div>
     </div>
 
+    <div class="card stack fm" id="fmUpload" hidden>
+      <h3>1. Film your product</h3>
+      <input type="file" id="fmInput" accept="video/*" hidden>
+      <div class="drop" id="fmDrop" role="button" tabindex="0">
+        <p><b>🎥 Record or choose a video</b></p>
+        <p class="muted small">20–40 seconds. Move slowly around the product, then go close to the details. Daylight is best.</p>
+      </div>
+      <div id="fmPrev" class="stack" hidden>
+        <video id="fmVideo" playsinline muted controls preload="metadata"></video>
+        <p class="small" id="fmCheck"></p>
+      </div>
+    </div>
     <div class="card stack">
       <h3 id="detailsH">2. Price and details</h3>
       <div class="grid2">
@@ -470,6 +489,18 @@ html:not(.public) .askfab{display:none}
       </div>
       <p class="small" id="formErr" style="color:var(--warn)" hidden></p>
     </div>
+
+    <!-- Film once, sell forever -->
+    <div class="card stack fm" id="fmResult" hidden>
+      <div class="section-h"><h3>3. Your videos</h3><span class="small muted">Code <span class="code" id="fmCode"></span></span></div>
+      <div id="fmProg" class="stack" style="gap:6px"><div class="progress"><i id="fmBar"></i></div><p class="small muted" id="fmStep"></p></div>
+      <div class="fmgrid" id="fmGrid"></div>
+      <div class="stack" id="fmPhotosBox" hidden style="gap:6px"><b>Photos from your video</b><div class="thumbs" id="fmThumbs"></div></div>
+      <div class="stack" id="fmCapBox" hidden style="gap:6px"><div class="section-h"><label style="margin:0">Caption</label><button class="btn small" type="button" id="fmCopy">Copy</button></div><div class="caption-box" id="fmCap" contenteditable="true"></div></div>
+      <button class="btn primary big" id="fmPublish" type="button" disabled>Add to shop</button>
+      <p class="small muted" id="fmAfter" hidden>The videos stay on the product page, so you can post one each day.</p>
+    </div>
+    <button class="btn primary big fm" id="btnFilm" type="button" hidden>Make my videos</button>
 
     <!-- talking-video mode -->
     <div class="card stack vm" id="vmScript" hidden>
@@ -1151,6 +1182,7 @@ function renderProductPage(p){
         ${!PUB_SLUG ? `<details class="small" id="pTTPaste"><summary>${p.ttUrl ? 'Change the TikTok link' : 'Posted this from the TikTok app? Add the link'}</summary>
           <div class="otp" style="margin-top:6px"><input id="pTTUrl" inputmode="url" placeholder="https://www.tiktok.com/@you/video/…" value="${esc(p.ttUrl || '')}"><button class="btn small" type="button" id="pTTSave">Save</button></div>
           <p class="small muted">Customers see a <b>Watch on TikTok</b> button on this product.${p.ttUrl ? ' Leave it empty and Save to remove it.' : ''}</p></details>` : ''}
+        ${!PUB_SLUG ? '<div class="stack" id="pFilm" hidden style="gap:8px"></div>' : ''}
         <button class="linkbtn" type="button" id="pCopyLink">Share this product ›</button>
       </div>
     </div>
@@ -1161,6 +1193,7 @@ function renderProductPage(p){
   $('#pMore').onclick = () => $('#pBack').click();
   if(PUB_SLUG) $('#pOrder').addEventListener('click', () => { if(window.Cloud) Cloud.recordWaClick(p.id); });
   if($('#pPostTT')){ $('#pPostTT').onclick = () => TT.open(p.id); TT.history(p.id); }
+  if(!PUB_SLUG) paintFilmVideos(p);
   if($('#pTTSave')) $('#pTTSave').onclick = () => {
     const v = $('#pTTUrl').value.trim();
     if(v && !/^https?:\/\/([a-z]+\.)?tiktok\.com\/\S+$/i.test(v)){ toast('Paste a TikTok link, like https://www.tiktok.com/@you/video/123…'); return; }
@@ -2211,11 +2244,11 @@ function templateCaption(info){
     nepali: info.oldPrice ? `🔥 ${info.offer||'अफर'}: ${info.oldPrice} को ${info.price} मात्र (${info.pct}% छुट)!` : `${info.price} मात्र!`,
     english: info.oldPrice ? `🔥 ${info.offer||'Offer'}: was ${info.oldPrice}, now ${info.price} (${info.pct}% off)!` : `Only ${info.price}!` }[info.lang||'roman'];
   const body = {
-    roman: `Naya ${n} aayo ✨ ${deal}\nSizes: ${info.sizes}.${low ? `\nStock ${info.stock} piece matra baki!` : ''}\nOrder: ${shopUrl()}${info.code ? ` → code ${info.code}` : ''} (link in bio) 🛍️`,
-    nepali: `नयाँ ${info.name} आयो ✨ ${deal}\nसाइज: ${info.sizes}।${low ? `\nस्टक ${info.stock} वटा मात्र बाँकी!` : ''}\nअर्डर: ${shopUrl()}${info.code ? ` → कोड ${info.code}` : ''} (बायोको लिङ्क) 🛍️`,
-    english: `New ${n} just in ✨ ${deal}\nSizes: ${info.sizes}.${low ? `\nOnly ${info.stock} left!` : ''}\nOrder: ${shopUrl()}${info.code ? ` → code ${info.code}` : ''} (link in bio) 🛍️`
+    roman: `Naya ${n} aayo ✨ ${deal}\nSizes: ${info.sizes}.${low ? `\nStock ${info.stock} piece matra baki!` : ''}🛍️`,
+    nepali: `नयाँ ${info.name} आयो ✨ ${deal}\nसाइज: ${info.sizes}।${low ? `\nस्टक ${info.stock} वटा मात्र बाँकी!` : ''}🛍️`,
+    english: `New ${n} just in ✨ ${deal}\nSizes: ${info.sizes}.${low ? `\nOnly ${info.stock} left!` : ''}🛍️`
   }[info.lang||'roman'];
-  const codeLine = info.code ? `\n${{roman:'Order', nepali:'अर्डर', english:'Order'}[info.lang||'roman']}: ${productUrl(info)} (${{roman:'code', nepali:'कोड', english:'code'}[info.lang||'roman']} ${info.code})` : '';
+  const codeLine = info.code ? `\n${{roman:'Order', nepali:'अर्डर', english:'Order'}[info.lang||'roman']}: ${productUrl(info)} (${{roman:'code', nepali:'कोड', english:'code'}[info.lang||'roman']} ${info.code}) · ${{roman:'link in bio', nepali:'बायोको लिङ्क', english:'link in bio'}[info.lang||'roman']}` : `\n${shopUrl()}`;
   return body + codeLine + '\n\n' + tags.map(t=>'#'+t.replace(/\s+/g,'')).join(' ');
 }
 async function aiCaption(info, fresh, image){
@@ -2505,10 +2538,11 @@ function setMode(m){
   const photo = m==='photo';
   $('#stepPhoto').hidden = !photo; $('#btnMake').hidden = !photo;
   if(!photo) $('#result').hidden = true;
-  $$('.vm').forEach(el => el.hidden = photo);
-  $('#resultV').hidden = photo || !vState.made;
-  $('#detailsH').textContent = photo ? '2. Price and details' : '1. Price and details';
-  $('#studioSub').textContent = photo ? 'Photo in, TikTok video and caption out.' : 'Your own video, with price stickers, an order card and a caption added.';
+  $$('.vm').forEach(el => el.hidden = true);   /* the older talking-video tools are replaced by Film once */
+  $$('.fm').forEach(el => el.hidden = photo || (el.id === 'fmResult' && !(window.Film && Film.started())));
+  $('#resultV').hidden = true;
+  $('#detailsH').textContent = '2. Price and details';
+  $('#studioSub').textContent = photo ? 'Photo in, TikTok video and caption out.' : 'Film your product once. WallTok makes 4 TikTok videos and product photos from it.';
 }
 $$('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 
@@ -3587,7 +3621,7 @@ var TT = (() => {
     const stalled = () => err || (Date.now() - last > 6000);
     try{
       for(let i = 0; i < n; i++){
-        draw(i / fps);
+        await draw(i / fps);
         const f = new VideoFrame(stage, { timestamp:Math.round(i * 1e6 / fps), duration:Math.round(1e6 / fps) });
         enc.encode(f, { keyFrame:i % 60 === 0 }); f.close();
         while(enc.encodeQueueSize > 6){ if(stalled()) throw err || new Error('encoder stalled'); await new Promise(r => setTimeout(r, 4)); }
@@ -3791,9 +3825,305 @@ var TT = (() => {
   }
   function close(){ $('#ttPost').hidden = true; pid = null; vid = null; busy = false; }
   $('#ttClose').onclick = close;
-  return { open, history, close };
+  return { open, history, close, encodeMp4 };
 })();
 $('#btnSignOut').onclick = () => Cloud.signOut();
+
+/* ================= Film once, sell forever ================= */
+/* the seller films the product once: WallTok finds the best moments, takes product photos with the precise cut-out,
+   lets the AI read the product, and makes 4 different TikTok videos that stay on the product for posting one a day */
+var Film = (() => {
+  const F = { url:null, file:null, an:null, clips:[], shots:[], videos:[], ai:null, info:null, started:false, busy:false };
+  const STYLES = [
+    { id:'offer',  title:'Price first' },
+    { id:'detail', title:'Close-up details' },
+    { id:'hurry',  title:'Quick cuts' },
+    { id:'studio', title:'Studio photos' } ];
+  const seek = (v, t) => new Promise(res => { let done = false; const fin = () => { if(!done){ done = true; v.removeEventListener('seeked', fin); res(); } };
+    v.addEventListener('seeked', fin); v.currentTime = Math.max(0, t); setTimeout(fin, 1500); });
+  async function openVideo(url){
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('This video could not be opened. Try another one (MP4 works best).')); });
+    if(!isFinite(v.duration)){ await seek(v, 1e6); await seek(v, 0); }
+    return v;
+  }
+
+  /* ---- 1. look at the whole video: sharp? steady? bright? ---- */
+  async function analyse(url, onPct){
+    const v = await openVideo(url), dur = v.duration || 1, vw = v.videoWidth || 720, vh = v.videoHeight || 1280;
+    const W = 96, H = Math.max(24, Math.round(96 * vh / vw));
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d', { willReadFrequently:true });
+    const n = Math.min(120, Math.max(8, Math.floor(dur / 0.5))), step = dur / n, out = [];
+    let prev = null;
+    for(let i = 0; i < n; i++){
+      const t = Math.min(dur - 0.05, (i + 0.5) * step); await seek(v, t);
+      g.drawImage(v, 0, 0, W, H); const d = g.getImageData(0, 0, W, H).data, gray = new Float32Array(W*H);
+      let sum = 0; for(let k = 0; k < W*H; k++){ gray[k] = d[k*4]*0.299 + d[k*4+1]*0.587 + d[k*4+2]*0.114; sum += gray[k]; }
+      const mean = sum / (W*H);
+      let ls = 0, ls2 = 0, m = 0;
+      for(let y = 1; y < H-1; y++) for(let x = 1; x < W-1; x++){ const k = y*W+x; const l = 4*gray[k] - gray[k-1] - gray[k+1] - gray[k-W] - gray[k+W]; ls += l; ls2 += l*l; m++; }
+      const sharp = ls2/m - (ls/m)**2;
+      let motion = 0; if(prev){ for(let k = 0; k < W*H; k++) motion += Math.abs(gray[k] - prev[k]); motion /= W*H; }
+      const th = new Float32Array(64); for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){ th[Math.min(7, (y*8/H)|0)*8 + Math.min(7, (x*8/W)|0)] += gray[y*W+x]; }
+      for(let k = 0; k < 64; k++) th[k] /= (W*H/64);
+      out.push({ t, sharp, mean, motion: prev ? motion : null, th }); prev = gray;
+      if(i % 4 === 0) onPct(i / n);
+    }
+    out.forEach((x, i) => { if(x.motion === null) x.motion = out[1] ? out[1].motion : 0; });
+    const maxS = Math.max(1e-6, ...out.map(x => x.sharp)), maxM = Math.max(1e-6, ...out.map(x => x.motion));
+    out.forEach(x => { x.sN = x.sharp / maxS; x.mN = x.motion / maxM; x.score = 0.6*x.sN + 0.4*(1 - x.mN) - (x.mean < 45 || x.mean > 225 ? 0.3 : 0); });
+    return { dur, vw, vh, step, samples:out, maxSharp:maxS, meanBright:out.reduce((a, x) => a + x.mean, 0)/out.length, meanMotion:out.reduce((a, x) => a + x.motion, 0)/out.length };
+  }
+  /* best steady moments, spread over the video */
+  function pickClips(an){
+    const L = Math.max(1.2, Math.min(2.6, an.dur / 6));
+    if(an.dur <= L + 0.3) return [{ start:0, len:Math.max(0.5, an.dur - 0.1) }];
+    const cands = [], med = [...an.samples.map(x => x.sN)].sort((a, b) => a - b)[Math.floor(an.samples.length/2)];
+    for(let s0 = 0; s0 + L <= an.dur - 0.05; s0 += an.step){
+      const inside = an.samples.filter(x => x.t >= s0 - an.step/2 && x.t <= s0 + L + an.step/2); if(!inside.length) continue;
+      if(Math.min(...inside.map(x => x.sN)) < med*0.6) continue;    /* skip blurry moments */
+      if(inside.some(x => x.mean < 30)) continue;                      /* and very dark ones */
+      cands.push({ start:s0, len:L, score:inside.reduce((a, x) => a + x.score, 0) / inside.length - Math.max(...inside.map(x => x.mN)) * 0.15 });
+    }
+    if(!cands.length) for(let s0 = 0; s0 + L <= an.dur - 0.05; s0 += an.step) cands.push({ start:s0, len:L, score:0 });
+    cands.sort((a, b) => b.score - a.score);
+    const chosen = [];
+    for(const c of cands){ if(chosen.length >= 6) break; if(chosen.every(o => c.start >= o.start + o.len + 0.25 || c.start + c.len <= o.start - 0.25)) chosen.push(c); }
+    return chosen.sort((a, b) => a.start - b.start);
+  }
+  /* sharp, steady and different from each other: the product photos */
+  function pickShots(an, n = 4){
+    const order = [...an.samples].sort((a, b) => (b.sN*0.7 + (1-b.mN)*0.3) - (a.sN*0.7 + (a.mN ? 1-a.mN : 1)*0.3));
+    const dist = (a, b) => { let s = 0; for(let k = 0; k < 64; k++) s += Math.abs(a.th[k] - b.th[k]); return s / 64; };
+    const gap = Math.max(0.8, an.dur / 10), out = [], med = [...an.samples.map(x => x.sN)].sort((a, b) => a - b)[Math.floor(an.samples.length/2)];
+    const clear = order.filter(x => x.sN >= med*0.75); if(clear.length >= 2) order.splice(0, order.length, ...clear);
+    for(const relax of [1, 0.5, 0]){
+      for(const x of order){ if(out.length >= n) break; if(out.includes(x)) continue;
+        if(out.every(o => Math.abs(o.t - x.t) >= gap*relax && dist(o, x) >= 10*relax)) out.push(x); }
+      if(out.length >= Math.min(n, 2)) break;
+    }
+    return out.sort((a, b) => a.t - b.t);
+  }
+  function tips(an){
+    const t = [];
+    if(an.meanBright < 70) t.push('A bit dark. Film near a window or in daylight.');
+    if(an.meanMotion > 22) t.push('Quite shaky. Move the phone slowly.');
+    if(an.dur < 8) t.push('Short video. 20–40 seconds gives more variety.');
+    if(an.maxSharp < 60) t.push('Looks blurry. Tap the screen on the product to focus.');
+    return t;
+  }
+  async function grabShots(shots){
+    const v = await openVideo(F.url), files = [], small = [];
+    for(const [i, x] of shots.entries()){
+      await seek(v, x.t);
+      const k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement('canvas');
+      c.width = Math.round(v.videoWidth*k); c.height = Math.round(v.videoHeight*k); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)); files.push(new File([blob], `frame-${i+1}.jpg`, { type:'image/jpeg' }));
+      const k2 = Math.min(1, 512 / Math.max(c.width, c.height)), c2 = document.createElement('canvas'); c2.width = Math.round(c.width*k2); c2.height = Math.round(c.height*k2);
+      c2.getContext('2d').drawImage(c, 0, 0, c2.width, c2.height); small.push(c2.toDataURL('image/jpeg', 0.8));
+    }
+    return { files, small };
+  }
+
+  /* ---- 2. the AI reads the product (falls back to ready-made text) ---- */
+  const HOOKS = {
+    roman:   i => ({ offer:i.oldPrice ? `${i.pct}% off! ${i.price} matra 🔥` : `${i.price} matra! 🔥`, detail:'Close bata hernus 👀', hurry:i.stock > 0 && i.stock <= 5 ? `${i.stock} ota matra baki!` : 'Chhito order garnus!', studio:'Naya aayo ✨' }),
+    nepali:  i => ({ offer:i.oldPrice ? `${i.pct}% छुट! ${i.price} मात्र 🔥` : `${i.price} मात्र! 🔥`, detail:'नजिकबाट हेर्नुहोस् 👀', hurry:i.stock > 0 && i.stock <= 5 ? `${i.stock} वटा मात्र बाँकी!` : 'छिटो अर्डर गर्नुहोस्!', studio:'नयाँ आयो ✨' }),
+    english: i => ({ offer:i.oldPrice ? `${i.pct}% off! Only ${i.price} 🔥` : `Only ${i.price}! 🔥`, detail:'Look closer 👀', hurry:i.stock > 0 && i.stock <= 5 ? `Only ${i.stock} left!` : 'Order today!', studio:'New arrival ✨' }) };
+  async function readProduct(small, info){
+    if(!(window.Cloud && Cloud.enabled && Cloud.signedIn())) return null;
+    try{ return await Cloud.aiCall('film', { frames:small, info:{ price:info.price, oldPrice:info.oldPrice, pct:info.pct, offer:info.offer, sizes:info.sizes, stock:info.stock,
+      name:info.rawName, category:info.category, notes:info.notes, lang:info.lang } }, true); }
+    catch(e){ console.warn('film AI', e); return null; }
+  }
+
+  /* ---- 3. drawing the videos ---- */
+  function hookText(g, text, a){
+    if(!text) return;
+    g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.lineJoin = 'round';
+    let size = 62; const words = text.split(' '); let lines = [text];
+    g.font = `800 ${size}px "Bricolage Grotesque", sans-serif`;
+    if(g.measureText(text).width > 640){ const mid = Math.ceil(words.length/2); lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+      while(size > 34 && Math.max(...lines.map(l => g.measureText(l).width)) > 640){ size -= 4; g.font = `800 ${size}px "Bricolage Grotesque", sans-serif`; } }
+    lines.forEach((l, i) => { const y = 250 + i*(size + 10) + (1-a)*-20; g.lineWidth = 10; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(l, 360, y); g.fillStyle = '#ffffff'; g.fillText(l, 360, y); });
+    g.restore();
+  }
+  const ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+  function plan(style){
+    const c = F.clips.length ? F.clips : [{ start:0, len:Math.min(2, F.an.dur) }];
+    const take = (n, dur, rate, z0, z1) => { const out = []; for(let i = 0; i < n; i++){ const k = c[i % c.length], need = dur*rate;
+      const from = k.start + Math.max(0, (k.len - need)/2); out.push({ from, dur, rate:Math.min(rate, Math.max(0.2, k.len/dur)), z0, z1, i }); } return out; };
+    if(style === 'offer') return take(Math.min(4, Math.max(3, c.length)), 1.8, 1, 1.0, 1.06);
+    if(style === 'detail') return take(Math.min(3, Math.max(2, c.length)), 2.4, 0.75, 1.04, 1.16);
+    return take(6, 1.0, 1, 1.08, 1.0);
+  }
+  async function renderClips(style, info, ai, onPct){
+    const v = await openVideo(F.url), stage = document.createElement('canvas'); stage.width = 720; stage.height = 1280;
+    const g = stage.getContext('2d'), small = document.createElement('canvas'); small.width = 36; small.height = 64;
+    const segs = plan(style), body = segs.reduce((a, s) => a + s.dur, 0), total = body + 2.2;
+    const feats = (ai && ai.features && ai.features.length ? ai.features : [info.notes, info.sizes ? 'Sizes ' + info.sizes : '', info.offer].filter(Boolean)).slice(0, 3);
+    const hook = (ai && ai.hooks && ai.hooks[style]) || HOOKS[info.lang || 'roman'](info)[style];
+    let last = -1;
+    const draw = async t => {
+      let acc = 0, seg = segs[segs.length - 1], local = seg.dur - 0.001;
+      for(const s of segs){ if(t < acc + s.dur){ seg = s; local = t - acc; break; } acc += s.dur; }
+      const src = Math.min(F.an.dur - 0.04, seg.from + local*seg.rate);
+      if(Math.abs(src - last) > 0.0005){ await seek(v, src); last = src; }
+      const z = seg.z0 + (seg.z1 - seg.z0) * (local / seg.dur);
+      g.save(); g.translate(360, 640); g.scale(z, z); g.translate(-360, -640); drawSource(g, v, small, true); g.restore();
+      if(t > body) { endCard(g, t, info, total); return; }
+      hookText(g, hook, ease(t/0.3) * (1 - ease((t - 2.4)/0.3)));
+      if(style === 'offer'){
+        const p = ease((t - 0.5)/0.35); if(p > 0 && info.price){ g.save(); g.globalAlpha = p; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 18; pricePill(g, 32 + (1-p)*-40, 846, 96, info); g.restore(); }
+        const ol = offerLabel(info); if(ol && p > 0){ g.save(); g.globalAlpha = p; pill(g, 32, 780, 54, ol, '700 28px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff'); g.restore(); }
+        const q = ease((t - 1.0)/0.35); if(q > 0){ g.save(); g.globalAlpha = q; pill(g, 32, 954, 54, infoLine(info), '600 28px Hind, sans-serif', 'rgba(27,29,58,.88)', '#ffffff'); g.restore(); }
+      } else if(style === 'detail'){
+        const f = feats[seg.i % Math.max(1, feats.length)], a = ease(local/0.3) * (1 - ease((local - seg.dur + 0.25)/0.25));
+        if(f && t > 0.6){ g.save(); g.globalAlpha = a; g.shadowColor = 'rgba(0,0,0,.3)'; g.shadowBlur = 14; pill(g, 360, 900 + (1-a)*16, 66, f, '700 34px "Bricolage Grotesque", sans-serif', 'rgba(255,255,255,.94)', '#1b1d3a', 'center'); g.restore(); }
+        if(seg === segs[segs.length - 1] && info.price){ const p = ease((local - 0.2)/0.35); g.save(); g.globalAlpha = p; pricePill(g, 360, 1000, 90, info, 'center'); g.restore(); }
+      } else {
+        const beat = 1 + 0.06*Math.max(0, Math.sin(t*Math.PI*2));
+        if(info.price){ g.save(); g.translate(360, 900); g.scale(beat, beat); g.translate(-360, -900); pricePill(g, 360, 852, 96, info, 'center'); g.restore(); }
+        const urgent = info.stock > 0 && info.stock <= 5 ? (info.lang === 'english' ? `Only ${info.stock} left!` : info.lang === 'nepali' ? `${info.stock} वटा मात्र बाँकी!` : `${info.stock} ota matra baki!`) : (offerLabel(info) || '');
+        if(urgent && t > 0.4) pill(g, 360, 770, 58, urgent, '800 30px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff', 'center');
+      }
+    };
+    try{ return await TT.encodeMp4(stage, draw, total, onPct, 'no-preference'); }
+    catch(e){ last = -1; return await TT.encodeMp4(stage, draw, total, onPct, 'prefer-software'); }
+  }
+  async function renderStudio(info, ai, onPct){
+    const comps = photos.map((_, i) => withPhoto(i, composeVertical));
+    const stage = document.createElement('canvas'); stage.width = 720; stage.height = 1280; const g = stage.getContext('2d');
+    const secs = Math.max(8, comps.length*2.2 + 2.2), hook = (ai && ai.hooks && ai.hooks.studio) || HOOKS[info.lang || 'roman'](info).studio;
+    const draw = t => drawFrame(g, t, comps, info, secs);   /* this style already shows the name up top; its hook goes in the caption */
+    try{ return await TT.encodeMp4(stage, draw, secs, onPct, 'no-preference'); }
+    catch(e){ return await TT.encodeMp4(stage, draw, secs, onPct, 'prefer-software'); }
+  }
+
+  /* ---- screens ---- */
+  const step = (txt, pct) => { $('#fmStep').textContent = txt; if(pct !== undefined) $('#fmBar').style.width = Math.round(pct*100) + '%'; };
+  function tile(i){
+    const st = STYLES[i], v = F.videos[i];
+    return `<div class="fmtile" data-fi="${i}">${v ? `<video src="${v.url}#t=0.6" muted loop playsinline controls preload="auto"></video>` : `<div class="ph">${F.busy ? 'Making…' : 'Could not make this one'}</div>`}
+      <b>${i+1}. ${esc(st.title)}</b>${v ? `<div class="row"><button class="btn small" type="button" data-fsave="${i}">Save</button>${navigator.canShare ? `<button class="btn small" type="button" data-fshare="${i}">Share</button>` : ''}</div>` : ''}</div>`;
+  }
+  function paintGrid(){ $('#fmGrid').innerHTML = STYLES.map((_, i) => tile(i)).join(''); }
+  const capFor = i => { const v = F.videos[i]; return v ? v.caption : $('#fmCap').innerText; };
+  async function load(file){
+    if(!file || !file.type.startsWith('video/')){ toast('Please choose a video'); return; }
+    if(F.url) URL.revokeObjectURL(F.url);
+    F.file = file; F.url = URL.createObjectURL(file); F.an = null;
+    $('#fmVideo').src = F.url; $('#fmPrev').hidden = false; $('#fmDrop').querySelector('b').textContent = 'Change video';
+    $('#fmCheck').textContent = 'Checking your video…';
+    try{
+      F.an = await analyse(F.url, () => {});
+      F.clips = pickClips(F.an); F.shots = pickShots(F.an);
+      const t = tips(F.an);
+      $('#fmCheck').innerHTML = t.length ? '💡 ' + t.map(esc).join(' ') + ' <span class="muted">You can still go ahead.</span>' : `<span style="color:var(--good)">✓ Good video: ${F.clips.length} clear moments and ${F.shots.length} photos found.</span>`;
+    }catch(e){ $('#fmCheck').textContent = e.message || 'Could not read this video.'; F.an = null; }
+  }
+  async function make(){
+    const f = readForm(), err = $('#formErr'), problems = [];
+    if(!F.an) problems.push('add your video'); if(!(f.price > 0)) problems.push('enter a price'); if(!draft.sizes.length) problems.push('pick at least one size');
+    if(problems.length){ err.textContent = 'Please ' + problems.join(', ') + '.'; err.hidden = false; return; }
+    err.hidden = true; F.busy = true; F.started = true; F.videos = []; $('#btnFilm').disabled = true; $('#fmPublish').disabled = true; $('#fmAfter').hidden = true;
+    $('#fmResult').hidden = false; $('#fmProg').hidden = false; paintGrid(); $('#fmResult').scrollIntoView({ behavior:'smooth', block:'start' });
+    try{
+      step('Taking product photos from your video…', 0.04);
+      const { files, small } = await grabShots(F.shots);
+      resetPhotos(); draft.removeBg = true; await loadFiles(files);
+      const info = { shop:S.shop.name, loc:S.shop.location, price:npr(f.price), sizes:draft.sizes.join(', '), category:f.category, rawName:f.rawName, notes:f.notes, name:f.rawName || f.category, code:nextCode(f.category), ...offerInfo(f) };
+      step('AI is looking at your product…', 0.1);
+      const ai = F.ai = await readProduct(small, info);
+      if(ai){
+        if(!f.rawName && ai.name){ $('#fName').value = ai.name; info.name = info.rawName = ai.name; }
+        if(ai.category && !f.rawName && ai.category !== f.category){ $('#fCat').value = ai.category; info.category = ai.category; info.code = nextCode(ai.category); }
+        if(!f.notes && ai.details){ $('#fNotes').value = ai.details; info.notes = ai.details; }
+        if(ai.quality) $('#fmCheck').innerHTML = '💡 ' + esc(ai.quality);
+      }
+      F.info = info; $('#fmCode').textContent = info.code;
+      await document.fonts.ready.catch(() => {});
+      for(let i = 0; i < STYLES.length; i++){
+        const st = STYLES[i], base = 0.14 + i*0.215;
+        if(st.id === 'studio' && segBusy){ step('Finishing the precise cut-out…', base); await Promise.race([segQ, new Promise(r => setTimeout(r, 60000))]); }
+        step(`Making video ${i+1} of 4: ${st.title}…`, base);
+        try{
+          const blob = st.id === 'studio' ? await renderStudio(info, ai, p => step(`Making video ${i+1} of 4: ${st.title}… ${Math.round(p*100)}%`, base + p*0.2))
+                                         : await renderClips(st.id, info, ai, p => step(`Making video ${i+1} of 4: ${st.title}… ${Math.round(p*100)}%`, base + p*0.2));
+          const hook = (ai && ai.hooks && ai.hooks[st.id]) || HOOKS[info.lang || 'roman'](info)[st.id];
+          F.videos[i] = { style:st.id, title:st.title, blob, url:URL.createObjectURL(blob), caption:hook + '\n' + templateCaption(info) };
+        }catch(e){ console.warn('film video', st.id, e); F.videos[i] = null; }
+        paintGrid();
+      }
+      const okN = F.videos.filter(Boolean).length;
+      if(!okN) throw new Error('This phone could not make videos here. Try Chrome on Android or a computer.');
+      $('#fmCap').innerText = F.videos.find(Boolean).caption; $('#fmCapBox').hidden = false;
+      $('#fmThumbs').innerHTML = photos.map((_, i) => `<img alt="Photo ${i+1}" src="${withPhoto(i, () => enhanced(240).toDataURL('image/jpeg', .8))}" style="width:72px;height:72px;object-fit:cover;border-radius:10px">`).join('');
+      $('#fmPhotosBox').hidden = !photos.length;
+      step(`✓ ${okN} videos ready. Post one today, the next one tomorrow.`, 1);
+      $('#fmPublish').disabled = false;
+    }catch(e){ step(e.message || 'Something went wrong. Try again.'); }
+    F.busy = false; $('#btnFilm').disabled = false; $('#btnFilm').textContent = 'Make again';
+  }
+  /* add the product with the video photos, and keep the videos on this phone for later posting */
+  async function publish(){
+    if(!photos.length || !F.info){ toast('Make the videos first'); return; }
+    draft.img = 'film'; lastInfo = F.info; $('#captionOut').innerText = $('#fmCap').innerText;
+    const before = S.products.length;
+    $('#btnPublish').onclick();
+    const p = S.products[S.products.length - 1]; if(S.products.length === before || !p) return;
+    let kept = 0; for(const v of F.videos){ if(v && await FilmStore.put(p.id, v)) kept++; }
+    F.videos = []; F.started = false; F.an = null; $('#fmResult').hidden = true; $('#fmPrev').hidden = true; $('#fmGrid').innerHTML = '';
+    $('#fmDrop').querySelector('b').textContent = '🎥 Record or choose a video'; $('#btnFilm').textContent = 'Make my videos';
+    openProduct(p.id, false);
+    toast(kept ? `Added to your shop ✓ ${kept} videos kept on this product` : 'Added to your shop ✓');
+  }
+  $('#fmDrop').onclick = () => $('#fmInput').click();
+  $('#fmDrop').onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#fmInput').click(); } };
+  $('#fmInput').onchange = () => { const f = $('#fmInput').files[0]; $('#fmInput').value = ''; load(f); };
+  $('#btnFilm').onclick = make;
+  $('#fmPublish').onclick = publish;
+  $('#fmCopy').onclick = () => copyText($('#fmCap').innerText);
+  $('#fmGrid').addEventListener('click', async e => {
+    const sv = e.target.closest('[data-fsave]'), sh = e.target.closest('[data-fshare]');
+    const idx = sv ? +sv.dataset.fsave : sh ? +sh.dataset.fshare : -1; if(idx < 0) return;
+    const v = F.videos[idx]; if(!v) return; const name = `${slugify(S.shop.name)}-${slugify(F.info.name || 'product')}-${idx+1}.mp4`;
+    if(sv){ copyText(v.caption); await saveFile(name, v.blob, 'Video saved and caption copied. Now open TikTok.'); }
+    else shareTo([new File([v.blob], name, { type:'video/mp4' })], v.caption, () => {});
+  });
+  return { started:() => F.started, load, make, state:F };
+})();
+
+/* the videos stay on this phone, so a seller can post one a day */
+var FilmStore = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => { try{ const r = indexedDB.open('walltok-films', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('videos', { keyPath:'key' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }catch(e){ rej(e); } }));
+  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction('videos', mode), st = t.objectStore('videos'); const out = fn(st); t.oncomplete = () => res(out && out.result !== undefined ? out.result : out); t.onerror = () => rej(t.error); }); };
+  async function put(pid, v){ try{ await tx('readwrite', st => st.put({ key:pid + ':' + v.style, pid, style:v.style, title:v.title, blob:v.blob, caption:v.caption, created:Date.now(), posted:false })); return true; }catch(e){ console.warn(e); return false; } }
+  async function list(pid){ try{ const db = await open(); return await new Promise(res => { const out = []; const t = db.transaction('videos'); t.objectStore('videos').openCursor().onsuccess = e => { const c = e.target.result; if(c){ if(c.value.pid === pid) out.push(c.value); c.continue(); } else res(out); }; t.onerror = () => res([]); }); }catch(e){ return []; } }
+  async function mark(key){ try{ const db = await open(); await new Promise(res => { const t = db.transaction('videos', 'readwrite'), st = t.objectStore('videos'); const g = st.get(key); g.onsuccess = () => { if(g.result){ g.result.posted = true; st.put(g.result); } }; t.oncomplete = res; t.onerror = res; }); }catch(e){} }
+  return { put, list, mark };
+})();
+const FILM_ORDER = ['offer', 'detail', 'hurry', 'studio'];
+async function paintFilmVideos(p){
+  const box = $('#pFilm'); if(!box) return;
+  const vids = (await FilmStore.list(p.id)).sort((a, b) => FILM_ORDER.indexOf(a.style) - FILM_ORDER.indexOf(b.style));
+  if(!vids.length || !$('#pFilm')){ if(box) box.hidden = true; return; }
+  const next = vids.find(v => !v.posted);
+  box.hidden = false;
+  box.innerHTML = `<div class="section-h"><b>🎬 Your videos</b><span class="small muted">${next ? 'Post one a day' : 'All posted ✓'}</span></div>
+    <div class="fmgrid">${vids.map(v => `<div class="fmtile${v.posted ? ' posted' : ''}"><video src="${URL.createObjectURL(v.blob)}#t=0.6" muted loop playsinline controls preload="auto"></video><b>${esc(v.title)}</b>
+      <div class="row"><button class="btn small${v === next ? ' primary' : ''}" type="button" data-pvsave="${esc(v.key)}">Save</button>${navigator.canShare ? `<button class="btn small" type="button" data-pvshare="${esc(v.key)}">Share</button>` : ''}</div></div>`).join('')}</div>`;
+  box.onclick = async e => {
+    const b = e.target.closest('[data-pvsave],[data-pvshare]'); if(!b) return;
+    const key = b.dataset.pvsave || b.dataset.pvshare, v = vids.find(x => x.key === key); if(!v) return;
+    const name = `${slugify(S.shop.name)}-${slugify(p.name)}-${v.style}.mp4`;
+    if(b.dataset.pvsave){ copyText(v.caption); await saveFile(name, v.blob, 'Video saved and caption copied. Now open TikTok.'); }
+    else await shareTo([new File([v.blob], name, { type:'video/mp4' })], v.caption, () => {});
+    await FilmStore.mark(key); paintFilmVideos(p);
+  };
+}
 
 /* ================= AI assistant ================= */
 const aiSeller = () => !!(window.Cloud && Cloud.enabled && Cloud.signedIn() && Cloud.aiReady());
