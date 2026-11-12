@@ -3278,6 +3278,11 @@ var Cloud = (() => {
     if(firstShop) { go('settings'); toast('Welcome! Give your shop its name.'); }
     else { toast('Signed in with WhatsApp ✓'); render(curView()); }
   }
+  function cloudCopyOnly(){
+    const sy = S.sync || {}, sp = sy.p || {}, so = sy.o || {};
+    if(!Object.keys(sp).length && !Object.keys(so).length && !sy.shop) return false;
+    return !S.products.some(p => !p.example && !sp[p.id]) && !S.orders.some(o => !o.example && !so[o.id]);
+  }
   async function signOut(){
     await sb.auth.signOut();
     try{ localStorage.removeItem(KEY); }catch(e){}
@@ -3349,8 +3354,16 @@ var Cloud = (() => {
     if(!enabled) return;
     addEventListener('online', () => push());
     const { data } = await sb.auth.getSession();
-    if(data && data.session){
-      user = data.session.user;
+    let session = data && data.session;
+    /* the account was removed or the sign-in ran out: sign out on this phone too */
+    if(session && navigator.onLine && sb.auth.getUser){
+      try{ const { error } = await sb.auth.getUser();
+        if(error && (error.status === 401 || error.status === 403 || /not.?found|invalid|expired|does not exist/i.test(error.message || ''))){ await sb.auth.signOut({ scope:'local' }).catch(() => {}); session = null; } }catch(e){}
+    }
+    /* signed out, but this phone still holds a copy of an online shop: it's safe online, so don't show it as if it lived here */
+    if(!session && cloudCopyOnly()){ try{ localStorage.removeItem(KEY); }catch(e){} location.replace(location.pathname + location.search); return; }
+    if(session){
+      user = session.user;
       state('Loading…');
       try{ await afterLogin(); state('Saved ✓'); }
       catch(e){ console.warn(e); state('Offline · saved on this phone'); toast('Could not reach your online shop. Working on this phone for now.'); }
