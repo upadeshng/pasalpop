@@ -3278,6 +3278,12 @@ var Cloud = (() => {
     if(firstShop) { go('settings'); toast('Welcome! Give your shop its name.'); }
     else { toast('Signed in with WhatsApp ✓'); render(curView()); }
   }
+  /* on customer pages: one small way in for sellers ("My shop" when already signed in) */
+  async function sellerDoor(){
+    const b = $('#btnSell'); let signed = false;
+    try{ const { data } = await sb.auth.getSession(); signed = !!(data && data.session); }catch(e){}
+    b.textContent = signed ? 'My shop' : 'Sell on WallTok'; b.href = signed ? '/?app=1' : '/?sell=1'; b.onclick = null; b.hidden = false;
+  }
   function cloudCopyOnly(){
     const sy = S.sync || {}, sp = sy.p || {}, so = sy.o || {};
     if(!Object.keys(sp).length && !Object.keys(so).length && !sy.shop) return false;
@@ -3323,6 +3329,7 @@ var Cloud = (() => {
     if(!shop){ showMissing(PUB_SLUG); return; }
     const { data:rows } = await fetchAll(() => sb.from('products').select('*').eq('shop_id', shop.id));
     S.shop = { name:shop.name, whatsapp:shop.whatsapp, location:shop.location, slug:shop.slug };
+    sellerDoor();
     S.products = (rows || []).map(prodLocal);
     document.title = `${shop.name} · ${DOMAIN}`;
     const hit = PUB_CODE && S.products.find(p => (p.code || '').toLowerCase() === PUB_CODE);
@@ -3372,6 +3379,8 @@ var Cloud = (() => {
     }
     const cur = curView();
     chrome(cur); render(cur);
+    /* came from "Sell on WallTok" on a shop page */
+    if(QS.has('sell')){ history.replaceState(null, '', location.pathname); if(user) go('home'); else signIn(true); }
     /* tapped the sign-in link in WallTok's WhatsApp reply */
     const wl = QS.get('walogin');
     if(wl){
