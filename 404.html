@@ -292,6 +292,7 @@ html:not(.public) .askfab{display:none}
 .tag-st.needs_seller{background:#f6b93b;color:#1b1d3a}.tag-st.ordered{background:var(--good);color:#fff}
 .aihome{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .fmgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#fmGrid{grid-template-columns:1fr;max-width:320px;margin:0 auto;width:100%}
 .fmtile{display:flex;flex-direction:column;gap:6px}
 .fmtile video{width:100%;aspect-ratio:9/16;border-radius:12px;background:#000;object-fit:cover}
 .fmtile .ph{width:100%;aspect-ratio:9/16;border-radius:12px;background:var(--line);display:grid;place-items:center;color:var(--muted);font-size:.85rem;text-align:center;padding:10px}
@@ -363,7 +364,7 @@ html:not(.public) .askfab{display:none}
     <div><h1>New product</h1><p class="muted" id="studioSub">Photo in, TikTok video and caption out.</p></div>
     <div class="seg" id="modeSeg">
       <button type="button" data-mode="photo" aria-pressed="true"><b>From a photo</b><span>Studio scene video</span></button>
-      <button type="button" data-mode="video" aria-pressed="false"><b>🎬 Film once</b><span>4 videos + photos from one video</span></button>
+      <button type="button" data-mode="video" aria-pressed="false"><b>🎬 Film once</b><span>A ready-to-post video + photos</span></button>
     </div>
 
     <div class="card stack" id="stepPhoto">
@@ -492,15 +493,15 @@ html:not(.public) .askfab{display:none}
 
     <!-- Film once, sell forever -->
     <div class="card stack fm" id="fmResult" hidden>
-      <div class="section-h"><h3>3. Your videos</h3><span class="small muted">Code <span class="code" id="fmCode"></span></span></div>
+      <div class="section-h"><h3>3. Your video</h3><span class="small muted">Code <span class="code" id="fmCode"></span></span></div>
       <div id="fmProg" class="stack" style="gap:6px"><div class="progress"><i id="fmBar"></i></div><p class="small muted" id="fmStep"></p></div>
       <div class="fmgrid" id="fmGrid"></div>
       <div class="stack" id="fmPhotosBox" hidden style="gap:6px"><b>Photos from your video</b><div class="thumbs" id="fmThumbs"></div></div>
       <div class="stack" id="fmCapBox" hidden style="gap:6px"><div class="section-h"><label style="margin:0">Caption</label><button class="btn small" type="button" id="fmCopy">Copy</button></div><div class="caption-box" id="fmCap" contenteditable="true"></div></div>
       <button class="btn primary big" id="fmPublish" type="button" disabled>Add to shop</button>
-      <p class="small muted" id="fmAfter" hidden>The videos stay on the product page, so you can post one each day.</p>
+      <p class="small muted" id="fmAfter" hidden>The video stays on the product page, so you can post it again later.</p>
     </div>
-    <button class="btn primary big fm" id="btnFilm" type="button" hidden>Make my videos</button>
+    <button class="btn primary big fm" id="btnFilm" type="button" hidden>Make my video</button>
 
     <!-- talking-video mode -->
     <div class="card stack vm" id="vmScript" hidden>
@@ -3851,11 +3852,7 @@ $('#btnSignOut').onclick = () => Cloud.signOut();
    lets the AI read the product, and makes 4 different TikTok videos that stay on the product for posting one a day */
 var Film = (() => {
   const F = { url:null, file:null, an:null, clips:[], shots:[], videos:[], ai:null, info:null, started:false, busy:false };
-  const STYLES = [
-    { id:'offer',  title:'Price first' },
-    { id:'detail', title:'Close-up details' },
-    { id:'hurry',  title:'Quick cuts' },
-    { id:'studio', title:'Studio photos' } ];
+  const STYLES = [ { id:'premium', title:'Your video' } ];
   const seek = (v, t) => new Promise(res => { let done = false; const fin = () => { if(!done){ done = true; v.removeEventListener('seeked', fin); res(); } };
     v.addEventListener('seeked', fin); v.currentTime = Math.max(0, t); setTimeout(fin, 1500); });
   /* iPhones only load a video's pictures after it starts playing, so we start it (muted, hidden) for a moment */
@@ -4032,18 +4029,192 @@ var Film = (() => {
       }
     };
   }
+  /* ---- one premium video: graded clips, soft cross-fades, clean titles, a studio shot with the price, then how to order ---- */
+  const KICK = { roman:'NAYA AAYO', nepali:'नयाँ आयो', english:'NEW ARRIVAL' };
+  function wrapText(g, text, maxW, maxLines){
+    const words = String(text || '').split(/\s+/).filter(Boolean), lines = []; let cur = '';
+    for(const w of words){ const t = cur ? cur + ' ' + w : w; if(g.measureText(t).width > maxW && cur){ lines.push(cur); cur = w; } else cur = t; }
+    if(cur) lines.push(cur);
+    if(lines.length > maxLines){ const keep = lines.slice(0, maxLines); keep[maxLines-1] += '…'; return keep; }
+    return lines;
+  }
+  const spaced = (g, px) => { try{ g.letterSpacing = px + 'px'; }catch(e){} };
+  function premiumPlan(){
+    const c = F.clips.length ? F.clips : [{ start:0, len:Math.max(0.6, F.an.dur - 0.1) }];
+    const durs = [2.6, 2.1, 2.1, 2.1], segs = [];
+    for(let i = 0; i < 4; i++){
+      const k = c[i % c.length], dur = durs[i], want = dur * 0.85;            /* a touch of slow motion feels calm and premium */
+      const rate = Math.min(0.85, Math.max(0.25, k.len / dur)), need = dur * rate;
+      /* if a clip is reused, take a different part of it */
+      const off = c.length < 4 && i >= c.length ? Math.max(0, k.len - need) : Math.max(0, (k.len - need) / 2);
+      segs.push({ from:Math.min(k.start + off, Math.max(0, F.an.dur - need - 0.05)), dur, rate, i });
+      if(c.length === 1 && i === 1) break;   /* a very short video: two shots are enough */
+    }
+    return segs;
+  }
+  function gradeOver(g){
+    const W = 720, H = 1280;
+    g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = 'rgba(255,190,120,.16)'; g.fillRect(0, 0, W, H); g.restore();
+    const vg = g.createRadialGradient(W/2, H*0.45, H*0.25, W/2, H*0.5, H*0.78); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.42)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  }
+  function scrim(g, a){
+    const gr = g.createLinearGradient(0, 760, 0, 1280); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(0,0,0,${0.62*a})`);
+    g.fillStyle = gr; g.fillRect(0, 760, 720, 520);
+    const top = g.createLinearGradient(0, 0, 0, 220); top.addColorStop(0, `rgba(0,0,0,${0.35*a})`); top.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = top; g.fillRect(0, 0, 720, 220);
+  }
+  function brand(g, info, a){
+    if(!info.shop || a <= 0) return;
+    g.save(); g.globalAlpha = a; g.textAlign = 'left'; g.font = '700 26px "Bricolage Grotesque", sans-serif'; spaced(g, 1);
+    g.fillStyle = 'rgba(255,255,255,.92)'; g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 10; g.fillText(info.shop, 44, 92);
+    g.fillStyle = '#e8b04b'; g.fillRect(44, 106, 36, 3); g.restore();
+  }
+  function heroAssets(){
+    let cutCv = null, photo = null;
+    if(photos[0]) withPhoto(0, () => {
+      photo = srcImage;
+      if(draft.removeBg && cut){ const k = Math.min(1, 1400 / Math.max(cut.w, cut.h)); cutCv = document.createElement('canvas'); cutCv.width = Math.round(cut.w*k); cutCv.height = Math.round(cut.h*k);
+        const s = photoTilt; photoTilt = 0; drawCut(cutCv.getContext('2d'), 0, 0, cutCv.width, cutCv.height); photoTilt = s; }
+    });
+    return { cutCv, photo };
+  }
+  function drawHero(g, lt, dur, info, ha, sizes){
+    const W = 720, H = 1280, p = lt / dur;
+    const bg = g.createRadialGradient(W/2, 560, 40, W/2, 640, 900); bg.addColorStop(0, '#3a3550'); bg.addColorStop(0.55, '#1d1b2c'); bg.addColorStop(1, '#0d0c15');
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    const glow = g.createRadialGradient(W/2, 600, 10, W/2, 600, 380); glow.addColorStop(0, 'rgba(232,176,75,.22)'); glow.addColorStop(1, 'rgba(232,176,75,0)');
+    g.fillStyle = glow; g.fillRect(0, 0, W, H);
+    const z = 0.94 + 0.08*ease(p*1.2), rise = (1 - ease(lt/0.7)) * 40;
+    if(ha.cutCv){
+      const c = ha.cutCv, s = Math.min(560/c.width, 600/c.height) * z, dw = c.width*s, dh = c.height*s, base = 900 + rise;
+      g.save(); g.fillStyle = 'rgba(0,0,0,.45)'; g.filter = 'blur(18px)'; g.beginPath(); g.ellipse(W/2, base, dw*0.42, 22, 0, 0, Math.PI*2); g.fill(); g.restore();
+      g.drawImage(c, (W - dw)/2, base - dh, dw, dh);
+    } else if(ha.photo){
+      const im = ha.photo, bw = 520*z, bh = 640*z, s = Math.max(bw/im.width, bh/im.height), x = (W-bw)/2, y = 250 + rise;
+      g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 40; g.shadowOffsetY = 20; roundRect(g, x, y, bw, bh, 28); g.fillStyle = '#000'; g.fill(); g.restore();
+      g.save(); roundRect(g, x, y, bw, bh, 28); g.clip(); g.drawImage(im, x + (bw - im.width*s)/2, y + (bh - im.height*s)/2, im.width*s, im.height*s); g.restore();
+    }
+    const a1 = ease((lt - 0.35)/0.45), a2 = ease((lt - 0.7)/0.45);
+    g.textAlign = 'center';
+    if(info.name){ g.save(); g.globalAlpha = a1; g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '600 30px "Bricolage Grotesque", sans-serif'; spaced(g, 0.5);
+      wrapText(g, info.name, 600, 1).forEach(l => g.fillText(l, W/2, 190 + (1-a1)*14)); g.restore(); }
+    if(info.price){
+      g.save(); g.globalAlpha = a2; const y = 1040 + (1-a2)*20;
+      g.font = '800 92px "Bricolage Grotesque", sans-serif'; g.fillStyle = '#ffffff'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 20; g.fillText(info.price, W/2, y); g.shadowBlur = 0;
+      if(info.oldPrice){ g.font = '500 34px Hind, sans-serif'; g.fillStyle = 'rgba(255,255,255,.55)'; const w = g.measureText(info.oldPrice).width; g.fillText(info.oldPrice, W/2, y - 96); g.fillRect(W/2 - w/2 - 4, y - 108, w + 8, 3);
+        if(info.pct >= 1) pill(g, W/2, y + 26, 50, `${info.pct}% OFF`, '800 26px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff', 'center'); }
+      g.restore();
+    }
+    if(sizes.length){
+      const a3 = ease((lt - 1.0)/0.45); g.save(); g.globalAlpha = a3; g.font = '700 26px "Bricolage Grotesque", sans-serif';
+      const pads = sizes.map(s => g.measureText(s).width + 36), gap = 10, tot = pads.reduce((a, b) => a + b, 0) + gap*(sizes.length - 1);
+      let x = (W - tot)/2; const y = (info.oldPrice && info.pct >= 1) ? 1150 : 1100;
+      sizes.forEach((s, i) => { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2; roundRect(g, x, y, pads[i], 48, 24); g.stroke(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(s, x + pads[i]/2, y + 33); x += pads[i] + gap; });
+      g.restore();
+    }
+  }
+  async function renderPremium(info, ai, onPct){
+    const SC = 1.5, W = 1080, H = 1920;                   /* full HD, drawn on a 720×1280 layout */
+    const stage = document.createElement('canvas'); stage.width = W; stage.height = H; const g = stage.getContext('2d');
+    const base = document.createElement('canvas'); base.width = W; base.height = H; const bg = base.getContext('2d');
+    const prev = document.createElement('canvas'); prev.width = W; prev.height = H; const pg = prev.getContext('2d');
+    const small = document.createElement('canvas'); small.width = 36; small.height = 64;
+    g.setTransform(SC, 0, 0, SC, 0, 0); bg.setTransform(SC, 0, 0, SC, 0, 0);
+    const lang = info.lang || 'roman', segs = premiumPlan();
+    const feats = (ai && ai.features && ai.features.length ? ai.features : [info.notes, info.offer].filter(Boolean)).slice(0, 3);
+    const kicker = info.pct >= 1 ? (lang === 'nepali' ? `${info.pct}% छुट` : `${info.pct}% OFF`) : KICK[lang] || KICK.roman;
+    const sizes = String(info.sizes || '').split(/,\s*/).filter(Boolean).slice(0, 6);
+    const XF = 0.4, HERO = 3.4, END = 2.4;
+    const body = segs.reduce((a, s) => a + s.dur, 0), total = body + HERO + END - 0.4;
+    const enc = await liveEncoder(W, H, 9_000_000);
+    let hasPrev = false;
+    const compose = (t, lt, segDur, overlay) => {
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(base, 0, 0);
+      if(hasPrev && lt < XF){ g.globalAlpha = 1 - ease(lt / XF); g.drawImage(prev, 0, 0); } g.restore();
+      overlay(t, lt, segDur); enc.add(stage, t);
+    };
+    const keepPrev = () => { pg.clearRect(0, 0, W, H); pg.drawImage(base, 0, 0); hasPrev = true; };
+    const clipOverlay = seg => (t, lt, d) => {
+      const out = 1 - ease((lt - (d - 0.3)) / 0.3);
+      scrim(g, 1); brand(g, info, ease(t / 0.6));
+      g.save(); g.textAlign = 'left';
+      if(seg.i === 0){
+        const a = ease((lt - 0.25)/0.5) * out, y = 1030 + (1 - a)*24;
+        g.globalAlpha = a; g.font = '800 26px "Bricolage Grotesque", sans-serif'; spaced(g, 4); g.fillStyle = '#e8b04b'; g.fillText(kicker, 48, y - 20);
+        spaced(g, 0); g.fillStyle = '#fff'; g.font = '800 66px "Bricolage Grotesque", sans-serif'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 16;
+        const ls = wrapText(g, info.name || info.category, 620, 2); ls.forEach((l, i) => g.fillText(l, 48, y + 58 + i*72));
+      } else {
+        const f = feats[seg.i - 1]; if(f){
+          const a = ease((lt - 0.3)/0.45) * out, lw = 60 * ease((lt - 0.2)/0.5);
+          g.globalAlpha = a; g.fillStyle = '#e8b04b'; g.fillRect(48, 1060, lw, 4);
+          g.font = '800 24px "Bricolage Grotesque", sans-serif'; spaced(g, 3); g.fillText('0' + seg.i, 48, 1040);
+          spaced(g, 0); g.fillStyle = '#fff'; g.font = '700 50px "Bricolage Grotesque", sans-serif'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 14;
+          wrapText(g, f, 620, 2).forEach((l, i) => g.fillText(l, 48, 1126 + i*60 + (1 - a)*18));
+        }
+      }
+      g.restore();
+    };
+    const v = await openVideo(F.url); let acc = 0, speed = 0.6, srcFd = 0;
+    const live = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+    try{
+      for(const seg of segs){
+        const ov = clipOverlay(seg);
+        const frame = local => {
+          const z = 1.06 - 0.06*ease(local / seg.dur) + (hasPrev && local < XF ? 0.03*(1 - ease(local/XF)) : 0);
+          bg.save(); bg.translate(360, 640); bg.scale(z, z); bg.translate(-360, -640); drawSource(bg, v, small, true); bg.restore(); gradeOver(bg);
+          compose(acc + local, local, seg.dur, ov);
+        };
+        await seek(v, seg.from); frame(0);
+        if(live){
+          await new Promise((res, rej) => {
+            let fin = false, lastM = -1; const end = () => { if(!fin){ fin = true; v.pause(); clearTimeout(guard); res(); } };
+            let guard = setTimeout(end, 20000);
+            const cb = async (now, md) => { if(fin) return;
+              clearTimeout(guard); guard = setTimeout(end, 4000);
+              /* if frames are being skipped, play slower so every frame gets drawn (smooth video, timing stays right) */
+              if(lastM >= 0){ const d = md.mediaTime - lastM; if(d > 0){ if(srcFd === 0 || d < srcFd) srcFd = Math.max(1/120, d);
+                if(d > srcFd*1.5) speed = Math.max(0.12, speed*0.8); else speed = Math.min(1, speed*1.03); v.playbackRate = Math.max(0.0625, seg.rate*speed); } }
+              lastM = md.mediaTime;
+              const local = (md.mediaTime - seg.from) / seg.rate; if(local >= seg.dur - 0.01){ end(); return; }
+              try{ if(local > 0) frame(local); }catch(e){ fin = true; v.pause(); rej(e); return; }
+              if(enc.queue() > 6){ v.pause(); try{ await enc.drain(2); }catch(e){ fin = true; rej(e); return; } if(!fin) v.play().catch(end); }
+              if(!fin) v.requestVideoFrameCallback(cb); };
+            v.playbackRate = Math.max(0.0625, seg.rate*speed); v.requestVideoFrameCallback(cb); v.onended = end; v.play().catch(end);
+          });
+        } else {
+          for(let local = 1/30; local < seg.dur - 0.01; local += 1/30){ await seek(v, seg.from + local*seg.rate); frame(local); await enc.drain(4); }
+        }
+        keepPrev(); acc += seg.dur; onPct(acc / total * 0.8);
+      }
+      v.pause(); v.remove();
+      /* the studio shot needs the precise cut-out of the first photo: give it a moment if it's still working */
+      const t0 = Date.now(); while(segBusy && !segFailed && photos[0] && !withPhoto(0, () => !!matte) && Date.now() - t0 < 9000) await new Promise(r => setTimeout(r, 200));
+      const ha = heroAssets();
+      for(let lt = 0; lt < HERO + END - 0.4; lt += 1/30){
+        const t = acc + lt, hl = Math.min(lt, HERO);
+        drawHero(bg, hl, HERO, info, ha, sizes);
+        compose(t, lt, HERO, () => { if(t > total - 2.05){ g.save(); endCard(g, t, info, total); g.restore(); } });
+        await enc.drain(4);
+        if(Math.round(lt*30) % 15 === 0) onPct(0.8 + 0.2*lt/(HERO + END));
+      }
+      enc.add(stage, total - 0.001); onPct(1);
+      return await enc.finish();
+    }catch(e){ enc.close(); throw e; }
+    finally{ v.pause(); v.remove(); }
+  }
   /* an MP4 encoder that takes frames as they come (not a fixed clock) */
-  async function liveEncoder(W, H){
+  async function liveEncoder(W, H, BR = 4_000_000){
     if(!window.VideoEncoder || !window.VideoFrame) throw new Error('no encoder');
     await TT.loadMuxer();
     let codec = null, hw = 'no-preference';
     for(const h of ['no-preference', 'prefer-software']) for(const c of ['avc1.4d0028', 'avc1.640028', 'avc1.42002a']){
-      if(codec) break; try{ const sup = await VideoEncoder.isConfigSupported({ codec:c, width:W, height:H, bitrate:4_000_000, framerate:30, hardwareAcceleration:h }); if(sup.supported){ codec = c; hw = h; } }catch(e){} }
+      if(codec) break; try{ const sup = await VideoEncoder.isConfigSupported({ codec:c, width:W, height:H, bitrate:BR, framerate:30, hardwareAcceleration:h }); if(sup.supported){ codec = c; hw = h; } }catch(e){} }
     if(!codec) throw new Error('no h264');
     const muxer = new Mp4Muxer.Muxer({ target:new Mp4Muxer.ArrayBufferTarget(), video:{ codec:'avc', width:W, height:H }, fastStart:'in-memory' });
     let err = null, last = -1, n = 0, outs = 0;
     const enc = new VideoEncoder({ output:(c, m) => { try{ muxer.addVideoChunk(c, m); outs++; }catch(e){ err = e; } }, error:e => { err = e; } });
-    enc.configure({ codec, width:W, height:H, bitrate:4_000_000, framerate:30, hardwareAcceleration:hw, avc:{ format:'avc' } });
+    enc.configure({ codec, width:W, height:H, bitrate:BR, framerate:30, hardwareAcceleration:hw, avc:{ format:'avc' } });
     return {
       add(canvas, t){ const us = Math.round(t * 1e6); if(us <= last) return; if(err) throw err;
         const f = new VideoFrame(canvas, { timestamp:us, duration:33333 }); enc.encode(f, { keyFrame:n % 45 === 0 }); f.close(); last = us; n++; },
@@ -4144,40 +4315,18 @@ var Film = (() => {
       }
       F.info = info; $('#fmCode').textContent = info.code;
       await document.fonts.ready.catch(() => {});
-      F.pid = null; F.comps = null;
-      const one = async i => {
-        const st = STYLES[i], base = 0.14 + i*0.215;
-        step(`Making video ${i+1} of 4: ${st.title}…`, base);
-        try{
-          const pct = p => step(`Making video ${i+1} of 4: ${st.title}… ${Math.round(p*100)}%`, base + p*0.2);
-          let blob;
-          if(st.id === 'studio') blob = await renderStudio(info, ai, pct);
-          else if('requestVideoFrameCallback' in HTMLVideoElement.prototype){ try{ blob = await renderClipsLive(st.id, info, ai, pct); }catch(e){ console.warn('live video failed, slower way', e); blob = await renderClips(st.id, info, ai, pct); } }
-          else blob = await renderClips(st.id, info, ai, pct);
-          const hook = (ai && ai.hooks && ai.hooks[st.id]) || HOOKS[info.lang || 'roman'](info)[st.id];
-          F.videos[i] = { style:st.id, title:st.title, blob, url:URL.createObjectURL(blob), caption:hook + '\n' + templateCaption(info) };
-        }catch(e){ console.warn('film video', st.id, e); F.videos[i] = null; }
-        paintGrid();
-      };
-      /* the three videos from the clip come first: the seller can post as soon as they are done */
-      for(let i = 0; i < STYLES.length; i++) if(STYLES[i].id !== 'studio') await one(i);
-      const ready = () => {
-        const okN = F.videos.filter(Boolean).length;
-        $('#fmCap').innerText = F.videos.find(Boolean).caption; $('#fmCapBox').hidden = false;
-        $('#fmThumbs').innerHTML = photos.map((_, i) => `<img alt="Photo ${i+1}" src="${withPhoto(i, () => enhanced(240).toDataURL('image/jpeg', .8))}" style="width:72px;height:72px;object-fit:cover;border-radius:10px">`).join('');
-        $('#fmPhotosBox').hidden = !photos.length; $('#fmPublish').disabled = false; return okN;
-      };
-      if(F.videos.some(Boolean)){ ready(); }
-      /* the studio video needs the precise cut-out, so it comes last; the seller doesn't have to wait for it */
-      const si = STYLES.findIndex(x => x.id === 'studio');
-      if(segBusy){ step(`${F.videos.filter(Boolean).length} videos ready ✓ Making the studio video… (you can add to shop now)`, 0.8); await Promise.race([segQ, new Promise(r => setTimeout(r, 25000))]); }
-      await one(si);
-      const okN = F.videos.filter(Boolean).length;
-      if(!okN) throw new Error('This phone could not make videos here. Try Chrome on Android or a computer.');
-      if(F.pid){
-        if(F.videos[si]){ await FilmStore.put(F.pid, F.videos[si]); const p = S.products.find(x => x.id === F.pid); if(p && shopOpen === p.id && $('#pFilm')) paintFilmVideos(p); toast('Studio video ready ✓'); }
-        F.videos = []; F.pid = null; F.comps = null;
-      } else { ready(); step(`✓ ${okN} videos ready. Post one today, the next one tomorrow.`, 1); }
+      step('Editing your video…', 0.14);
+      try{
+        const blob = await renderPremium(info, ai, p => step(`Editing your video… ${Math.round(p*100)}%`, 0.14 + p*0.84));
+        const hook = (ai && ai.hooks && ai.hooks.offer) || HOOKS[info.lang || 'roman'](info).offer;
+        F.videos[0] = { style:'premium', title:'Your video', blob, url:URL.createObjectURL(blob), caption:hook + '\n' + templateCaption(info) };
+      }catch(e){ console.warn('film video', e); F.videos[0] = null; }
+      paintGrid();
+      if(!F.videos[0]) throw new Error('This phone could not make the video here. Try Chrome on Android or a computer.');
+      $('#fmCap').innerText = F.videos[0].caption; $('#fmCapBox').hidden = false;
+      $('#fmThumbs').innerHTML = photos.map((_, i) => `<img alt="Photo ${i+1}" src="${withPhoto(i, () => enhanced(240).toDataURL('image/jpeg', .8))}" style="width:72px;height:72px;object-fit:cover;border-radius:10px">`).join('');
+      $('#fmPhotosBox').hidden = !photos.length; $('#fmPublish').disabled = false;
+      step('✓ Your video is ready to post.', 1);
     }catch(e){ step(e.message || 'Something went wrong. Try again.'); }
     F.busy = false; dropVideos(); $('#btnFilm').disabled = false; $('#btnFilm').textContent = 'Make again';
   }
@@ -4186,15 +4335,14 @@ var Film = (() => {
     if(!photos.length || !F.info){ toast('Make the videos first'); return; }
     draft.img = 'film'; lastInfo = F.info; $('#captionOut').innerText = $('#fmCap').innerText;
     const before = S.products.length;
-    if(F.busy && photos.length) F.comps = photos.map((_, i) => withPhoto(i, composeVertical));   /* keep the photos for the studio video still being made */
     $('#btnPublish').onclick();
     const p = S.products[S.products.length - 1]; if(S.products.length === before || !p) return;
     let kept = 0; for(const v of F.videos){ if(v && await FilmStore.put(p.id, v)) kept++; }
-    const more = F.busy; if(more) F.pid = p.id;
-    F.videos = more ? F.videos.map(() => null) : []; F.started = false; F.an = null; $('#fmResult').hidden = true; $('#fmPrev').hidden = true; $('#fmGrid').innerHTML = '';
-    $('#fmDrop').querySelector('b').textContent = '🎥 Record or choose a video'; $('#btnFilm').textContent = 'Make my videos';
+    const more = false;
+    F.videos = []; F.started = false; F.an = null; $('#fmResult').hidden = true; $('#fmPrev').hidden = true; $('#fmGrid').innerHTML = '';
+    $('#fmDrop').querySelector('b').textContent = '🎥 Record or choose a video'; $('#btnFilm').textContent = 'Make my video';
     openProduct(p.id, false);
-    toast(kept ? `Added to your shop ✓ ${kept} videos kept on this product${more ? ' · studio video coming in a moment' : ''}` : 'Added to your shop ✓');
+    toast(kept ? 'Added to your shop ✓ Video kept on this product' : 'Added to your shop ✓');
   }
   $('#fmDrop').onclick = () => $('#fmInput').click();
   $('#fmDrop').onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#fmInput').click(); } };
