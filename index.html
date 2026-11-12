@@ -3858,12 +3858,28 @@ var Film = (() => {
     { id:'studio', title:'Studio photos' } ];
   const seek = (v, t) => new Promise(res => { let done = false; const fin = () => { if(!done){ done = true; v.removeEventListener('seeked', fin); res(); } };
     v.addEventListener('seeked', fin); v.currentTime = Math.max(0, t); setTimeout(fin, 1500); });
+  /* iPhones only load a video's pictures after it starts playing, so we start it (muted, hidden) for a moment */
+  const waitEv = (v, evs, ms) => new Promise(res => { let done = false; const fin = ok => { if(!done){ done = true; evs.forEach(e => v.removeEventListener(e, on)); clearTimeout(tm); res(ok); } };
+    const on = () => fin(true); evs.forEach(e => v.addEventListener(e, on)); const tm = setTimeout(() => fin(false), ms); });
   async function openVideo(url){
-    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
-    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('This video could not be opened. Try another one (MP4 works best).')); });
+    const v = document.createElement('video'); v.className = 'fm-off'; v.muted = true; v.defaultMuted = true; v.playsInline = true;
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.preload = 'auto';
+    const bad = new Promise((_, rej) => { v.onerror = () => rej(new Error('This phone could not open this video. Try recording again with the normal camera (not slow-motion or HDR), or choose an MP4.')); });
+    v.src = url;
+    const ok = await Promise.race([waitEv(v, ['loadedmetadata'], 10000), bad]);
+    if(!ok){ v.remove(); throw new Error('This video is taking too long to open. Try a shorter video, or record again with the normal camera.'); }
+    if(v.readyState < 2) await Promise.race([waitEv(v, ['loadeddata'], 1500), bad]);
+    if(v.readyState < 2){     /* iPhone: play it for a moment, hidden on the page */
+      v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1'; document.body.append(v);
+      try{ await v.play(); }catch(e){}
+      await Promise.race([waitEv(v, ['loadeddata', 'canplay', 'playing'], 6000), bad]);
+      v.pause();
+    }
+    if(v.readyState < 2){ v.remove(); throw new Error('This phone could not read the video here. Try recording again with the normal camera, or use Chrome.'); }
     if(!isFinite(v.duration)){ await seek(v, 1e6); await seek(v, 0); }
     return v;
   }
+  const dropVideos = () => document.querySelectorAll('video.fm-off').forEach(x => { x.pause(); x.removeAttribute('src'); x.load(); x.remove(); });
 
   /* ---- 1. look at the whole video: sharp? steady? bright? ---- */
   async function analyse(url, onPct){
@@ -3871,8 +3887,9 @@ var Film = (() => {
     const W = 96, H = Math.max(24, Math.round(96 * vh / vw));
     const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d', { willReadFrequently:true });
     const n = Math.min(120, Math.max(8, Math.floor(dur / 0.5))), step = dur / n, out = [];
-    let prev = null;
+    let prev = null; const t0 = Date.now();
     for(let i = 0; i < n; i++){
+      if(i >= 6 && Date.now() - t0 > 12000) break;    /* a slow phone: what we have is enough */
       const t = Math.min(dur - 0.05, (i + 0.5) * step); await seek(v, t);
       g.drawImage(v, 0, 0, W, H); const d = g.getImageData(0, 0, W, H).data, gray = new Float32Array(W*H);
       let sum = 0; for(let k = 0; k < W*H; k++){ gray[k] = d[k*4]*0.299 + d[k*4+1]*0.587 + d[k*4+2]*0.114; sum += gray[k]; }
@@ -3884,8 +3901,9 @@ var Film = (() => {
       const th = new Float32Array(64); for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){ th[Math.min(7, (y*8/H)|0)*8 + Math.min(7, (x*8/W)|0)] += gray[y*W+x]; }
       for(let k = 0; k < 64; k++) th[k] /= (W*H/64);
       out.push({ t, sharp, mean, motion: prev ? motion : null, th }); prev = gray;
-      if(i % 4 === 0) onPct(i / n);
+      onPct((i + 1) / n);
     }
+    v.remove();
     out.forEach((x, i) => { if(x.motion === null) x.motion = out[1] ? out[1].motion : 0; });
     const maxS = Math.max(1e-6, ...out.map(x => x.sharp)), maxM = Math.max(1e-6, ...out.map(x => x.motion));
     out.forEach(x => { x.sN = x.sharp / maxS; x.mN = x.motion / maxM; x.score = 0.6*x.sN + 0.4*(1 - x.mN) - (x.mean < 45 || x.mean > 225 ? 0.3 : 0); });
@@ -4097,8 +4115,9 @@ var Film = (() => {
     F.file = file; F.url = URL.createObjectURL(file); F.an = null;
     $('#fmVideo').src = F.url; $('#fmPrev').hidden = false; $('#fmDrop').querySelector('b').textContent = 'Change video';
     $('#fmCheck').textContent = 'Checking your video…';
+    if(!F.busy) dropVideos();
     try{
-      F.an = await analyse(F.url, () => {});
+      F.an = await analyse(F.url, p => { $('#fmCheck').textContent = `Checking your video… ${Math.round(p*100)}%`; });
       F.clips = pickClips(F.an); F.shots = pickShots(F.an);
       const t = tips(F.an);
       $('#fmCheck').innerHTML = t.length ? '💡 ' + t.map(esc).join(' ') + ' <span class="muted">You can still go ahead.</span>' : `<span style="color:var(--good)">✓ Good video: ${F.clips.length} clear moments and ${F.shots.length} photos found.</span>`;
@@ -4160,7 +4179,7 @@ var Film = (() => {
         F.videos = []; F.pid = null; F.comps = null;
       } else { ready(); step(`✓ ${okN} videos ready. Post one today, the next one tomorrow.`, 1); }
     }catch(e){ step(e.message || 'Something went wrong. Try again.'); }
-    F.busy = false; $('#btnFilm').disabled = false; $('#btnFilm').textContent = 'Make again';
+    F.busy = false; dropVideos(); $('#btnFilm').disabled = false; $('#btnFilm').textContent = 'Make again';
   }
   /* add the product with the video photos, and keep the videos on this phone for later posting */
   async function publish(){
