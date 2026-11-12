@@ -1678,13 +1678,31 @@ async function segModelBytes(){
   try{ if(cache) await cache.put(SEG.model, new Response(buf, { headers:{ 'Content-Type':'application/octet-stream' } })); }catch(e){}
   return buf;
 }
+/* the AI runs in a background worker so the page (and video making) never freezes; main thread only as a fallback */
+const SEG_WORKER = `importScripts('${SEG.ort}ort.wasm.min.js'); ort.env.wasm.wasmPaths = '${SEG.ort}'; ort.env.wasm.numThreads = 1; let ses = null;
+onmessage = async e => { const m = e.data; try{
+  if(m.type === 'init'){ ses = await ort.InferenceSession.create(m.bytes, { executionProviders:['wasm'], graphOptimizationLevel:'all' }); postMessage({ id:m.id, ok:1 }); }
+  else { const out = await ses.run({ [ses.inputNames[0]]: new ort.Tensor('float32', m.input, [1, 3, m.S, m.S]) }); const a = new Float32Array(out[ses.outputNames[0]].data); postMessage({ id:m.id, ok:1, data:a }, [a.buffer]); }
+} catch(err){ postMessage({ id:m.id, ok:0, error:String(err && err.message || err) }); } };`;
+function workerRunner(bytes){
+  const w = new Worker(URL.createObjectURL(new Blob([SEG_WORKER], { type:'text/javascript' })));
+  let seq = 0; const wait = new Map();
+  w.onmessage = e => { const r = wait.get(e.data.id); if(r){ wait.delete(e.data.id); e.data.ok ? r.ok(e.data.data) : r.no(new Error(e.data.error)); } };
+  w.onerror = e => { wait.forEach(r => r.no(new Error(e.message || 'worker'))); wait.clear(); };
+  const call = (msg, tr) => new Promise((ok, no) => { const id = ++seq; wait.set(id, { ok, no }); w.postMessage({ ...msg, id }, tr || []); });
+  return call({ type:'init', bytes }).then(() => ({ run:(input, S) => call({ type:'run', input, S }, [input.buffer]) }));
+}
+async function mainRunner(bytes){
+  if(!window.ort) await loadScript(SEG.ort + 'ort.wasm.min.js');
+  ort.env.wasm.wasmPaths = SEG.ort; ort.env.wasm.numThreads = 1;
+  const ses = await ort.InferenceSession.create(bytes, { executionProviders:['wasm'], graphOptimizationLevel:'all' });
+  return { run:async (input, S) => (await ses.run({ [ses.inputNames[0]]: new ort.Tensor('float32', input, [1, 3, S, S]) }))[ses.outputNames[0]].data };
+}
 function loadSeg(){
   if(!segP) segP = (async () => {
-    if(!window.ort) await loadScript(SEG.ort + 'ort.wasm.min.js');
-    ort.env.wasm.wasmPaths = SEG.ort;
-    ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
     const bytes = await segModelBytes();
-    return ort.InferenceSession.create(bytes, { executionProviders:['wasm'], graphOptimizationLevel:'all' });
+    if(window.Worker){ try{ return await workerRunner(bytes); }catch(e){ console.warn('cut-out worker not available, using the page', e); } }
+    return mainRunner(bytes);
   })();
   segP.catch(() => { segP = null; });
   return segP;
@@ -1696,8 +1714,7 @@ async function aiMatte(img){
   const g = c.getContext('2d', { willReadFrequently:true }); g.drawImage(img, 0, 0, S, S);
   const d = g.getImageData(0, 0, S, S).data, inp = new Float32Array(3*N);
   for(let i=0;i<N;i++){ inp[i] = d[i*4]/255 - 0.5; inp[i+N] = d[i*4+1]/255 - 0.5; inp[i+2*N] = d[i*4+2]/255 - 0.5; }
-  const out = await ses.run({ [ses.inputNames[0]]: new ort.Tensor('float32', inp, [1, 3, S, S]) });
-  const o = out[ses.outputNames[0]].data;
+  const o = await ses.run(inp, S);
   let mn = Infinity, mx = -Infinity; for(let i=0;i<N;i++){ const v = o[i]; if(v < mn) mn = v; if(v > mx) mx = v; }
   const logits = mn < -0.01 || mx > 1.01, a = new Uint8Array(N);
   let lo = logits ? 1/(1+Math.exp(-mn)) : mn, hi = logits ? 1/(1+Math.exp(-mx)) : mx; if(hi - lo < 1e-6){ lo = 0; hi = 1; }
@@ -3825,7 +3842,7 @@ var TT = (() => {
   }
   function close(){ $('#ttPost').hidden = true; pid = null; vid = null; busy = false; }
   $('#ttClose').onclick = close;
-  return { open, history, close, encodeMp4 };
+  return { open, history, close, encodeMp4, loadMuxer };
 })();
 $('#btnSignOut').onclick = () => Cloud.signOut();
 
@@ -3961,14 +3978,22 @@ var Film = (() => {
     const v = await openVideo(F.url), stage = document.createElement('canvas'); stage.width = 720; stage.height = 1280;
     const g = stage.getContext('2d'), small = document.createElement('canvas'); small.width = 36; small.height = 64;
     const segs = plan(style), body = segs.reduce((a, s) => a + s.dur, 0), total = body + 2.2;
-    const feats = (ai && ai.features && ai.features.length ? ai.features : [info.notes, info.sizes ? 'Sizes ' + info.sizes : '', info.offer].filter(Boolean)).slice(0, 3);
-    const hook = (ai && ai.hooks && ai.hooks[style]) || HOOKS[info.lang || 'roman'](info)[style];
+    const paint = clipPainter(style, info, ai, g, v, small, segs, body, total);
     let last = -1;
     const draw = async t => {
       let acc = 0, seg = segs[segs.length - 1], local = seg.dur - 0.001;
       for(const s of segs){ if(t < acc + s.dur){ seg = s; local = t - acc; break; } acc += s.dur; }
       const src = Math.min(F.an.dur - 0.04, seg.from + local*seg.rate);
       if(Math.abs(src - last) > 0.0005){ await seek(v, src); last = src; }
+      paint(t, seg, local);
+    };
+    try{ return await TT.encodeMp4(stage, draw, total, onPct, 'no-preference'); }
+    catch(e){ last = -1; return await TT.encodeMp4(stage, draw, total, onPct, 'prefer-software'); }
+  }
+  function clipPainter(style, info, ai, g, v, small, segs, body, total){
+    const feats = (ai && ai.features && ai.features.length ? ai.features : [info.notes, info.sizes ? 'Sizes ' + info.sizes : '', info.offer].filter(Boolean)).slice(0, 3);
+    const hook = (ai && ai.hooks && ai.hooks[style]) || HOOKS[info.lang || 'roman'](info)[style];
+    return (t, seg, local) => {
       const z = seg.z0 + (seg.z1 - seg.z0) * (local / seg.dur);
       g.save(); g.translate(360, 640); g.scale(z, z); g.translate(-360, -640); drawSource(g, v, small, true); g.restore();
       if(t > body) { endCard(g, t, info, total); return; }
@@ -3988,11 +4013,68 @@ var Film = (() => {
         if(urgent && t > 0.4) pill(g, 360, 770, 58, urgent, '800 30px "Bricolage Grotesque", sans-serif', '#c62828', '#ffffff', 'center');
       }
     };
-    try{ return await TT.encodeMp4(stage, draw, total, onPct, 'no-preference'); }
-    catch(e){ last = -1; return await TT.encodeMp4(stage, draw, total, onPct, 'prefer-software'); }
+  }
+  /* an MP4 encoder that takes frames as they come (not a fixed clock) */
+  async function liveEncoder(W, H){
+    if(!window.VideoEncoder || !window.VideoFrame) throw new Error('no encoder');
+    await TT.loadMuxer();
+    let codec = null, hw = 'no-preference';
+    for(const h of ['no-preference', 'prefer-software']) for(const c of ['avc1.4d0028', 'avc1.640028', 'avc1.42002a']){
+      if(codec) break; try{ const sup = await VideoEncoder.isConfigSupported({ codec:c, width:W, height:H, bitrate:4_000_000, framerate:30, hardwareAcceleration:h }); if(sup.supported){ codec = c; hw = h; } }catch(e){} }
+    if(!codec) throw new Error('no h264');
+    const muxer = new Mp4Muxer.Muxer({ target:new Mp4Muxer.ArrayBufferTarget(), video:{ codec:'avc', width:W, height:H }, fastStart:'in-memory' });
+    let err = null, last = -1, n = 0, outs = 0;
+    const enc = new VideoEncoder({ output:(c, m) => { try{ muxer.addVideoChunk(c, m); outs++; }catch(e){ err = e; } }, error:e => { err = e; } });
+    enc.configure({ codec, width:W, height:H, bitrate:4_000_000, framerate:30, hardwareAcceleration:hw, avc:{ format:'avc' } });
+    return {
+      add(canvas, t){ const us = Math.round(t * 1e6); if(us <= last) return; if(err) throw err;
+        const f = new VideoFrame(canvas, { timestamp:us, duration:33333 }); enc.encode(f, { keyFrame:n % 45 === 0 }); f.close(); last = us; n++; },
+      queue:() => enc.encodeQueueSize,
+      async drain(max){ const t0 = Date.now(); while(enc.encodeQueueSize > max){ if(err) throw err; if(Date.now() - t0 > 8000) throw new Error('encoder stalled'); await new Promise(r => setTimeout(r, 4)); } },
+      async finish(){ await Promise.race([enc.flush(), new Promise((_, no) => setTimeout(() => no(new Error('flush timed out')), 15000))]); if(err) throw err;
+        if(outs < n * 0.9) throw new Error('missing frames'); muxer.finalize(); try{ enc.close(); }catch(e){} return new Blob([muxer.target.buffer], { type:'video/mp4' }); },
+      close(){ try{ enc.close(); }catch(e){} } };
+  }
+  /* plays each clip once and records the frames as they show: much faster than jumping frame by frame */
+  async function renderClipsLive(style, info, ai, onPct){
+    const v = await openVideo(F.url);
+    v.style.cssText = 'position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none'; document.body.append(v);
+    const stage = document.createElement('canvas'); stage.width = 720; stage.height = 1280;
+    const g = stage.getContext('2d'), small = document.createElement('canvas'); small.width = 36; small.height = 64;
+    const segs = plan(style), body = segs.reduce((a, x) => a + x.dur, 0), total = body + 2.2;
+    const paint = clipPainter(style, info, ai, g, v, small, segs, body, total);
+    const enc = await liveEncoder(720, 1280);
+    try{
+      let acc = 0;
+      for(const seg of segs){
+        await seek(v, seg.from); paint(acc, seg, 0); enc.add(stage, acc);
+        await new Promise((res, rej) => {
+          let finished = false;
+          const fin = () => { if(!finished){ finished = true; v.pause(); res(); } };
+          const cb = async (now, md) => {
+            if(finished) return;
+            const local = (md.mediaTime - seg.from) / seg.rate;
+            if(local >= seg.dur - 0.01){ fin(); return; }
+            try{ paint(acc + Math.max(0, local), seg, Math.max(0, local)); enc.add(stage, acc + Math.max(0, local)); }catch(e){ finished = true; v.pause(); rej(e); return; }
+            if(enc.queue() > 6){ v.pause(); try{ await enc.drain(2); }catch(e){ finished = true; rej(e); return; } if(!finished) v.play().catch(fin); }
+            if(!finished) v.requestVideoFrameCallback(cb);
+          };
+          v.playbackRate = seg.rate; v.requestVideoFrameCallback(cb);
+          v.onended = fin; v.play().catch(fin);
+          setTimeout(fin, (seg.dur / seg.rate) * 1000 + 5000);
+        });
+        acc += seg.dur; onPct(acc / total);
+      }
+      const lastSeg = segs[segs.length - 1];
+      for(let t = body; t < total; t += 1/30){ paint(t, lastSeg, lastSeg.dur - 0.001); enc.add(stage, t); await enc.drain(4); }
+      enc.add(stage, total - 0.001);
+      onPct(1);
+      return await enc.finish();
+    }catch(e){ enc.close(); throw e; }
+    finally{ v.pause(); v.remove(); }
   }
   async function renderStudio(info, ai, onPct){
-    const comps = photos.map((_, i) => withPhoto(i, composeVertical));
+    const comps = F.comps || photos.map((_, i) => withPhoto(i, composeVertical));
     const stage = document.createElement('canvas'); stage.width = 720; stage.height = 1280; const g = stage.getContext('2d');
     const secs = Math.max(8, comps.length*2.2 + 2.2), hook = (ai && ai.hooks && ai.hooks.studio) || HOOKS[info.lang || 'roman'](info).studio;
     const draw = t => drawFrame(g, t, comps, info, secs);   /* this style already shows the name up top; its hook goes in the caption */
@@ -4043,25 +4125,40 @@ var Film = (() => {
       }
       F.info = info; $('#fmCode').textContent = info.code;
       await document.fonts.ready.catch(() => {});
-      for(let i = 0; i < STYLES.length; i++){
+      F.pid = null; F.comps = null;
+      const one = async i => {
         const st = STYLES[i], base = 0.14 + i*0.215;
-        if(st.id === 'studio' && segBusy){ step('Finishing the precise cut-out…', base); await Promise.race([segQ, new Promise(r => setTimeout(r, 60000))]); }
         step(`Making video ${i+1} of 4: ${st.title}…`, base);
         try{
-          const blob = st.id === 'studio' ? await renderStudio(info, ai, p => step(`Making video ${i+1} of 4: ${st.title}… ${Math.round(p*100)}%`, base + p*0.2))
-                                         : await renderClips(st.id, info, ai, p => step(`Making video ${i+1} of 4: ${st.title}… ${Math.round(p*100)}%`, base + p*0.2));
+          const pct = p => step(`Making video ${i+1} of 4: ${st.title}… ${Math.round(p*100)}%`, base + p*0.2);
+          let blob;
+          if(st.id === 'studio') blob = await renderStudio(info, ai, pct);
+          else if('requestVideoFrameCallback' in HTMLVideoElement.prototype){ try{ blob = await renderClipsLive(st.id, info, ai, pct); }catch(e){ console.warn('live video failed, slower way', e); blob = await renderClips(st.id, info, ai, pct); } }
+          else blob = await renderClips(st.id, info, ai, pct);
           const hook = (ai && ai.hooks && ai.hooks[st.id]) || HOOKS[info.lang || 'roman'](info)[st.id];
           F.videos[i] = { style:st.id, title:st.title, blob, url:URL.createObjectURL(blob), caption:hook + '\n' + templateCaption(info) };
         }catch(e){ console.warn('film video', st.id, e); F.videos[i] = null; }
         paintGrid();
-      }
+      };
+      /* the three videos from the clip come first: the seller can post as soon as they are done */
+      for(let i = 0; i < STYLES.length; i++) if(STYLES[i].id !== 'studio') await one(i);
+      const ready = () => {
+        const okN = F.videos.filter(Boolean).length;
+        $('#fmCap').innerText = F.videos.find(Boolean).caption; $('#fmCapBox').hidden = false;
+        $('#fmThumbs').innerHTML = photos.map((_, i) => `<img alt="Photo ${i+1}" src="${withPhoto(i, () => enhanced(240).toDataURL('image/jpeg', .8))}" style="width:72px;height:72px;object-fit:cover;border-radius:10px">`).join('');
+        $('#fmPhotosBox').hidden = !photos.length; $('#fmPublish').disabled = false; return okN;
+      };
+      if(F.videos.some(Boolean)){ ready(); }
+      /* the studio video needs the precise cut-out, so it comes last; the seller doesn't have to wait for it */
+      const si = STYLES.findIndex(x => x.id === 'studio');
+      if(segBusy){ step(`${F.videos.filter(Boolean).length} videos ready ✓ Making the studio video… (you can add to shop now)`, 0.8); await Promise.race([segQ, new Promise(r => setTimeout(r, 25000))]); }
+      await one(si);
       const okN = F.videos.filter(Boolean).length;
       if(!okN) throw new Error('This phone could not make videos here. Try Chrome on Android or a computer.');
-      $('#fmCap').innerText = F.videos.find(Boolean).caption; $('#fmCapBox').hidden = false;
-      $('#fmThumbs').innerHTML = photos.map((_, i) => `<img alt="Photo ${i+1}" src="${withPhoto(i, () => enhanced(240).toDataURL('image/jpeg', .8))}" style="width:72px;height:72px;object-fit:cover;border-radius:10px">`).join('');
-      $('#fmPhotosBox').hidden = !photos.length;
-      step(`✓ ${okN} videos ready. Post one today, the next one tomorrow.`, 1);
-      $('#fmPublish').disabled = false;
+      if(F.pid){
+        if(F.videos[si]){ await FilmStore.put(F.pid, F.videos[si]); const p = S.products.find(x => x.id === F.pid); if(p && shopOpen === p.id && $('#pFilm')) paintFilmVideos(p); toast('Studio video ready ✓'); }
+        F.videos = []; F.pid = null; F.comps = null;
+      } else { ready(); step(`✓ ${okN} videos ready. Post one today, the next one tomorrow.`, 1); }
     }catch(e){ step(e.message || 'Something went wrong. Try again.'); }
     F.busy = false; $('#btnFilm').disabled = false; $('#btnFilm').textContent = 'Make again';
   }
@@ -4070,13 +4167,15 @@ var Film = (() => {
     if(!photos.length || !F.info){ toast('Make the videos first'); return; }
     draft.img = 'film'; lastInfo = F.info; $('#captionOut').innerText = $('#fmCap').innerText;
     const before = S.products.length;
+    if(F.busy && photos.length) F.comps = photos.map((_, i) => withPhoto(i, composeVertical));   /* keep the photos for the studio video still being made */
     $('#btnPublish').onclick();
     const p = S.products[S.products.length - 1]; if(S.products.length === before || !p) return;
     let kept = 0; for(const v of F.videos){ if(v && await FilmStore.put(p.id, v)) kept++; }
-    F.videos = []; F.started = false; F.an = null; $('#fmResult').hidden = true; $('#fmPrev').hidden = true; $('#fmGrid').innerHTML = '';
+    const more = F.busy; if(more) F.pid = p.id;
+    F.videos = more ? F.videos.map(() => null) : []; F.started = false; F.an = null; $('#fmResult').hidden = true; $('#fmPrev').hidden = true; $('#fmGrid').innerHTML = '';
     $('#fmDrop').querySelector('b').textContent = '🎥 Record or choose a video'; $('#btnFilm').textContent = 'Make my videos';
     openProduct(p.id, false);
-    toast(kept ? `Added to your shop ✓ ${kept} videos kept on this product` : 'Added to your shop ✓');
+    toast(kept ? `Added to your shop ✓ ${kept} videos kept on this product${more ? ' · studio video coming in a moment' : ''}` : 'Added to your shop ✓');
   }
   $('#fmDrop').onclick = () => $('#fmInput').click();
   $('#fmDrop').onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#fmInput').click(); } };
