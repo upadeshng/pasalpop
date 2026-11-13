@@ -292,6 +292,13 @@ html:not(.public) .askfab{display:none}
 .tag-st.needs_seller{background:#f6b93b;color:#1b1d3a}.tag-st.ordered{background:var(--good);color:#fff}
 .aihome{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .fmgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fmstyle summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline}.fmstyle summary::-webkit-details-marker{display:none}
+.fmstyle summary::after{content:'›';margin-left:auto;transition:transform .2s}.fmstyle[open] summary::after{transform:rotate(90deg)}
+.stylewrap{display:grid;gap:14px;margin-top:12px}.stylepv{display:flex;gap:8px;justify-content:center}
+.stylepv canvas{width:120px;height:213px;border-radius:12px;background:#ddd;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.fmstyle .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.fmstyle .chips button{border:1.5px solid var(--line,#ddd);background:var(--card,#fff);color:inherit;border-radius:999px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+.fmstyle .chips button.on{border-color:var(--ink,#1b1d3a);background:var(--ink,#1b1d3a);color:#fff}
 #fmGrid{grid-template-columns:1fr;max-width:320px;margin:0 auto;width:100%}
 .fmtile{display:flex;flex-direction:column;gap:6px}
 .fmtile video{width:100%;aspect-ratio:9/16;border-radius:12px;background:#000;object-fit:cover}
@@ -501,6 +508,26 @@ html:not(.public) .askfab{display:none}
       <button class="btn primary big" id="fmPublish" type="button" disabled>Add to shop</button>
       <p class="small muted" id="fmAfter" hidden>The video stays on the product page, so you can post it again later.</p>
     </div>
+    <details class="card fm fmstyle" id="fmStyle" hidden>
+      <summary><b>🎨 Style</b> <span class="small muted" id="fmStyleSum">Auto · optional</span></summary>
+      <div class="stylewrap">
+        <div class="stylepv"><canvas id="fmPv1" width="270" height="480" aria-label="Preview of the video"></canvas><canvas id="fmPv2" width="270" height="480" aria-label="Preview of the price"></canvas></div>
+        <div class="stack" style="gap:10px">
+          <div><label>Background</label><div class="chips" data-k="bg">
+            <button type="button" data-v="auto">Auto</button><button type="button" data-v="blur">Blur video</button><button type="button" data-v="cream">Cream</button><button type="button" data-v="dark">Dark</button><button type="button" data-v="blush">Pink</button><button type="button" data-v="sky">Blue</button><button type="button" data-v="mint">Green</button></div></div>
+          <div><label>Look</label><div class="chips" data-k="look">
+            <button type="button" data-v="natural">Natural</button><button type="button" data-v="bright">Bright</button><button type="button" data-v="warm">Warm</button><button type="button" data-v="cool">Cool</button><button type="button" data-v="vivid">Vivid</button></div></div>
+          <div><label>Video</label><div class="chips" data-k="layout">
+            <button type="button" data-v="frame">In a frame</button><button type="button" data-v="full">Full screen</button></div></div>
+          <div><label>Price</label><div class="chips" data-k="price">
+            <button type="button" data-v="big">Big</button><button type="button" data-v="tag">Price tag</button><button type="button" data-v="none">Hide</button></div></div>
+          <div><label>Speed</label><div class="chips" data-k="pace">
+            <button type="button" data-v="calm">Calm</button><button type="button" data-v="fast">Fast</button></div></div>
+          <div><label>Text on video</label><div class="chips" data-k="text">
+            <button type="button" data-v="on">Show</button><button type="button" data-v="off">Only price</button></div></div>
+        </div>
+      </div>
+    </details>
     <button class="btn primary big fm" id="btnFilm" type="button" hidden>Make my video</button>
 
     <!-- talking-video mode -->
@@ -4096,11 +4123,12 @@ var Film = (() => {
     });
     return { cutCv, photo };
   }
-  function drawHero(g, lt, dur, info, ha, sizes, pal){
-    const W = 720, H = 1280, p = lt / dur;
+  function drawHero(g, lt, dur, info, ha, sizes, pal, st){
+    const W = 720, H = 1280, p = lt / dur; st = st || STYLE_DEF;
     pal = pal || studioPalette(200);
-    const bg = g.createRadialGradient(W/2, 560, 40, W/2, 640, 900); bg.addColorStop(0, pal.a); bg.addColorStop(0.55, pal.b); bg.addColorStop(1, pal.c);
-    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    if(pal.blur && ha.photo) blurInto(g, ha.photo, ha.photo.width, ha.photo.height);
+    else { const bg = g.createRadialGradient(W/2, 560, 40, W/2, 640, 900); bg.addColorStop(0, pal.a); bg.addColorStop(0.55, pal.b); bg.addColorStop(1, pal.c);
+    g.fillStyle = bg; g.fillRect(0, 0, W, H); }
     const glow = g.createRadialGradient(W/2, 600, 10, W/2, 600, 380); glow.addColorStop(0, pal.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = glow; g.fillRect(0, 0, W, H);
     const ink = pal.light ? '#1b1d3a' : '#ffffff', ink2 = pal.light ? 'rgba(27,29,58,.6)' : 'rgba(255,255,255,.8)', inkLine = pal.light ? 'rgba(27,29,58,.4)' : 'rgba(255,255,255,.55)';
@@ -4118,7 +4146,8 @@ var Film = (() => {
     g.textAlign = 'center';
     if(info.name){ g.save(); g.globalAlpha = a1; g.fillStyle = ink2; g.font = '600 30px "Bricolage Grotesque", sans-serif'; spaced(g, 0.5);
       wrapText(g, info.name, 600, 1).forEach(l => g.fillText(l, W/2, 190 + (1-a1)*14)); g.restore(); }
-    if(info.price){
+    if(info.price && st.price === 'tag') priceTag(g, 520, 380 + (1-a2)*-30, info, a2, 1.15);
+    if(info.price && st.price === 'big'){
       g.save(); g.globalAlpha = a2; const y = 1040 + (1-a2)*20;
       g.font = '800 92px "Bricolage Grotesque", sans-serif'; g.fillStyle = ink; g.shadowColor = pal.light ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,.35)'; g.shadowBlur = 20; g.fillText(info.price, W/2, y); g.shadowBlur = 0;
       if(info.oldPrice){ g.font = '500 34px Hind, sans-serif'; g.fillStyle = inkLine; const w = g.measureText(info.oldPrice).width; g.fillText(info.oldPrice, W/2, y - 96); g.fillRect(W/2 - w/2 - 4, y - 108, w + 8, 3);
@@ -4128,7 +4157,7 @@ var Film = (() => {
     if(sizes.length){
       const a3 = ease((lt - 1.0)/0.45); g.save(); g.globalAlpha = a3; g.font = '700 26px "Bricolage Grotesque", sans-serif';
       const pads = sizes.map(s => g.measureText(s).width + 36), gap = 10, tot = pads.reduce((a, b) => a + b, 0) + gap*(sizes.length - 1);
-      let x = (W - tot)/2; const y = (info.oldPrice && info.pct >= 1) ? 1150 : 1100;
+      let x = (W - tot)/2; const y = st.price !== 'big' ? 1000 : (info.oldPrice && info.pct >= 1) ? 1150 : 1100;
       sizes.forEach((s, i) => { g.strokeStyle = inkLine; g.lineWidth = 2; roundRect(g, x, y, pads[i], 48, 24); g.stroke(); g.fillStyle = ink; g.textAlign = 'center'; g.fillText(s, x + pads[i]/2, y + 33); x += pads[i] + gap; });
       g.restore();
     }
@@ -4201,6 +4230,48 @@ var Film = (() => {
     const s = Math.max(W/vw, H/vh); return { x:(W - vw*s)/2, y:(H - vh*s)/2, w:vw*s, h:vh*s };
   }
   /* a backdrop that suits the product: light for dark products, dark for light ones */
+  const PALS = {
+    cream:{ light:true, a:'#f6f1ea', b:'#e4dacd', c:'#cbbcaa', glow:'rgba(255,255,255,.7)', shadow:'rgba(60,40,20,.28)' },
+    dark:{ light:false, a:'#3a3550', b:'#1d1b2c', c:'#0d0c15', glow:'rgba(232,176,75,.22)', shadow:'rgba(0,0,0,.45)' },
+    blush:{ light:true, a:'#fdf0f2', b:'#f4d3da', c:'#e2abb8', glow:'rgba(255,255,255,.7)', shadow:'rgba(120,40,60,.25)' },
+    sky:{ light:true, a:'#eef5fc', b:'#d2e3f4', c:'#a9c4e2', glow:'rgba(255,255,255,.7)', shadow:'rgba(30,60,110,.25)' },
+    mint:{ light:true, a:'#eef8f2', b:'#d1eadc', c:'#a5d1b8', glow:'rgba(255,255,255,.7)', shadow:'rgba(20,80,50,.25)' },
+    blur:{ light:false, blur:true, a:'#333', b:'#222', c:'#111', glow:'rgba(255,255,255,.12)', shadow:'rgba(0,0,0,.5)' } };
+  const STYLE_DEF = { bg:'auto', look:'natural', layout:'frame', price:'big', pace:'calm', text:'on' };
+  F.style = (() => { try{ return { ...STYLE_DEF, ...JSON.parse(localStorage.getItem('wt-film-style') || '{}') }; }catch(e){ return { ...STYLE_DEF }; } })();
+  const pickPal = (st, lum) => st.bg === 'auto' || !PALS[st.bg] ? studioPalette(lum) : PALS[st.bg];
+  /* a soft, darkened blur of a picture, used as the background */
+  function blurInto(g, src, sw, sh){
+    /* shrink in steps, then stretch back up: a strong, smooth blur that works on every phone */
+    const t = blurInto.c || (blurInto.c = document.createElement('canvas')), u = blurInto.u || (blurInto.u = document.createElement('canvas'));
+    t.width = 36; t.height = 64; u.width = 9; u.height = 16;
+    const tg = t.getContext('2d'), ug = u.getContext('2d'); tg.imageSmoothingQuality = 'high'; ug.imageSmoothingQuality = 'high';
+    const s = Math.max(36/sw, 64/sh); tg.drawImage(src, (36 - sw*s)/2, (64 - sh*s)/2, sw*s, sh*s); ug.drawImage(t, 0, 0, 9, 16);
+    tg.clearRect(0, 0, 36, 64); tg.drawImage(u, -2, -2, 40, 68);
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(t, -60, -60, g.canvas.width + 120, g.canvas.height + 120);
+    g.fillStyle = 'rgba(0,0,0,.42)'; g.fillRect(0, 0, g.canvas.width, g.canvas.height); g.restore();
+  }
+  /* colour looks on the seller's footage */
+  function applyLook(g, look, draw){
+    if(look === 'bright'){ g.save(); g.globalCompositeOperation = 'screen'; g.fillStyle = 'rgba(255,255,255,.14)'; draw(); g.restore(); }
+    else if(look === 'warm'){ g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = 'rgba(255,160,70,.45)'; draw(); g.restore(); }
+    else if(look === 'cool'){ g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = 'rgba(80,140,255,.4)'; draw(); g.restore(); }
+    else if(look === 'natural'){ g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = 'rgba(255,190,120,.14)'; draw(); g.restore(); }
+  }
+  /* a hanging price tag */
+  function priceTag(g, x, y, info, a, sc = 1){
+    if(!info.price || a <= 0) return;
+    g.save(); g.globalAlpha = a; g.translate(x, y); g.rotate(-0.12); g.scale(sc, sc);
+    g.font = '800 46px "Bricolage Grotesque", sans-serif'; const w = Math.max(170, g.measureText(info.price).width + 70), h = info.oldPrice ? 112 : 86;
+    g.shadowColor = 'rgba(0,0,0,.25)'; g.shadowBlur = 16; g.shadowOffsetY = 6;
+    g.fillStyle = info.pct >= 1 ? '#c62828' : '#e8b04b'; roundRect(g, -w/2, -h/2, w, h, 18); g.fill(); g.shadowColor = 'transparent';
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.arc(-w/2 + 20, 0, 7, 0, Math.PI*2); g.fill();
+    g.textAlign = 'center'; g.fillStyle = info.pct >= 1 ? '#ffffff' : '#1b1d3a';
+    if(info.oldPrice){ g.font = '600 24px Hind, sans-serif'; const ow = g.measureText(info.oldPrice).width; g.globalAlpha = a*0.8; g.fillText(info.oldPrice, 10, -18); g.fillRect(10 - ow/2, -26, ow, 2.5); g.globalAlpha = a;
+      g.font = '800 46px "Bricolage Grotesque", sans-serif'; g.fillText(info.price, 10, 32); }
+    else g.fillText(info.price, 10, 16);
+    g.restore();
+  }
   function studioPalette(lum){ return lum < 95 ? { light:true, a:'#f6f1ea', b:'#e4dacd', c:'#cbbcaa', glow:'rgba(255,255,255,.7)', shadow:'rgba(60,40,20,.28)' }
                                                  : { light:false, a:'#3a3550', b:'#1d1b2c', c:'#0d0c15', glow:'rgba(232,176,75,.22)', shadow:'rgba(0,0,0,.45)' }; }
   function studioBackdrop(pal){
@@ -4279,7 +4350,8 @@ var Film = (() => {
     const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
     const stage = mk(), g = stage.getContext('2d'), base = mk(), bg = base.getContext('2d'), prev = mk(), pg = prev.getContext('2d'), tmp = mk();
     g.setTransform(SC, 0, 0, SC, 0, 0); bg.setTransform(SC, 0, 0, SC, 0, 0);
-    const lang = info.lang || 'roman', segs = (F.plan || premiumPlan()).slice(0, 3);
+    const st = { ...STYLE_DEF, ...(F.style || {}) }, sp = st.pace === 'fast' ? 0.72 : 1, words = st.text !== 'off';
+    const lang = info.lang || 'roman', segs = (F.plan || premiumPlan()).slice(0, 3).map(x => ({ ...x, dur:x.dur*sp }));
     const feats = (ai && ai.features && ai.features.length ? ai.features : []).slice(0, 3);
     const kicker = info.pct >= 1 ? (lang === 'nepali' ? `${info.pct}% छुट` : `${info.pct}% OFF`) : KICK[lang] || KICK.roman;
     const sizes = String(info.sizes || '').split(/,\s*/).filter(Boolean).slice(0, 6);
@@ -4290,13 +4362,14 @@ var Film = (() => {
     /* the cleanest cut-out leads; others only if they are about as clean */
     let hi = 0; assets.forEach((a, i) => { if(a.cutCv && (!assets[hi].cutCv || a.score < assets[hi].score)) hi = i; });
     const hero = assets[hi] || { cutCv:null, photo:null }, others = assets.filter((a, i) => i !== hi && a.cutCv && a.score <= hero.score*1.2 + 0.2);
-    const pal = studioPalette(cutLum(hero.cutCv)), backdrop = studioBackdrop(pal);
+    const pal = pickPal(st, cutLum(hero.cutCv)), backdrop = pal.blur ? null : studioBackdrop(pal);
     const ink = pal.light ? '#1b1d3a' : '#ffffff', ink2 = pal.light ? 'rgba(27,29,58,.62)' : 'rgba(255,255,255,.78)', gold = pal.light ? '#b07a1a' : '#e8b04b';
-    const XF = 0.35, HERO = 2.6, CLIP = segs.map(s => s.dur), ANG = others.length ? 2.4 : 0, PRICE = 2.8, END = 2.2;
+    const XF = 0.35, HERO = 2.6*sp, CLIP = segs.map(s => s.dur), ANG = others.length ? 2.4*sp : 0, PRICE = st.pace === 'fast' ? 2.3 : 2.8, END = 2.2;
     const total = HERO + CLIP.reduce((a, b) => a + b, 0) + ANG + PRICE + END;
     const enc = await liveEncoder(W, H, 9_000_000);
     let hasPrev = false, acc = 0;
-    const back = () => { bg.save(); bg.setTransform(1, 0, 0, 1, 0, 0); bg.drawImage(backdrop, 0, 0); bg.restore(); };
+    const back = src => { if(pal.blur){ const im = src || hero.photo; if(im) blurInto(bg, im, im.videoWidth || im.width, im.videoHeight || im.height); else { bg.fillStyle = '#222'; bg.fillRect(0, 0, 720, 1280); } }
+      else { bg.save(); bg.setTransform(1, 0, 0, 1, 0, 0); bg.drawImage(backdrop, 0, 0); bg.restore(); } };
     const emit = (t, lt, over) => {
       g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(base, 0, 0);
       if(hasPrev && lt < XF){ g.globalAlpha = 1 - ease(lt / XF); g.drawImage(prev, 0, 0); } g.restore();
@@ -4312,6 +4385,8 @@ var Film = (() => {
         back(); const z = 0.86 + 0.14*ease(lt/0.9) + 0.03*lt/HERO, box = drawProduct(bg, hero, 360, 900 + (1 - ease(lt/0.9))*50, 560, 620, z, ease(lt/0.35));
         emit(acc + lt, lt, () => {
           sweep(g, hero, box, (lt - 0.7)/1.1, tmp); handle(ease((lt - 0.2)/0.5));
+          if(st.price === 'tag') priceTag(g, 540, 330, info, ease((lt - 0.8)/0.4), 0.95);
+          if(!words) return;
           const a = ease((lt - 0.55)/0.5);
           text(kicker, 360, 1040 + (1-a)*16, '800 24px "Bricolage Grotesque", sans-serif', gold, 'center', a, 5);
           g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = ink; g.font = '800 60px "Bricolage Grotesque", sans-serif';
@@ -4324,25 +4399,36 @@ var Film = (() => {
       try{
         for(let si = 0; si < segs.length; si++){
           const seg = segs[si], f = feats[si], dir = si % 2 ? -1 : 1;
+          const full = st.layout === 'full';
           const frame = local => {
-            back();
-            const inA = ease(local/0.5), z = 1.08 - 0.08*ease(local/seg.dur), rot = (1 - inA) * 0.05 * dir, dy = (1 - inA) * 60;
-            bg.save(); bg.translate(360, CY + CH/2 + dy); bg.rotate(rot); bg.translate(-360, -(CY + CH/2));
-            bg.shadowColor = pal.light ? 'rgba(60,40,20,.28)' : 'rgba(0,0,0,.55)'; bg.shadowBlur = 50; bg.shadowOffsetY = 24;
-            roundRect(bg, CX, CY, CW, CH, 34); bg.fillStyle = '#000'; bg.fill(); bg.shadowColor = 'transparent';
-            roundRect(bg, CX, CY, CW, CH, 34); bg.clip();
-            const vw = v.videoWidth || 720, vh = v.videoHeight || 1280, s = Math.max(CW/vw, CH/vh) * z;
-            bg.drawImage(v, 360 - vw*s/2, CY + CH/2 - vh*s/2, vw*s, vh*s);
-            bg.save(); bg.globalCompositeOperation = 'soft-light'; bg.fillStyle = 'rgba(255,190,120,.14)'; bg.fillRect(CX, CY, CW, CH); bg.restore();
-            bg.restore();
+            const vw = v.videoWidth || 720, vh = v.videoHeight || 1280, z = 1.08 - 0.08*ease(local/seg.dur);
+            const vid = (x, y, w, h) => { const s = Math.max(w/vw, h/vh) * z, dx = x + w/2 - vw*s/2, dy = y + h/2 - vh*s/2;
+              bg.drawImage(v, dx, dy, vw*s, vh*s);
+              if(st.look === 'vivid'){ bg.save(); bg.globalCompositeOperation = 'soft-light'; bg.globalAlpha = 0.6; bg.drawImage(v, dx, dy, vw*s, vh*s); bg.restore(); }
+              else applyLook(bg, st.look, () => bg.fillRect(x, y, w, h)); };
+            if(full){
+              bg.fillStyle = '#000'; bg.fillRect(0, 0, 720, 1280);
+              if(vw/vh > 0.62){ back(v); const h = 720*vh/vw; vid(0, 640 - h/2, 720, h); } else vid(0, 0, 720, 1280);
+              const sc = bg.createLinearGradient(0, 820, 0, 1280); sc.addColorStop(0, 'rgba(0,0,0,0)'); sc.addColorStop(1, 'rgba(0,0,0,.6)'); bg.fillStyle = sc; bg.fillRect(0, 820, 720, 460);
+            } else {
+              back(v);
+              const inA = ease(local/0.5), rot = (1 - inA) * 0.05 * dir, dy = (1 - inA) * 60;
+              bg.save(); bg.translate(360, CY + CH/2 + dy); bg.rotate(rot); bg.translate(-360, -(CY + CH/2));
+              bg.shadowColor = pal.light ? 'rgba(60,40,20,.28)' : 'rgba(0,0,0,.55)'; bg.shadowBlur = 50; bg.shadowOffsetY = 24;
+              roundRect(bg, CX, CY, CW, CH, 34); bg.fillStyle = '#000'; bg.fill(); bg.shadowColor = 'transparent';
+              roundRect(bg, CX, CY, CW, CH, 34); bg.clip(); vid(CX, CY, CW, CH); bg.restore();
+            }
+            const tInk = full ? '#ffffff' : ink, tY = full ? 1020 : 0;
             emit(acc + local, local, () => {
-              handle(1);
+              if(full){ if(info.shop) text(info.shop, 360, 96, '700 24px "Bricolage Grotesque", sans-serif', 'rgba(255,255,255,.9)', 'center', 1, 2); } else handle(1);
+              if(st.price === 'tag') priceTag(g, full ? 560 : 590, full ? 230 : 210, info, ease((local - 0.2)/0.4), 0.75);
+              if(!words) return;
               if(f){ const a = ease((local - 0.25)/0.45) * (1 - ease((local - (seg.dur - 0.3))/0.3));
-                text('0' + (si + 1), 360, 1072, '800 22px "Bricolage Grotesque", sans-serif', gold, 'center', a, 4);
-                g.save(); g.globalAlpha = a; g.fillStyle = gold; g.fillRect(360 - 30*ease((local - 0.2)/0.5), 1086, 60*ease((local - 0.2)/0.5), 3); g.restore();
-                g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = ink; g.font = '700 46px "Bricolage Grotesque", sans-serif';
+                text('0' + (si + 1), 360, 1072 + tY*0, '800 22px "Bricolage Grotesque", sans-serif', full ? '#e8b04b' : gold, 'center', a, 4);
+                g.save(); g.globalAlpha = a; g.fillStyle = full ? '#e8b04b' : gold; g.fillRect(360 - 30*ease((local - 0.2)/0.5), 1086, 60*ease((local - 0.2)/0.5), 3); g.restore();
+                g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = tInk; g.font = '700 46px "Bricolage Grotesque", sans-serif'; if(full){ g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 14; }
                 wrapText(g, f, 640, 2).forEach((l, i) => g.fillText(l, 360, 1146 + i*54 + (1-a)*14)); g.restore(); }
-              else if(si === 0 && title){ const a = ease((local - 0.25)/0.45); g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = ink; g.font = '700 44px "Bricolage Grotesque", sans-serif'; wrapText(g, title, 640, 2).forEach((l, i) => g.fillText(l, 360, 1110 + i*52)); g.restore(); }
+              else if(si === 0 && title){ const a = ease((local - 0.25)/0.45); g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = tInk; g.font = '700 44px "Bricolage Grotesque", sans-serif'; if(full){ g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 14; } wrapText(g, title, 640, 2).forEach((l, i) => g.fillText(l, 360, 1110 + i*52)); g.restore(); }
             });
           };
           await seek(v, seg.from); frame(0);
@@ -4371,11 +4457,11 @@ var Film = (() => {
         back(); const n = others.length, pos = lt / ANG * n - 0.5;
         others.forEach((a, i) => { const d = i - pos, x = 360 + d*430, sc = 1 - Math.min(0.3, Math.abs(d)*0.3), al = Math.max(0, 1 - Math.abs(d)*0.7);
           if(al > 0) drawProduct(bg, a, x, 880, 480, 560, sc, al); });
-        emit(acc + lt, lt, () => { handle(1); text(lang === 'nepali' ? 'हरेक कोणबाट' : lang === 'english' ? 'EVERY ANGLE' : 'HAREK ANGLE', 360, 1060, '800 24px "Bricolage Grotesque", sans-serif', gold, 'center', ease(lt/0.5), 5); });
+        emit(acc + lt, lt, () => { handle(1); if(words) text(lang === 'nepali' ? 'हरेक कोणबाट' : lang === 'english' ? 'EVERY ANGLE' : 'HAREK ANGLE', 360, 1060, '800 24px "Bricolage Grotesque", sans-serif', gold, 'center', ease(lt/0.5), 5); });
       });
       /* 4 · price, 5 · how to order */
       await timed(PRICE + END, lt => {
-        drawHero(bg, Math.min(lt, PRICE), PRICE, { ...info, name:title || info.name }, { cutCv:hero.cutCv, photo:hero.photo }, sizes, pal);
+        drawHero(bg, Math.min(lt, PRICE), PRICE, { ...info, name:words ? (title || info.name) : '' }, { cutCv:hero.cutCv, photo:hero.photo }, sizes, pal, st);
         const t = acc + lt; emit(t, lt, () => { if(t > total - END - 0.05){ g.save(); endCard(g, t, info, total, pal); g.restore(); } });
       });
       enc.add(stage, total - 0.001); onPct(1);
@@ -4470,6 +4556,7 @@ var Film = (() => {
       F.an = await analyse(F.url, p => { $('#fmCheck').textContent = `Checking your video… ${Math.round(p*100)}%`; });
       F.clips = pickClips(F.an); F.shots = pickShots(F.an);
       F.prepUrl = F.url; F.prep = prepare(); F.prep.catch(e => console.warn('prepare', e));
+      F.prep.then(() => { paintStyle(); if(segBusy) segQ.then(paintStyle).catch(() => {}); }).catch(() => {});
       const t = tips(F.an);
       $('#fmCheck').innerHTML = t.length ? '💡 ' + t.map(esc).join(' ') + ' <span class="muted">You can still go ahead.</span>' : `<span style="color:var(--good)">✓ Good video: ${F.clips.length} clear moments and ${F.shots.length} photos found.</span>`;
     }catch(e){ $('#fmCheck').textContent = e.message || 'Could not read this video.'; F.an = null; }
@@ -4536,6 +4623,41 @@ var Film = (() => {
   $('#fmDrop').onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#fmInput').click(); } };
   $('#fmInput').onchange = () => { const f = $('#fmInput').files[0]; $('#fmInput').value = ''; load(f); };
   $('#btnFilm').onclick = make;
+  /* ---- style choices with an instant preview ---- */
+  const STYLE_NAMES = { bg:{ blur:'Blur video', cream:'Cream', dark:'Dark', blush:'Pink', sky:'Blue', mint:'Green' }, look:{ bright:'Bright', warm:'Warm', cool:'Cool', vivid:'Vivid' },
+    layout:{ full:'Full screen' }, price:{ tag:'Price tag', none:'No price' }, pace:{ fast:'Fast' }, text:{ off:'Only price' } };
+  function styleSummary(){ const parts = Object.keys(STYLE_NAMES).map(k => STYLE_NAMES[k][F.style[k]]).filter(Boolean); return parts.length ? parts.join(' · ') : 'Auto · optional'; }
+  function paintChips(){ $$('#fmStyle .chips').forEach(box => box.querySelectorAll('button').forEach(b => b.classList.toggle('on', F.style[box.dataset.k] === b.dataset.v))); $('#fmStyleSum').textContent = styleSummary(); }
+  function filmInfo(){ const f = readForm(); return { shop:S.shop.name, price:f.price > 0 ? npr(f.price) : 'Rs 1,500', sizes:draft.sizes.join(', '), category:f.category, name:f.rawName || (F.ai && F.ai.name) || '', code:'', lang:'roman', ...offerInfo(f) }; }
+  function paintStyle(){
+    const box = $('#fmStyle'); if(!box || !box.open) return;
+    const st = { ...STYLE_DEF, ...F.style }, info = filmInfo(), words = st.text !== 'off';
+    const assets = photos.map((_, i) => photoAsset(i)); let hi = 0; assets.forEach((a, i) => { if(a.cutCv && (!assets[hi].cutCv || a.score < assets[hi].score)) hi = i; });
+    const hero = assets[hi], pal = pickPal(st, cutLum(hero && hero.cutCv));
+    [$('#fmPv1'), $('#fmPv2')].forEach((c, n) => {
+      const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
+      if(!hero){ g.fillStyle = '#e9e6e0'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#777'; g.font = '600 18px sans-serif'; g.textAlign = 'center'; g.fillText(n ? '' : 'Add your video', c.width/2, c.height/2); return; }
+      g.setTransform(c.width/720, 0, 0, c.width/720, 0, 0);
+      const back = () => { if(pal.blur) blurInto(g, hero.photo, hero.photo.width, hero.photo.height); else g.drawImage(studioBackdrop.cache && studioBackdrop.cache.pal === pal ? studioBackdrop.cache.c : (studioBackdrop.cache = { pal, c:studioBackdrop(pal) }).c, 0, 0, 720, 1280); };
+      if(n === 1){ drawHero(g, 2.8, 2.8, { ...info, name:words ? info.name : '' }, hero, String(info.sizes || '').split(/,\s*/).filter(Boolean), pal, st); return; }
+      const im = hero.photo, vw = im.width, vh = im.height;
+      const vid = (x, y, w, h) => { const s = Math.max(w/vw, h/vh), dx = x + w/2 - vw*s/2, dy = y + h/2 - vh*s/2; g.drawImage(im, dx, dy, vw*s, vh*s);
+        if(st.look === 'vivid'){ g.save(); g.globalCompositeOperation = 'soft-light'; g.globalAlpha = 0.6; g.drawImage(im, dx, dy, vw*s, vh*s); g.restore(); } else applyLook(g, st.look, () => g.fillRect(x, y, w, h)); };
+      const ink = st.layout === 'full' ? '#fff' : pal.light ? '#1b1d3a' : '#fff';
+      if(st.layout === 'full'){ vid(0, 0, 720, 1280); const sc = g.createLinearGradient(0, 820, 0, 1280); sc.addColorStop(0, 'rgba(0,0,0,0)'); sc.addColorStop(1, 'rgba(0,0,0,.6)'); g.fillStyle = sc; g.fillRect(0, 820, 720, 460); }
+      else { back(); g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 50; g.shadowOffsetY = 24; roundRect(g, 70, 160, 580, 830, 34); g.fillStyle = '#000'; g.fill(); g.restore();
+        g.save(); roundRect(g, 70, 160, 580, 830, 34); g.clip(); vid(70, 160, 580, 830); g.restore(); }
+      if(st.price === 'tag') priceTag(g, st.layout === 'full' ? 560 : 590, st.layout === 'full' ? 230 : 210, info, 1, 0.75);
+      if(words){ g.textAlign = 'center'; g.fillStyle = '#e8b04b'; g.font = '800 22px "Bricolage Grotesque", sans-serif'; g.fillText('01', 360, 1072); g.fillRect(330, 1086, 60, 3);
+        g.fillStyle = ink; g.font = '700 46px "Bricolage Grotesque", sans-serif'; g.fillText((F.ai && F.ai.features && F.ai.features[0]) || 'Soft fabric', 360, 1146); }
+    });
+  }
+  $$('#fmStyle .chips button').forEach(b => b.onclick = () => {
+    F.style[b.closest('.chips').dataset.k] = b.dataset.v; try{ localStorage.setItem('wt-film-style', JSON.stringify(F.style)); }catch(e){}
+    paintChips(); paintStyle();
+  });
+  $('#fmStyle').addEventListener('toggle', () => { paintStyle(); if(segBusy) segQ.then(paintStyle).catch(() => {}); });
+  paintChips();
   $('#fmPublish').onclick = publish;
   $('#fmCopy').onclick = () => copyText($('#fmCap').innerText);
   $('#fmGrid').addEventListener('click', async e => {
