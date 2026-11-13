@@ -3234,7 +3234,22 @@ var Cloud = (() => {
   }
   /* orders the AI assistant took: check every minute while WallTok is open */
   let orderTick = 0;
+  /* customers the AI handed over: tell the seller as soon as WallTok is open */
+  async function newHandoffs(){
+    if(!shopId || noAI) return;
+    let seen = {}; try{ seen = JSON.parse(localStorage.getItem('wt-handoffs') || '{}'); }catch(e){}
+    const { data, error } = await sb.from('ai_chats').select('id,summary,customer,updated_at').eq('shop_id', shopId).eq('status', 'needs_seller').order('updated_at', { ascending:false }).limit(20);
+    if(error || !data) return;
+    const fresh = data.filter(r => seen[r.id] !== r.updated_at);
+    data.forEach(r => seen[r.id] = r.updated_at); try{ localStorage.setItem('wt-handoffs', JSON.stringify(seen)); }catch(e){}
+    if(!fresh.length) return;
+    const f = fresh[0];
+    toast(`💬 A customer needs you${f.summary ? ': ' + f.summary.slice(0, 80) : ''}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''} · see Home → AI assistant`);
+    try{ if(window.Notification && Notification.permission === 'granted') new Notification('A customer needs you', { body:f.summary || 'Open WallTok to reply', icon:'/favicon.ico' }); }catch(e){}
+    if(curView() === 'home') render('home');
+  }
   async function newOrders(){
+    newHandoffs().catch(() => {});
     if(!shopId || document.hidden || busy) return;
     const since = new Date(Math.max(0, ...S.orders.map(o => o.created || 0)) - 60000).toISOString();
     const { data, error } = await sb.from('orders').select('*').eq('shop_id', shopId).gte('created_at', since);
