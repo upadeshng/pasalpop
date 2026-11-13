@@ -4550,7 +4550,7 @@ const Chat = (() => {
     let h = `<div class="msg ai${m.typing ? ' typing' : ''}">${esc(m.text || '')}</div>`;
     if(m.cards && m.cards.length) h += `<div class="ccards">${m.cards.map(c => `<a class="ccard" href="${esc(c.url)}"><img alt="" src="${esc(c.image || '')}" loading="lazy"><span><b>${esc(c.name)}</b><span>${esc(c.code)} · ${npr(c.price)}${c.stock === 0 ? ' · Sold out' : ''}</span></span></a>`).join('')}</div>`;
     if(m.order) h += `<div class="ocard"><b>✓ Order sent to ${esc(S.shop.name)}</b><span>${esc(m.order.code)} ${esc(m.order.name)}${m.order.size ? ', size ' + esc(m.order.size) : ''} × ${m.order.qty} = ${npr(m.order.total)}</span><span class="small muted">The seller will confirm with you on WhatsApp or phone.</span>${m.seller ? `<a class="btn small wa-btn" href="${esc(m.seller)}" target="_blank" rel="noopener">Also send it on WhatsApp</a>` : ''}</div>`;
-    else if(m.seller) h += `<a class="btn small wa-btn" style="align-self:flex-start" href="${esc(m.seller)}" target="_blank" rel="noopener">💬 Message the seller on WhatsApp</a>`;
+    else if(m.seller) h += `<a class="btn ${m.handoff ? '' : 'small '}wa-btn" style="align-self:flex-start" href="${esc(m.seller)}" target="_blank" rel="noopener">💬 ${m.handoff ? 'Ask the seller on WhatsApp' : 'Message the seller on WhatsApp'}</a>`;
     return h;
   }
   function paint(){ const log = $('#chatLog'); log.innerHTML = st.msgs.map(bubble).join('') + (busy ? bubble({ role:'assistant', text:'…', typing:true }) : ''); log.scrollTop = log.scrollHeight; chips(); }
@@ -4571,7 +4571,7 @@ const Chat = (() => {
       if(Cloud.signedIn() && !PUB_SLUG || (Cloud.signedIn() && S.shop.slug === PUB_SLUG)) r.reply += `\n\n(Only you see this, as the seller: ${e.detail || e.message || 'could not reach the assistant'})`; }
     busy = false;
     const last = st.msgs[st.msgs.length - 1]; if(last && last.image){ delete last.image; last.photo = true; }
-    if(r.status === 'ok') st.msgs.push({ role:'assistant', text:r.reply, cards:r.cards, order:r.order, seller:r.order ? r.seller : r.handoff ? r.handoff.seller : null });
+    if(r.status === 'ok') st.msgs.push({ role:'assistant', text:r.reply, cards:r.cards, order:r.order, seller:r.order ? r.seller : r.handoff ? r.handoff.seller : null, handoff:!!r.handoff });
     else if(r.status === 'limit' || r.status === 'off') st.msgs.push({ role:'assistant', text:'Yo kura seller sanga WhatsApp ma sodhnus hai 🙏', seller:r.seller || sellerWaLink('Namaste!') });
     else st.msgs.push({ role:'assistant', text:r.reply || 'Seller lai WhatsApp ma sodhnus 🙏', seller:r.seller || sellerWaLink('Namaste!') });
     keep(); paint();
