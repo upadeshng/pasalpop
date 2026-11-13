@@ -3257,7 +3257,7 @@ var Cloud = (() => {
     if(auth){ const { data } = await sb.auth.getSession(); if(data && data.session) headers.Authorization = 'Bearer ' + data.session.access_token; }
     const r = await fetch(`${CLOUD.url}/functions/v1/assistant/${path}`, { method:'POST', headers, body:JSON.stringify(body) });
     const j = await r.json().catch(() => ({}));
-    if(!r.ok) throw Object.assign(new Error((j.error && j.error.message) || 'The assistant is busy. Try again.'), { code:j.error && j.error.code, status:r.status });
+    if(!r.ok){ console.warn('assistant', r.status, j); throw Object.assign(new Error((j.error && j.error.message) || 'The assistant is busy. Try again.'), { code:j.error && j.error.code, status:r.status, detail:(j.error && (j.error.detail || j.error.message)) || ('HTTP ' + r.status) }); }
     return j;
   }
   function applyViews(prodRows){
@@ -4551,7 +4551,9 @@ const Chat = (() => {
     const msgs = st.msgs.map((m, i) => ({ role:m.role, text:m.text || '', ...(m.image && i === st.msgs.length - 1 ? { image:m.image } : {}) }));
     let r;
     try{ r = await Cloud.aiCall('chat', { slug:S.shop.slug || PUB_SLUG, session:st.session, product_code:cur() ? cur().code : '', messages:msgs }); }
-    catch(e){ r = { status:'error', reply:e.code === 'slow_down' ? 'Dherai message bhayo 🙏 Ekchin pachhi feri try garnus, wa seller lai WhatsApp garnus.' : 'Maaf garnus, ahile reply garna sakina 🙏 Seller lai WhatsApp ma sodhnus.', seller:sellerWaLink('Namaste!') }; }
+    catch(e){ r = { status:'error', reply:e.code === 'slow_down' ? 'Dherai message bhayo 🙏 Ekchin pachhi feri try garnus, wa seller lai WhatsApp garnus.' : 'Maaf garnus, ahile reply garna sakina 🙏 Seller lai WhatsApp ma sodhnus.', seller:sellerWaLink('Namaste!') };
+      /* the shop owner sees why, so it can be fixed */
+      if(Cloud.signedIn() && !PUB_SLUG || (Cloud.signedIn() && S.shop.slug === PUB_SLUG)) r.reply += `\n\n(Only you see this, as the seller: ${e.detail || e.message || 'could not reach the assistant'})`; }
     busy = false;
     const last = st.msgs[st.msgs.length - 1]; if(last && last.image){ delete last.image; last.photo = true; }
     if(r.status === 'ok') st.msgs.push({ role:'assistant', text:r.reply, cards:r.cards, order:r.order, seller:r.order ? r.seller : r.handoff ? r.handoff.seller : null });
