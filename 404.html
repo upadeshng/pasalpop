@@ -2189,20 +2189,22 @@ function waDisplay(){
   const nat = d.startsWith('977') && d.length === 13 ? d.slice(3) : (!raw.startsWith('+') && d.length === 10 ? d : '');
   return nat ? nat.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1 $2 $3') : '+' + d;
 }
-function endCard(g, t, info, T){
+function endCard(g, t, info, T, pal){
   const e = Math.min(1, Math.max(0, (t - (T - 2)) / 0.35)); if(e <= 0) return;
   const W = 720, H = 1280, url = shopUrl(), tx = END_TXT[info.lang] || END_TXT.roman;
   const wa = S.waOnVideo !== false ? waDisplay() : '';
   g.save(); g.globalAlpha = e;
-  const bgd = g.createLinearGradient(0, 0, 0, H); bgd.addColorStop(0, '#2b2f7a'); bgd.addColorStop(1, '#14163a');
+  const L = pal && pal.light, ink = L ? '#1b1d3a' : '#ffffff', soft = L ? 'rgba(27,29,58,.65)' : 'rgba(255,255,255,.75)';
+  let bgd; if(pal){ bgd = g.createRadialGradient(W/2, 560, 40, W/2, 640, 900); bgd.addColorStop(0, pal.a); bgd.addColorStop(0.55, pal.b); bgd.addColorStop(1, pal.c); }
+  else { bgd = g.createLinearGradient(0, 0, 0, H); bgd.addColorStop(0, '#2b2f7a'); bgd.addColorStop(1, '#14163a'); }
   g.fillStyle = bgd; g.fillRect(0, 0, W, H);
   g.textAlign = 'center';
-  if(info.shop){ g.font = '700 30px "Bricolage Grotesque", sans-serif'; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText(info.shop, W/2, 330); }
-  g.fillStyle = '#ffffff'; fitFont(g, tx.g, 700, 40, '"Bricolage Grotesque", sans-serif', 640); g.fillText(tx.g, W/2, 420);
+  if(info.shop){ g.font = '700 30px "Bricolage Grotesque", sans-serif'; g.fillStyle = soft; g.fillText(info.shop, W/2, 330); }
+  g.fillStyle = ink; fitFont(g, tx.g, 700, 40, '"Bricolage Grotesque", sans-serif', 640); g.fillText(tx.g, W/2, 420);
   /* a search bar people recognise from their phone's home screen */
   fitFont(g, url, 800, 50, '"Bricolage Grotesque", sans-serif', 520);
   const tw = g.measureText(url).width, bw = Math.min(680, tw + 150), bx = (W - bw)/2, by = 460, bh = 104;
-  g.fillStyle = '#ffffff'; roundRect(g, bx, by, bw, bh, 52); g.fill();
+  g.save(); if(L){ g.shadowColor = 'rgba(60,40,20,.18)'; g.shadowBlur = 24; g.shadowOffsetY = 6; } g.fillStyle = '#ffffff'; roundRect(g, bx, by, bw, bh, 52); g.fill(); g.restore();
   g.strokeStyle = '#5f6368'; g.lineWidth = 6; g.beginPath(); g.arc(bx + 58, by + 48, 16, 0, Math.PI*2); g.stroke();
   g.beginPath(); g.moveTo(bx + 70, by + 60); g.lineTo(bx + 84, by + 74); g.stroke();
   g.fillStyle = '#1b1d3a'; g.textAlign = 'left'; g.fillText(url, bx + 108, by + 70);
@@ -2211,12 +2213,12 @@ function endCard(g, t, info, T){
   if(info.code) pill(g, W/2, 650, 74, `Code ${info.code}`, '800 40px "Bricolage Grotesque", sans-serif', '#e8b04b', '#1b1d3a', 'center');
   const y0 = info.code ? 790 : 700;
   if(wa){
-    g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 2; g.beginPath(); g.moveTo(140, y0); g.lineTo(300, y0); g.moveTo(420, y0); g.lineTo(580, y0); g.stroke();
-    g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '600 30px Hind, sans-serif'; g.fillText(tx.or, W/2, y0 + 10);
+    g.strokeStyle = L ? 'rgba(27,29,58,.2)' : 'rgba(255,255,255,.3)'; g.lineWidth = 2; g.beginPath(); g.moveTo(140, y0); g.lineTo(300, y0); g.moveTo(420, y0); g.lineTo(580, y0); g.stroke();
+    g.fillStyle = soft; g.font = '600 30px Hind, sans-serif'; g.fillText(tx.or, W/2, y0 + 10);
     pill(g, W/2, y0 + 80, 80, `💬 WhatsApp ${wa}${info.code ? ' · ' + info.code : ''}`, '700 34px "Bricolage Grotesque", sans-serif', '#25a366', '#ffffff', 'center');
-    g.fillStyle = 'rgba(255,255,255,.75)'; fitFont(g, tx.wa, 500, 28, 'Hind, sans-serif', 620); g.fillText(tx.wa, W/2, y0 + 216);
+    g.fillStyle = soft; fitFont(g, tx.wa, 500, 28, 'Hind, sans-serif', 620); g.fillText(tx.wa, W/2, y0 + 216);
   } else {
-    g.fillStyle = 'rgba(255,255,255,.8)'; g.font = '500 30px Hind, sans-serif'; g.fillText(tx.bio, W/2, y0 + 10);
+    g.fillStyle = soft; g.font = '500 30px Hind, sans-serif'; g.fillText(tx.bio, W/2, y0 + 10);
   }
   g.restore();
 }
@@ -4208,121 +4210,177 @@ var Film = (() => {
     const gl = g.createRadialGradient(360, 600, 10, 360, 600, 420); gl.addColorStop(0, pal.glow); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(0, 0, 720, 1280);
     return c;
   }
+  /* ---- the finished video ----
+     1 the product cut out on a studio backdrop, with a light sweep and its name
+     2 three real moments from the seller's video, each in a floating frame with one feature
+     3 the other photos sliding past (every angle)
+     4 the price
+     5 how to order */
+  /* is this cut-out clean? one solid piece, not bits of the room stuck to it */
+  function cutClean(c){
+    const N = 64, s = document.createElement('canvas'); s.width = N; s.height = N; const g = s.getContext('2d', { willReadFrequently:true });
+    g.drawImage(c, 0, 0, N, N); const d = g.getImageData(0, 0, N, N).data, on = new Uint8Array(N*N); let tot = 0;
+    for(let k = 0; k < N*N; k++) if(d[k*4+3] > 128){ on[k] = 1; tot++; }
+    if(tot < N*N*0.12) return Infinity;
+    const seen = new Uint8Array(N*N); let best = 0;
+    for(let k = 0; k < N*N; k++){ if(!on[k] || seen[k]) continue; let n = 0; const q = [k]; seen[k] = 1;
+      while(q.length){ const j = q.pop(); n++; const x = j % N, y = (j / N)|0;
+        for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const xx = x+dx, yy = y+dy; if(xx<0||yy<0||xx>=N||yy>=N) continue; const jj = yy*N+xx; if(on[jj] && !seen[jj]){ seen[jj] = 1; q.push(jj); } } }
+      if(n > best) best = n; }
+    if(best / tot < 0.93) return Infinity;
+    /* bits of the room stuck on make a ragged outline: compare the outline length with the area */
+    let edge = 0; for(let k = 0; k < N*N; k++){ if(!on[k]) continue; const x = k % N, y = (k / N)|0;
+      if(x === 0 || y === 0 || x === N-1 || y === N-1 || !on[k-1] || !on[k+1] || !on[k-N] || !on[k+N]) edge++; }
+    return edge / Math.sqrt(tot);     /* lower = cleaner outline */
+  }
+  function photoAsset(i){
+    let cutCv = null, photo = null, score = Infinity;
+    if(photos[i]) withPhoto(i, () => {
+      photo = srcImage;
+      if(draft.removeBg && cut){ const k = Math.min(1, 1200 / Math.max(cut.w, cut.h)); cutCv = document.createElement('canvas'); cutCv.width = Math.round(cut.w*k); cutCv.height = Math.round(cut.h*k);
+        const s = photoTilt; photoTilt = 0; drawCut(cutCv.getContext('2d'), 0, 0, cutCv.width, cutCv.height); photoTilt = s;
+        score = cutClean(cutCv); if(!isFinite(score) || score > 12) cutCv = null; }
+    });
+    return { cutCv, photo, score };
+  }
+  function cutLum(c){
+    if(!c) return 128; const s = document.createElement('canvas'); s.width = 48; s.height = Math.max(1, Math.round(48*c.height/c.width));
+    const g = s.getContext('2d', { willReadFrequently:true }); g.drawImage(c, 0, 0, s.width, s.height); const d = g.getImageData(0, 0, s.width, s.height).data;
+    let l = 0, n = 0; for(let k = 0; k < d.length; k += 4) if(d[k+3] > 200){ l += d[k]*0.299 + d[k+1]*0.587 + d[k+2]*0.114; n++; } return n ? l/n : 128;
+  }
+  /* the product, cut out, standing on the backdrop with a soft shadow; returns where it was drawn */
+  function drawProduct(g, a, cx, baseY, maxW, maxH, z, alpha = 1){
+    g.save(); g.globalAlpha = alpha;
+    if(a.cutCv){
+      const c = a.cutCv, s = Math.min(maxW/c.width, maxH/c.height) * z, dw = c.width*s, dh = c.height*s;
+      g.save(); g.globalAlpha = alpha*0.9; g.fillStyle = 'rgba(0,0,0,.28)'; g.filter = 'blur(16px)'; g.beginPath(); g.ellipse(cx, baseY - 4, dw*0.4, 18*z, 0, 0, Math.PI*2); g.fill(); g.restore();
+      g.drawImage(c, cx - dw/2, baseY - dh, dw, dh); g.restore(); return { x:cx - dw/2, y:baseY - dh, w:dw, h:dh };
+    }
+    if(a.photo){
+      const im = a.photo, bw = maxW*0.9*z, bh = Math.min(maxH, bw*1.25), s = Math.max(bw/im.width, bh/im.height), x = cx - bw/2, y = baseY - bh;
+      g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 40; g.shadowOffsetY = 18; roundRect(g, x, y, bw, bh, 30); g.fillStyle = '#000'; g.fill(); g.shadowColor = 'transparent';
+      roundRect(g, x, y, bw, bh, 30); g.clip(); g.drawImage(im, x + (bw - im.width*s)/2, y + (bh - im.height*s)/2, im.width*s, im.height*s); g.restore(); return { x, y, w:bw, h:bh };
+    }
+    g.restore(); return null;
+  }
+  /* a bright band of light passing over the product */
+  function sweep(g, a, box, p, tmp){
+    if(!a.cutCv || !box || p <= 0 || p >= 1) return;
+    const tg = tmp.getContext('2d'); tg.setTransform(1, 0, 0, 1, 0, 0); tg.clearRect(0, 0, tmp.width, tmp.height);
+    const k = tmp.width / 720; tg.setTransform(k, 0, 0, k, 0, 0);
+    tg.drawImage(a.cutCv, box.x, box.y, box.w, box.h); tg.globalCompositeOperation = 'source-in';
+    const x = box.x - 200 + (box.w + 400) * p, gr = tg.createLinearGradient(x - 120, box.y, x + 120, box.y + 160);
+    gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    tg.fillStyle = gr; tg.fillRect(0, 0, 720, 1280); tg.globalCompositeOperation = 'source-over';
+    g.save(); g.globalCompositeOperation = 'screen'; g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(tmp, 0, 0); g.restore();
+  }
   async function renderPremium(info, ai, onPct){
-    const SC = 1.5, W = 1080, H = 1920;                   /* full HD, drawn on a 720×1280 layout */
-    const stage = document.createElement('canvas'); stage.width = W; stage.height = H; const g = stage.getContext('2d');
-    const base = document.createElement('canvas'); base.width = W; base.height = H; const bg = base.getContext('2d');
-    const prev = document.createElement('canvas'); prev.width = W; prev.height = H; const pg = prev.getContext('2d');
-    const small = document.createElement('canvas'); small.width = 36; small.height = 64;
+    const SC = 1.5, W = 1080, H = 1920;
+    const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+    const stage = mk(), g = stage.getContext('2d'), base = mk(), bg = base.getContext('2d'), prev = mk(), pg = prev.getContext('2d'), tmp = mk();
     g.setTransform(SC, 0, 0, SC, 0, 0); bg.setTransform(SC, 0, 0, SC, 0, 0);
-    const lang = info.lang || 'roman', segs = F.plan || premiumPlan();
-    const feats = (ai && ai.features && ai.features.length ? ai.features : [info.notes, info.offer].filter(Boolean)).slice(0, 3);
+    const lang = info.lang || 'roman', segs = (F.plan || premiumPlan()).slice(0, 3);
+    const feats = (ai && ai.features && ai.features.length ? ai.features : []).slice(0, 3);
     const kicker = info.pct >= 1 ? (lang === 'nepali' ? `${info.pct}% छुट` : `${info.pct}% OFF`) : KICK[lang] || KICK.roman;
     const sizes = String(info.sizes || '').split(/,\s*/).filter(Boolean).slice(0, 6);
-    const XF = 0.4, HERO = 3.4, END = 2.4;
-    const body = segs.reduce((a, s) => a + s.dur, 0), total = body + HERO + END - 0.4;
+    const title = (ai && ai.name) || info.name || '';
+    /* the cut-outs: wait a little for any still being made */
+    const t0 = Date.now(); while(segBusy && !segFailed && Date.now() - t0 < 25000){ step('Cleaning up your photos…'); await new Promise(r => setTimeout(r, 250)); }
+    const assets = photos.map((_, i) => photoAsset(i));
+    /* the cleanest cut-out leads; others only if they are about as clean */
+    let hi = 0; assets.forEach((a, i) => { if(a.cutCv && (!assets[hi].cutCv || a.score < assets[hi].score)) hi = i; });
+    const hero = assets[hi] || { cutCv:null, photo:null }, others = assets.filter((a, i) => i !== hi && a.cutCv && a.score <= hero.score*1.2 + 0.2);
+    const pal = studioPalette(cutLum(hero.cutCv)), backdrop = studioBackdrop(pal);
+    const ink = pal.light ? '#1b1d3a' : '#ffffff', ink2 = pal.light ? 'rgba(27,29,58,.62)' : 'rgba(255,255,255,.78)', gold = pal.light ? '#b07a1a' : '#e8b04b';
+    const XF = 0.35, HERO = 2.6, CLIP = segs.map(s => s.dur), ANG = others.length ? 2.4 : 0, PRICE = 2.8, END = 2.2;
+    const total = HERO + CLIP.reduce((a, b) => a + b, 0) + ANG + PRICE + END;
     const enc = await liveEncoder(W, H, 9_000_000);
-    let hasPrev = false;
-    const compose = (t, lt, segDur, overlay) => {
+    let hasPrev = false, acc = 0;
+    const back = () => { bg.save(); bg.setTransform(1, 0, 0, 1, 0, 0); bg.drawImage(backdrop, 0, 0); bg.restore(); };
+    const emit = (t, lt, over) => {
       g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(base, 0, 0);
       if(hasPrev && lt < XF){ g.globalAlpha = 1 - ease(lt / XF); g.drawImage(prev, 0, 0); } g.restore();
-      overlay(t, lt, segDur); enc.add(stage, t);
+      if(over) over(); enc.add(stage, t);
     };
-    const keepPrev = () => { pg.clearRect(0, 0, W, H); pg.drawImage(base, 0, 0); hasPrev = true; };
-    const clipOverlay = seg => (t, lt, d) => {
-      const out = 1 - ease((lt - (d - 0.3)) / 0.3);
-      scrim(g, 1); brand(g, info, ease(t / 0.6));
-      g.save(); g.textAlign = 'left';
-      if(seg.i === 0){
-        const a = ease((lt - 0.25)/0.5) * out, y = 1030 + (1 - a)*24;
-        g.globalAlpha = a; g.font = '800 26px "Bricolage Grotesque", sans-serif'; spaced(g, 4); g.fillStyle = '#e8b04b'; g.fillText(kicker, 48, y - 20);
-        spaced(g, 0); g.fillStyle = '#fff'; g.font = '800 66px "Bricolage Grotesque", sans-serif'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 16;
-        const ls = wrapText(g, info.name || info.category, 620, 2); ls.forEach((l, i) => g.fillText(l, 48, y + 58 + i*72));
-      } else {
-        const f = feats[seg.i - 1]; if(f){
-          const a = ease((lt - 0.3)/0.45) * out, lw = 60 * ease((lt - 0.2)/0.5);
-          g.globalAlpha = a; g.fillStyle = '#e8b04b'; g.fillRect(48, 1060, lw, 4);
-          g.font = '800 24px "Bricolage Grotesque", sans-serif'; spaced(g, 3); g.fillText('0' + seg.i, 48, 1040);
-          spaced(g, 0); g.fillStyle = '#fff'; g.font = '700 50px "Bricolage Grotesque", sans-serif'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 14;
-          wrapText(g, f, 620, 2).forEach((l, i) => g.fillText(l, 48, 1126 + i*60 + (1 - a)*18));
-        }
-      }
-      g.restore();
-    };
-    const v = await openVideo(F.url); let acc = 0, speed = 0.6, srcFd = 0;
-    const vw = v.videoWidth || 720, vh = v.videoHeight || 1280, thH = Math.max(16, Math.round(TW * vh / vw));
-    const fgc = document.createElement('canvas'); fgc.width = W; fgc.height = H; const fg = fgc.getContext('2d'); fg.setTransform(SC, 0, 0, SC, 0, 0);
-    const hc = document.createElement('canvas'); hc.width = 180; hc.height = 320; const hg = hc.getContext('2d'); hg.setTransform(0.25, 0, 0, 0.25, 0, 0);
-    const tc = document.createElement('canvas'); tc.width = TW; tc.height = thH; const tg = tc.getContext('2d', { willReadFrequently:true });
-    const curGray = () => { tg.drawImage(v, 0, 0, TW, thH); const d = tg.getImageData(0, 0, TW, thH).data, o = new Float32Array(TW*thH); for(let k = 0; k < TW*thH; k++) o[k] = d[k*4]*0.299 + d[k*4+1]*0.587 + d[k*4+2]*0.114; return o; };
-    let pal = null, backdrop = null;
-    F.studioBg = 0;
-    const live = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+    const keep = () => { pg.clearRect(0, 0, W, H); pg.drawImage(stage, 0, 0); hasPrev = true; };
+    const text = (s, x, y, font, color, align = 'left', a = 1, sp = 0) => { g.save(); g.globalAlpha = a; g.textAlign = align; g.font = font; spaced(g, sp); g.fillStyle = color; g.fillText(s, x, y); g.restore(); };
+    const handle = a => { if(info.shop) text(info.shop, 360, 96, '700 24px "Bricolage Grotesque", sans-serif', ink2, 'center', a, 2); };
+    const timed = async (dur, paint) => { for(let lt = 0; lt < dur - 1e-6; lt += 1/30){ paint(lt); await enc.drain(4); } keep(); acc += dur; onPct(acc / total); };
     try{
-      for(const seg of segs){
-        const ov = clipOverlay(seg);
-        /* wait (a little) for this clip's precise cut-out */
-        const tw0 = Date.now(); while(segBusy && !segFailed && photos[seg.i] && !withPhoto(seg.i, () => !!matte) && Date.now() - tw0 < 20000){ step('Cleaning up the background…'); await new Promise(r => setTimeout(r, 200)); }
-        const K = clipKey(seg.i, vw, vh);
-        if(K && !pal){ pal = studioPalette(K.lum); backdrop = studioBackdrop(pal); }
-        if(K) F.studioBg++;
-        let st = { s:1, dx:0, dy:0 }, first = true, rep = 1;
-        const frame = local => {
-          const z = 1.06 - 0.06*ease(local / seg.dur) + (hasPrev && local < XF ? 0.03*(1 - ease(local/XF)) : 0);
-          const zoom = c => { c.translate(360, 640); c.scale(z, z); c.translate(-360, -640); };
-          if(K){
-            const b = track(K, curGray(), st, first); first = false; st = b;
-            rep += ((b.e < 22 ? 1 : b.e > 34 ? 0 : (34 - b.e)/12) - rep) * 0.25;     /* lost the product? ease back to the real background */
-            const r = videoRect(v), place = (c, img) => { c.save(); zoom(c); c.translate(r.x + r.w*(0.5 + b.dx/TW), r.y + r.h*(0.5 + b.dy/K.th)); c.scale(b.s, b.s); c.drawImage(img, -r.w/2, -r.h/2, r.w, r.h); c.restore(); };
-            fg.save(); fg.globalCompositeOperation = 'source-over'; fg.clearRect(0, 0, 720, 1280); zoom(fg); drawSource(fg, v, small, true); fg.restore();
-            fg.save(); fg.globalCompositeOperation = 'destination-in'; place(fg, K.mask); fg.restore();
-            hg.save(); hg.globalCompositeOperation = 'source-over'; hg.clearRect(0, 0, 720, 1280); zoom(hg); drawSource(hg, v, small, true); hg.restore();
-            hg.save(); hg.globalCompositeOperation = 'destination-in'; place(hg, K.halo); hg.restore();
-            hg.save(); hg.setTransform(1, 0, 0, 1, 0, 0); hg.globalCompositeOperation = 'source-atop'; hg.globalAlpha = 0.85; hg.fillStyle = pal.b; hg.fillRect(0, 0, 180, 320); hg.restore();   /* tint it to the backdrop */
-            bg.save(); zoom(bg); drawSource(bg, v, small, true); bg.restore();
-            bg.save(); bg.globalAlpha = rep; bg.setTransform(1, 0, 0, 1, 0, 0); bg.drawImage(backdrop, 0, 0);
-            bg.globalAlpha = rep * 0.3; bg.drawImage(hc, 0, 0, W, H); bg.globalAlpha = rep; bg.drawImage(fgc, 0, 0); bg.restore();
-          } else { bg.save(); zoom(bg); drawSource(bg, v, small, true); bg.restore(); }
-          gradeOver(bg);
-          compose(acc + local, local, seg.dur, ov);
-        };
-        await seek(v, seg.from); frame(0);
-        if(live){
-          await new Promise((res, rej) => {
-            let fin = false, lastM = -1; const end = () => { if(!fin){ fin = true; v.pause(); clearTimeout(guard); res(); } };
-            let guard = setTimeout(end, 20000);
-            const cb = async (now, md) => { if(fin) return;
-              clearTimeout(guard); guard = setTimeout(end, 4000);
-              /* if frames are being skipped, play slower so every frame gets drawn (smooth video, timing stays right) */
-              if(lastM >= 0){ const d = md.mediaTime - lastM; if(d > 0){ if(srcFd === 0 || d < srcFd) srcFd = Math.max(1/120, d);
-                if(d > srcFd*1.5) speed = Math.max(0.12, speed*0.8); else speed = Math.min(1, speed*1.03); v.playbackRate = Math.max(0.0625, seg.rate*speed); } }
-              lastM = md.mediaTime;
-              const local = (md.mediaTime - seg.from) / seg.rate; if(local >= seg.dur - 0.01){ end(); return; }
-              try{ if(local > 0) frame(local); }catch(e){ fin = true; v.pause(); rej(e); return; }
-              if(enc.queue() > 6){ v.pause(); try{ await enc.drain(2); }catch(e){ fin = true; rej(e); return; } if(!fin) v.play().catch(end); }
-              if(!fin) v.requestVideoFrameCallback(cb); };
-            v.playbackRate = Math.max(0.0625, seg.rate*speed); v.requestVideoFrameCallback(cb); v.onended = end; v.play().catch(end);
-          });
-        } else {
-          for(let local = 1/30; local < seg.dur - 0.01; local += 1/30){ await seek(v, seg.from + local*seg.rate); frame(local); await enc.drain(4); }
+      /* 1 · hero */
+      await timed(HERO, lt => {
+        back(); const z = 0.86 + 0.14*ease(lt/0.9) + 0.03*lt/HERO, box = drawProduct(bg, hero, 360, 900 + (1 - ease(lt/0.9))*50, 560, 620, z, ease(lt/0.35));
+        emit(acc + lt, lt, () => {
+          sweep(g, hero, box, (lt - 0.7)/1.1, tmp); handle(ease((lt - 0.2)/0.5));
+          const a = ease((lt - 0.55)/0.5);
+          text(kicker, 360, 1040 + (1-a)*16, '800 24px "Bricolage Grotesque", sans-serif', gold, 'center', a, 5);
+          g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = ink; g.font = '800 60px "Bricolage Grotesque", sans-serif';
+          wrapText(g, title || info.category, 620, 2).forEach((l, i) => g.fillText(l, 360, 1110 + i*66 + (1-a)*16)); g.restore();
+        });
+      });
+      /* 2 · real moments in a floating frame */
+      const v = await openVideo(F.url); let speed = 0.6, srcFd = 0;
+      const CX = 70, CY = 160, CW = 580, CH = 830;
+      try{
+        for(let si = 0; si < segs.length; si++){
+          const seg = segs[si], f = feats[si], dir = si % 2 ? -1 : 1;
+          const frame = local => {
+            back();
+            const inA = ease(local/0.5), z = 1.08 - 0.08*ease(local/seg.dur), rot = (1 - inA) * 0.05 * dir, dy = (1 - inA) * 60;
+            bg.save(); bg.translate(360, CY + CH/2 + dy); bg.rotate(rot); bg.translate(-360, -(CY + CH/2));
+            bg.shadowColor = pal.light ? 'rgba(60,40,20,.28)' : 'rgba(0,0,0,.55)'; bg.shadowBlur = 50; bg.shadowOffsetY = 24;
+            roundRect(bg, CX, CY, CW, CH, 34); bg.fillStyle = '#000'; bg.fill(); bg.shadowColor = 'transparent';
+            roundRect(bg, CX, CY, CW, CH, 34); bg.clip();
+            const vw = v.videoWidth || 720, vh = v.videoHeight || 1280, s = Math.max(CW/vw, CH/vh) * z;
+            bg.drawImage(v, 360 - vw*s/2, CY + CH/2 - vh*s/2, vw*s, vh*s);
+            bg.save(); bg.globalCompositeOperation = 'soft-light'; bg.fillStyle = 'rgba(255,190,120,.14)'; bg.fillRect(CX, CY, CW, CH); bg.restore();
+            bg.restore();
+            emit(acc + local, local, () => {
+              handle(1);
+              if(f){ const a = ease((local - 0.25)/0.45) * (1 - ease((local - (seg.dur - 0.3))/0.3));
+                text('0' + (si + 1), 360, 1072, '800 22px "Bricolage Grotesque", sans-serif', gold, 'center', a, 4);
+                g.save(); g.globalAlpha = a; g.fillStyle = gold; g.fillRect(360 - 30*ease((local - 0.2)/0.5), 1086, 60*ease((local - 0.2)/0.5), 3); g.restore();
+                g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = ink; g.font = '700 46px "Bricolage Grotesque", sans-serif';
+                wrapText(g, f, 640, 2).forEach((l, i) => g.fillText(l, 360, 1146 + i*54 + (1-a)*14)); g.restore(); }
+              else if(si === 0 && title){ const a = ease((local - 0.25)/0.45); g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = ink; g.font = '700 44px "Bricolage Grotesque", sans-serif'; wrapText(g, title, 640, 2).forEach((l, i) => g.fillText(l, 360, 1110 + i*52)); g.restore(); }
+            });
+          };
+          await seek(v, seg.from); frame(0);
+          if('requestVideoFrameCallback' in HTMLVideoElement.prototype){
+            await new Promise((res, rej) => {
+              let fin = false, lastM = -1; const end = () => { if(!fin){ fin = true; v.pause(); clearTimeout(guard); res(); } };
+              let guard = setTimeout(end, 20000);
+              const cb = async (now, md) => { if(fin) return; clearTimeout(guard); guard = setTimeout(end, 4000);
+                if(lastM >= 0){ const d = md.mediaTime - lastM; if(d > 0){ if(srcFd === 0 || d < srcFd) srcFd = Math.max(1/120, d);
+                  if(d > srcFd*1.5) speed = Math.max(0.12, speed*0.8); else speed = Math.min(1, speed*1.03); v.playbackRate = Math.max(0.0625, seg.rate*speed); } }
+                lastM = md.mediaTime;
+                const local = (md.mediaTime - seg.from) / seg.rate; if(local >= seg.dur - 0.01){ end(); return; }
+                try{ if(local > 0) frame(local); }catch(e){ fin = true; v.pause(); rej(e); return; }
+                if(enc.queue() > 6){ v.pause(); try{ await enc.drain(2); }catch(e){ fin = true; rej(e); return; } if(!fin) v.play().catch(end); }
+                if(!fin) v.requestVideoFrameCallback(cb); };
+              v.playbackRate = Math.max(0.0625, seg.rate*speed); v.requestVideoFrameCallback(cb); v.onended = end; v.play().catch(end);
+            });
+          } else {
+            for(let local = 1/30; local < seg.dur - 0.01; local += 1/30){ await seek(v, seg.from + local*seg.rate); frame(local); await enc.drain(4); }
+          }
+          keep(); acc += seg.dur; onPct(acc / total);
         }
-        keepPrev(); acc += seg.dur; onPct(acc / total * 0.8);
-      }
-      v.pause(); v.remove();
-      /* the studio shot needs the precise cut-out of the first photo: give it a moment if it's still working */
-      const t0 = Date.now(); while(segBusy && !segFailed && photos[0] && !withPhoto(0, () => !!matte) && Date.now() - t0 < 9000) await new Promise(r => setTimeout(r, 200));
-      const ha = heroAssets();
-      for(let lt = 0; lt < HERO + END - 0.4; lt += 1/30){
-        const t = acc + lt, hl = Math.min(lt, HERO);
-        drawHero(bg, hl, HERO, info, ha, sizes, pal);
-        compose(t, lt, HERO, () => { if(t > total - 2.05){ g.save(); endCard(g, t, info, total); g.restore(); } });
-        await enc.drain(4);
-        if(Math.round(lt*30) % 15 === 0) onPct(0.8 + 0.2*lt/(HERO + END));
-      }
+      } finally { v.pause(); v.remove(); }
+      /* 3 · every angle */
+      if(ANG) await timed(ANG, lt => {
+        back(); const n = others.length, pos = lt / ANG * n - 0.5;
+        others.forEach((a, i) => { const d = i - pos, x = 360 + d*430, sc = 1 - Math.min(0.3, Math.abs(d)*0.3), al = Math.max(0, 1 - Math.abs(d)*0.7);
+          if(al > 0) drawProduct(bg, a, x, 880, 480, 560, sc, al); });
+        emit(acc + lt, lt, () => { handle(1); text(lang === 'nepali' ? 'हरेक कोणबाट' : lang === 'english' ? 'EVERY ANGLE' : 'HAREK ANGLE', 360, 1060, '800 24px "Bricolage Grotesque", sans-serif', gold, 'center', ease(lt/0.5), 5); });
+      });
+      /* 4 · price, 5 · how to order */
+      await timed(PRICE + END, lt => {
+        drawHero(bg, Math.min(lt, PRICE), PRICE, { ...info, name:title || info.name }, { cutCv:hero.cutCv, photo:hero.photo }, sizes, pal);
+        const t = acc + lt; emit(t, lt, () => { if(t > total - END - 0.05){ g.save(); endCard(g, t, info, total, pal); g.restore(); } });
+      });
       enc.add(stage, total - 0.001); onPct(1);
       return await enc.finish();
     }catch(e){ enc.close(); throw e; }
-    finally{ v.pause(); v.remove(); }
   }
   /* an MP4 encoder that takes frames as they come (not a fixed clock) */
   async function liveEncoder(W, H, BR = 4_000_000){
