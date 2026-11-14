@@ -1493,8 +1493,7 @@ function renderThumbs(){
 function resetPhotos(){
   photos.forEach(p => URL.revokeObjectURL(p.url));
   photos = []; curPhoto = -1; srcImage = null; srcFile = null; mask = null; cut = null; xform = null; matte = null;
-  draft.tint = null; draft.matchSeed = 1 + Math.floor(Math.random()*1e6); draft.scenePicked = false; draft.catPicked = false;
-  Object.keys(sceneCache).forEach(k => delete sceneCache[k]);
+  draft.tint = null; draft.matchSeed = 1 + Math.floor(Math.random()*1e6); draft.scenePicked = false; draft.catPicked = false; regenScenes();
   $('#compare').hidden = true; $('#backdropRow').hidden = true; $('#thumbs').hidden = true; $('#photoCount').textContent = '';
   drop.querySelector('b').textContent = 'Tap to choose photos';
 }
@@ -2068,6 +2067,86 @@ const SCENES = {
     glow(g,S,0.3 + r()*0.4,0.18,0.75,'rgba(255,255,255,.35)'); vignette(g,S,.16); noise(g,S,5,r);
   }}
 };
+/* ---- fresh backgrounds for every product ----
+   8 designs made on the spot from the product's own colours: a colour set, a shape on the wall, a floor, and the light.
+   No two products (or sellers) get the same set. */
+const hsl = (h, s, l, a = 1) => `hsla(${((h % 360) + 360) % 360} ${Math.max(0, Math.min(100, s)).toFixed(0)}% ${Math.max(0, Math.min(100, l)).toFixed(0)}% / ${a})`;
+function hueName(h, s){
+  if(s < 12) return 'Stone';
+  const n = [[15,'Rose'],[40,'Peach'],[60,'Sand'],[85,'Lemon'],[150,'Sage'],[190,'Mint'],[230,'Sky'],[265,'Blue'],[300,'Lilac'],[340,'Blush'],[361,'Rose']];
+  return n.find(([e]) => ((h % 360) + 360) % 360 < e)[1];
+}
+function genPalettes(t, r){
+  const grey = !t || t.s < 0.14, h = grey ? [30, 210, 150, 340, 45][Math.floor(r()*5)] : t.h, light = t && t.l > 0.8;
+  const sets = [
+    { h, s:48, l:86 },                         /* the product's own colour, soft */
+    { h, s:38, l:light ? 34 : 78 },            /* the product's colour, deeper */
+    { h:h + 180, s:36, l:86 },                 /* gentle opposite */
+    { h:h + 40, s:42, l:84 },                  /* neighbour colours */
+    { h:h - 40, s:42, l:84 },
+    { h:h + 150, s:30, l:light ? 30 : 72 },
+    { h:30, s:14, l:88 },                      /* warm neutral */
+    { h:215, s:12, l:86 },                     /* cool neutral */
+  ];
+  for(let i = sets.length - 1; i > 1; i--){ const j = 1 + Math.floor(r()*i); [sets[i], sets[j]] = [sets[j], sets[i]]; }   /* the first stays the product's own colour */
+  return sets;
+}
+const SHAPES = ['arch', 'circle', 'sunbeam', 'stripes', 'steps', 'leaves', 'bokeh', 'split', 'frame', 'wave'];
+const FLOORS = ['wood', 'marble', 'stone', 'fabric', 'solid', 'tiles'];
+const SHAPE_NAME = { arch:'Arch', circle:'Circle', sunbeam:'Sunbeam', stripes:'Stripes', steps:'Steps', leaves:'Leaf shadow', bokeh:'Glow', split:'Two-tone', frame:'Frame', wave:'Wave' };
+function genScene(i, seed, t){
+  const r0 = rng(seed*7919 + i*104729 + 17), pals = genPalettes(t, rng(seed*31 + 5)), P = pals[i % pals.length];
+  const shuffle = (a, rr) => { a = a.slice(); for(let k = a.length - 1; k > 0; k--){ const j = Math.floor(rr()*(k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
+  const shapes = shuffle(SHAPES, rng(seed*13 + 1)), floors = shuffle(FLOORS, rng(seed*17 + 3));
+  const calm = ['arch', 'circle', 'sunbeam', 'frame'], shape = i === 0 ? calm[Math.floor(rng(seed*3 + 9)()*calm.length)] : shapes[i % shapes.length], floor = floors[(i + Math.floor(r0()*3)) % floors.length];
+  const dark = P.l < 50, surf = 0.72 + r0()*0.1, plinth = r0() < 0.35;
+  return { name:`${hueName(P.h, P.s)} ${SHAPE_NAME[shape].toLowerCase()}`.replace(/^./, c => c.toUpperCase()), tone:hsl(P.h, P.s, P.l), dark, surface:surf, gen:true,
+    draw(g, S, r){
+      const W = (y0, y1, a, b) => vg(g, S, y0, y1, [[0, a], [1, b]]);
+      W(0, surf, hsl(P.h, P.s, P.l + (dark ? 4 : 5)), hsl(P.h, P.s + 4, P.l - (dark ? 6 : 7)));
+      const A = hsl(P.h + (r() < .5 ? 0 : 20), P.s + 8, P.l + (dark ? 8 : -9)), A2 = hsl(P.h - 15, P.s + 10, P.l + (dark ? 14 : -15));
+      g.save(); g.beginPath(); g.rect(0, 0, S, surf*S); g.clip();
+      if(shape === 'arch'){ const w = (0.5 + r()*0.2)*S, x = (S - w)/2 + (r() - 0.5)*0.15*S, top = (0.08 + r()*0.1)*S; g.fillStyle = A; g.beginPath(); g.moveTo(x, surf*S); g.lineTo(x, top + w/2); g.arc(x + w/2, top + w/2, w/2, Math.PI, 0); g.lineTo(x + w, surf*S); g.closePath(); g.fill(); }
+      else if(shape === 'circle'){ g.fillStyle = A; g.beginPath(); g.arc((0.35 + r()*0.3)*S, (0.3 + r()*0.15)*S, (0.24 + r()*0.12)*S, 0, 7); g.fill(); if(r() < .5){ g.fillStyle = A2; g.beginPath(); g.arc((0.15 + r()*0.7)*S, (0.15 + r()*0.4)*S, (0.06 + r()*0.06)*S, 0, 7); g.fill(); } }
+      else if(shape === 'sunbeam'){ g.fillStyle = dark ? 'rgba(255,235,200,.16)' : 'rgba(255,255,255,.42)'; const n = 2 + Math.floor(r()*2), dir = r() < .5 ? 1 : -1;
+        for(let k = 0; k < n; k++){ const x = (0.1 + k*0.28 + r()*0.08)*S; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 0.13*S, 0); g.lineTo(x + 0.13*S + dir*0.3*S, surf*S); g.lineTo(x + dir*0.3*S, surf*S); g.closePath(); g.fill(); } }
+      else if(shape === 'stripes'){ const n = 5 + Math.floor(r()*5), w = S/n; for(let k = 0; k < n; k += 2){ g.fillStyle = A; g.globalAlpha = 0.55; g.fillRect(k*w, 0, w, S); } g.globalAlpha = 1; }
+      else if(shape === 'steps'){ const x0 = (0.1 + r()*0.2)*S; [[0, 0.22, 0.32], [0.3, 0.38, 0.16]].forEach(([dx, w, hgt], k) => { g.fillStyle = k ? A2 : A; g.fillRect(x0 + dx*S, (surf - hgt)*S, w*S, hgt*S); }); }
+      else if(shape === 'leaves'){ g.fillStyle = dark ? 'rgba(0,0,0,.22)' : hsl(P.h, P.s, P.l - 22, 0.35); const cx = r() < .5 ? 0.05 : 0.95;
+        for(let k = 0; k < 18; k++){ g.save(); g.translate((cx + (r() - 0.5)*0.35)*S, (0.05 + r()*0.55)*S); g.rotate(r()*Math.PI); g.beginPath(); g.ellipse(0, 0, 0.07*S, 0.022*S, 0, 0, 7); g.fill(); g.restore(); } }
+      else if(shape === 'bokeh'){ for(let k = 0; k < 26; k++){ const x = r()*S, y = r()*surf*S*0.9, rad = (0.015 + r()*0.05)*S, gr = g.createRadialGradient(x, y, 0, x, y, rad);
+          gr.addColorStop(0, dark ? 'rgba(255,220,160,.45)' : 'rgba(255,255,255,.65)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad*2, rad*2); } }
+      else if(shape === 'split'){ g.fillStyle = A; g.beginPath(); const a = (0.2 + r()*0.4)*S, b = (0.4 + r()*0.4)*S; g.moveTo(0, a); g.lineTo(S, b); g.lineTo(S, S); g.lineTo(0, S); g.closePath(); g.fill(); }
+      else if(shape === 'frame'){ const w = (0.42 + r()*0.12)*S, h2 = (0.42 + r()*0.12)*S, x = (S - w)/2 + (r() - 0.5)*0.2*S, y = (0.08 + r()*0.08)*S; g.fillStyle = A; g.fillRect(x, y, w, h2); g.strokeStyle = A2; g.lineWidth = 0.012*S; g.strokeRect(x + 0.03*S, y + 0.03*S, w - 0.06*S, h2 - 0.06*S); }
+      else if(shape === 'wave'){ g.fillStyle = A; g.beginPath(); g.moveTo(0, surf*S); const y = (0.35 + r()*0.2)*S, amp = (0.05 + r()*0.05)*S, f = 1 + r()*1.5;
+        for(let x = 0; x <= S; x += S/40) g.lineTo(x, y + Math.sin(x/S*Math.PI*2*f)*amp); g.lineTo(S, surf*S); g.closePath(); g.fill(); }
+      g.restore();
+      /* floor */
+      const fl = dark ? P.l + 10 : P.l - 10;
+      if(floor === 'wood'){ const wh = [28, 34, 24][Math.floor(r()*3)]; W(surf, 1, hsl(wh, 42, dark ? 34 : 55), hsl(wh, 45, dark ? 24 : 40)); grainLines(g, S, surf, 1, r, 'rgba(60,30,10,.14)', 60); }
+      else if(floor === 'marble'){ W(surf, 1, hsl(P.h, 8, dark ? 80 : 95), hsl(P.h, 8, dark ? 70 : 87)); g.save(); g.beginPath(); g.rect(0, surf*S, S, S); g.clip();
+        for(let k = 0; k < 12; k++){ g.strokeStyle = `rgba(120,120,125,${0.08 + r()*0.12})`; g.lineWidth = 0.5 + r()*S*0.003; g.beginPath(); const y = (surf + r()*(1 - surf))*S; g.moveTo(-10, y); g.bezierCurveTo(S*0.3, y + (r() - 0.5)*S*0.2, S*0.6, y + (r() - 0.5)*S*0.2, S + 10, y + (r() - 0.5)*S*0.15); g.stroke(); } g.restore(); }
+      else if(floor === 'stone'){ W(surf, 1, hsl(P.h, 6, dark ? 55 : 76), hsl(P.h, 6, dark ? 45 : 64)); }
+      else if(floor === 'fabric'){ W(surf, 1, hsl(P.h, P.s - 10, fl + 4), hsl(P.h, P.s - 10, fl - 4)); for(let y = surf*S; y < S; y += Math.max(2, S/200)){ g.fillStyle = r() < .5 ? 'rgba(0,0,0,.03)' : 'rgba(255,255,255,.05)'; g.fillRect(0, y, S, 1); } }
+      else if(floor === 'tiles'){ W(surf, 1, hsl(P.h, P.s - 15, fl + 6), hsl(P.h, P.s - 15, fl - 2)); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1;
+        for(let k = 1; k < 4; k++){ const y = (surf + (1 - surf)*Math.pow(k/4, 1.4))*S; g.beginPath(); g.moveTo(0, y); g.lineTo(S, y); g.stroke(); }
+        for(let k = -6; k <= 6; k++){ g.beginPath(); g.moveTo(S/2 + k*S*0.09, surf*S); g.lineTo(S/2 + k*S*0.3, S); g.stroke(); } }
+      else W(surf, 1, hsl(P.h, P.s, fl), hsl(P.h, P.s, fl - 8));
+      vg(g, S, surf, surf + 0.04, [[0, 'rgba(0,0,0,.12)'], [1, 'rgba(0,0,0,0)']]);
+      g.fillStyle = dark ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.4)'; g.fillRect(0, surf*S, S, Math.max(1, S*0.002));
+      if(plinth){ const cw = (0.46 + r()*0.12)*S, cx = S/2, cy = surf*S + 0.035*S, ch = 0.055*S;
+        g.fillStyle = hsl(P.h, P.s - 18, dark ? P.l + 26 : 92); g.fillRect(cx - cw/2, cy - ch, cw, ch);
+        g.beginPath(); g.ellipse(cx, cy, cw/2, ch*0.4, 0, 0, Math.PI); g.fill();
+        g.fillStyle = hsl(P.h, P.s - 18, dark ? P.l + 34 : 97); g.beginPath(); g.ellipse(cx, cy - ch, cw/2, ch*0.4, 0, 0, Math.PI*2); g.fill(); }
+      glow(g, S, 0.2 + r()*0.6, 0.12, 0.7, dark ? 'rgba(255,230,190,.16)' : 'rgba(255,255,255,.4)'); vignette(g, S, dark ? 0.3 : 0.15); noise(g, S, 6, r);
+    } };
+}
+const GEN_COUNT = 8;
+function regenScenes(){
+  Object.keys(SCENES).filter(k => /^g\d$/.test(k)).forEach(k => delete SCENES[k]);
+  for(let i = 0; i < GEN_COUNT; i++) SCENES['g' + i] = genScene(i, draft.matchSeed || 1, draft.tint);
+  Object.keys(sceneCache).forEach(k => delete sceneCache[k]);
+}
 /* the product's main colour, from the cut-out */
 function productTint(c){
   if(!c) return null; const N = 40, t = document.createElement('canvas'); t.width = N; t.height = Math.max(1, Math.round(N*c.height/c.width));
@@ -2097,7 +2176,7 @@ function updateTint(){
   const old = draft.tint; draft.tint = t;
   if(!draft.plainPicked){ draft.backdrop = t.s >= 0.14 ? `hsl(${(t.h + (draft.matchSeed % 2 ? 0 : 180)) % 360} 40% 88%)` : ['#efe9e1', '#e6ebef', '#eef0e8'][draft.matchSeed % 3]; }
   if(!old || Math.abs(old.h - t.h) > 12 || Math.abs(old.s - t.s) > 0.1 || Math.abs(old.l - t.l) > 0.1){
-    Object.keys(sceneCache).forEach(k => delete sceneCache[k]); if($('#scenes')) renderScenePicker(); enhance(); }
+    regenScenes(); if($('#scenes')) renderScenePicker(); enhance(); }
 }
 const SCENE_FOR = { 'Kurta':['boutique','studio','linen'], 'Saree':['boutique','studio','linen'], 'Clothes':['boutique','studio','linen'],
   'Shoes':['concrete','studio','wood'], 'Bags':['boutique','concrete','marble'], 'Jewellery':['marble','linen','festive'],
@@ -2110,7 +2189,7 @@ function sceneCanvas(id, S){
   if(sceneCache[key]) return sceneCache[key];
   const c = document.createElement('canvas'); c.width = c.height = S;
   const g = c.getContext('2d');
-  if(id === 'match' || id === 'plain'){ SCENES[id].draw(g, S, rng(seed*31 + 7)); return sceneCache[key] = c; }
+  if(id === 'match' || id === 'plain' || (SCENES[id] && SCENES[id].gen)){ SCENES[id].draw(g, S, rng(seed*31 + 7 + id.charCodeAt(id.length - 1)*53)); return sceneCache[key] = c; }
   /* every product gets its own version of each scene: decorations placed differently, sometimes mirrored,
      light from a different side, and a soft colour wash that suits the product */
   const v = rng(seed*131 + id.length*977 + id.charCodeAt(0));
@@ -2125,21 +2204,22 @@ function sceneCanvas(id, S){
     const bx = (0.1 + v()*0.6)*S, top = (sc.surface || 1)*S; g.beginPath(); g.moveTo(bx, 0); g.lineTo(bx + 0.18*S, 0); g.lineTo(bx + 0.38*S, top); g.lineTo(bx + 0.2*S, top); g.closePath(); g.fill(); g.restore(); }
   return sceneCache[key] = c;
 }
-draft.scene = 'match'; draft.scenePicked = false; draft.matchSeed = 1 + Math.floor(Math.random()*1e6);
+draft.scene = 'g0'; draft.scenePicked = false; draft.matchSeed = 1 + Math.floor(Math.random()*1e6);
 const currentScene = () => ({id:draft.scene, ...SCENES[draft.scene]});
 function renderScenePicker(){
-  const rec = ['match', ...(SCENE_FOR[$('#fCat').value] || SCENE_FOR.Other)];
-  if(!draft.scenePicked) draft.scene = rec[0];
+  if(!SCENES.g0) regenScenes();
+  const rec = Array.from({ length:GEN_COUNT }, (_, i) => 'g' + i);
+  if(!draft.scenePicked || !SCENES[draft.scene]) draft.scene = rec[0];
   const wrap = $('#scenes'); wrap.innerHTML = '';
-  [...rec, ...Object.keys(SCENES).filter(k=>!rec.includes(k))].forEach(id => {
+  [...rec, 'plain'].forEach(id => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'scene';
     b.setAttribute('aria-pressed', id===draft.scene);
-    b.innerHTML = `<img alt="" src="${sceneCanvas(id,120).toDataURL('image/jpeg',.8)}">${esc(id === 'match' ? 'For this product' : SCENES[id].name)}${id===rec[0]?'<span class="sug">Best</span>':''}`;
+    b.innerHTML = `<img alt="" src="${sceneCanvas(id,120).toDataURL('image/jpeg',.8)}">${esc(SCENES[id].name)}${id===rec[0]?'<span class="sug">Best</span>':''}`;
     b.onclick = () => { draft.scene = id; draft.scenePicked = true; renderScenePicker(); enhance(); };
     wrap.append(b);
   });
   $('#plainRow').hidden = draft.scene !== 'plain';
-  $('#sceneHint').textContent = draft.tint ? '· colours picked from your product' : '';
+  $('#sceneHint').textContent = draft.tint ? '· made for this product' : '';
 }
 $('#fCat').onchange = () => { draft.catPicked = true; draft.scenePicked = false; renderScenePicker(); enhance(); };
 renderScenePicker();
@@ -2604,8 +2684,8 @@ $('#btnPublish').onclick = () => {
   save();
   // reset studio
   resetPhotos(); slides = []; $('#slidesBox').hidden = true; videoReady = false;
-  draft = {sizes:['M','L'], backdrop:draft.backdrop, removeBg:draft.removeBg, scene:'match', scenePicked:false, tint:null, matchSeed:1 + Math.floor(Math.random()*1e6)};
-  Object.keys(sceneCache).forEach(k => delete sceneCache[k]); syncSizes(); renderScenePicker();
+  draft = {sizes:['M','L'], backdrop:draft.backdrop, removeBg:draft.removeBg, scene:'g0', scenePicked:false, tint:null, matchSeed:1 + Math.floor(Math.random()*1e6)};
+  regenScenes(); syncSizes(); renderScenePicker();
   $('#fName').placeholder = 'Cotton kurta (AI can fill this)';
   ['#fPrice','#fStock','#fName','#fNotes','#fOldPrice','#fOffer'].forEach(s=>$(s).value=''); fileInput.value='';
   $('#result').hidden = true; $('#btnMake').textContent='Make video and caption';
