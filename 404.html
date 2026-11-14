@@ -1186,6 +1186,9 @@ $('#visitForm').onsubmit = e => {
 };
 
 /* TikTok can't add or pin a comment for sellers, so WallTok hands them the text */
+/* Direct posting needs TikTok's approval. Until it's approved, sellers share the video from their phone instead.
+   When TikTok approves WallTok, change this to true. */
+const TT_DIRECT = false;
 function prodInfo(p){
   const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
   return { shop:S.shop.name, loc:S.shop.location, price:npr(p.price), sizes:(p.sizes||[]).join(', '), category:p.category, rawName:p.name, notes:'', name:p.name,
@@ -1208,7 +1211,10 @@ function renderProductPage(p){
         <p class="small"><b>Sizes:</b> ${esc(p.sizes.join(' · '))}${p.stock<=3 && p.stock>0 ? ` · <b style="color:var(--warn)">Only ${p.stock} left</b>` : ''}${p.stock===0 ? ' · <b style="color:var(--warn)">Sold out</b>' : ''}</p>
         <a class="btn primary big" id="pOrder" href="${orderLink(p)}" target="_blank" rel="noopener">Order on WhatsApp</a>
         <a class="btn ink" id="pWatchTT" href="${esc(p.ttUrl || '#')}" target="_blank" rel="noopener" ${p.ttUrl ? '' : 'hidden'}><span class="tt-logo" aria-hidden="true">♪</span> Watch on TikTok</a>
-        ${!PUB_SLUG && window.Cloud && Cloud.enabled && Cloud.signedIn() ? (p.ttAt
+        ${!PUB_SLUG && !TT_DIRECT ? `<div class="ttbox stack" style="gap:6px">${p.ttUrl ? `<b><span class="tt-logo" aria-hidden="true">♪</span> On TikTok</b>` : ''}
+            <button class="btn ${p.ttUrl ? '' : 'ink big'}" type="button" id="pShareTT"><span class="tt-logo" aria-hidden="true">♪</span> ${p.ttUrl ? 'Post again on TikTok' : 'Post on TikTok'}</button>
+            <span class="small muted" id="pShareHow">Saves the video (or photos) and copies the caption. Then post it in the TikTok app.</span>${p.ttUrl ? pinBox(p) : ''}</div>` : ''}
+        ${!PUB_SLUG && TT_DIRECT && window.Cloud && Cloud.enabled && Cloud.signedIn() ? (p.ttAt
           ? `<div class="ttbox stack" style="gap:6px"><b><span class="tt-logo" aria-hidden="true">♪</span> On TikTok</b><span class="small muted" id="pTTHist">Posted ${new Date(p.ttAt).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}</span><div id="pTTLinks" class="stack" style="gap:6px"></div>${pinBox(p)}<button class="linkbtn" type="button" id="pPostTT">Post again ›</button></div>`
           : `<div class="ttbox stack"><button class="btn ink big" type="button" id="pPostTT"><span class="tt-logo" aria-hidden="true">♪</span> Post to TikTok</button><span class="small muted" id="pTTHist">Not on TikTok yet</span><div id="pTTLinks" class="stack" style="gap:6px"></div></div>`) : ''}
         ${!PUB_SLUG ? `<details class="small" id="pTTPaste"><summary>${p.ttUrl ? 'Change the TikTok link' : 'Posted this from the TikTok app? Add the link'}</summary>
@@ -1225,6 +1231,7 @@ function renderProductPage(p){
   $('#pMore').onclick = () => $('#pBack').click();
   if(PUB_SLUG) $('#pOrder').addEventListener('click', () => { if(window.Cloud) Cloud.recordWaClick(p.id); });
   if($('#pPostTT')){ $('#pPostTT').onclick = () => TT.open(p.id); TT.history(p.id); }
+  if($('#pShareTT')) $('#pShareTT').onclick = () => shareProductTT(p);
   if(!PUB_SLUG) paintFilmVideos(p);
   if($('#pTTSave')) $('#pTTSave').onclick = () => {
     const v = $('#pTTUrl').value.trim();
@@ -4876,6 +4883,31 @@ var FilmStore = (() => {
   return { put, list, mark };
 })();
 const FILM_ORDER = ['offer', 'detail', 'hurry', 'studio'];
+/* post from the phone: the newest video made for this product (or its photos), with the caption copied */
+async function shareProductTT(p){
+  const btn = $('#pShareTT'); btn.disabled = true;
+  try{
+    const vids = window.FilmStore ? await FilmStore.list(p.id) : [];
+    const v = vids.find(x => !x.posted) || vids[vids.length - 1];
+    const caption = v ? v.caption : templateCaption(prodInfo(p));
+    let files = [];
+    if(v) files = [new File([v.blob], `${slugify(S.shop.name)}-${slugify(p.name)}.mp4`, { type:'video/mp4' })];
+    else {
+      const srcs = (p.imgs && p.imgs.length ? p.imgs : [p.img]).filter(Boolean).slice(0, 6);
+      for(let i = 0; i < srcs.length; i++){ try{ const b = await (await fetch(srcs[i])).blob(); files.push(new File([b], `${slugify(p.name)}-${i+1}.jpg`, { type:b.type || 'image/jpeg' })); }catch(e){} }
+    }
+    if(!files.length){ copyText(caption); toast('Caption copied. Open TikTok and post your video.'); return; }
+    copyText(caption);
+    if(navigator.canShare && navigator.canShare({ files })){
+      try{ await navigator.share({ files }); toast('Caption copied ✓ In TikTok, paste it and post. Then add the TikTok link here.'); }
+      catch(e){ if(e.name !== 'AbortError') toast('Sharing did not work. Try again, or save it.'); return; }
+    } else {
+      for(const f of files) await saveFile(f.name, f, 'Saved and caption copied. Now open TikTok and post it.');
+    }
+    if(v && window.FilmStore) await FilmStore.mark(v.key);
+    const d = $('#pTTPaste'); if(d){ d.open = true; }                 /* so they can paste the TikTok link after posting */
+  } finally { if($('#pShareTT')) $('#pShareTT').disabled = false; }
+}
 async function paintFilmVideos(p){
   const box = $('#pFilm'); if(!box) return;
   const vids = (await FilmStore.list(p.id)).sort((a, b) => FILM_ORDER.indexOf(a.style) - FILM_ORDER.indexOf(b.style));
