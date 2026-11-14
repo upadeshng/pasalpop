@@ -292,6 +292,10 @@ html:not(.public) .askfab{display:none}
 .tag-st.needs_seller{background:#f6b93b;color:#1b1d3a}.tag-st.ordered{background:var(--good);color:#fff}
 .aihome{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .fmgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.afterfig{position:relative}.afterfig.busy img{filter:blur(8px) saturate(.7);transition:filter .3s}
+.cutload{position:absolute;inset:0 0 28px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(255,255,255,.55);border-radius:12px;text-align:center;color:#1b1d3a}
+.cutload small{opacity:.7}.cutload .spin{width:34px;height:34px;border-radius:50%;border:3.5px solid rgba(27,29,58,.18);border-top-color:#1b1d3a;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .fmstyle summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline}.fmstyle summary::-webkit-details-marker{display:none}
 .fmstyle summary::after{content:'›';margin-left:auto;transition:transform .2s}.fmstyle[open] summary::after{transform:rotate(90deg)}
 .stylewrap{display:grid;gap:14px;margin-top:12px}.stylepv{display:flex;gap:8px;justify-content:center}
@@ -385,7 +389,7 @@ html:not(.public) .askfab{display:none}
       <p class="small muted" id="photoCount"></p>
       <div class="compare" id="compare" hidden>
         <figure><img id="imgBefore" alt="Original photo"><figcaption>Your photo</figcaption></figure>
-        <figure><img id="imgAfter" alt="Cleaned up photo"><figcaption>Studio look</figcaption></figure>
+        <figure class="afterfig"><img id="imgAfter" alt="Cleaned up photo"><div class="cutload" id="cutLoad" hidden><span class="spin" aria-hidden="true"></span><b>Making it perfect…</b><small>A few seconds</small></div><figcaption>Studio look</figcaption></figure>
       </div>
       <div id="backdropRow" class="stack" hidden>
         <details class="adjust">
@@ -1467,7 +1471,7 @@ function selectPhoto(i){
   curPhoto = i; srcImage = p.img; Object.assign(work, p.work); mask = p.mask; cut = p.cut; photoTilt = p.tilt || 0; matte = p.matte || null;
   maskHistory = []; $('#btnUndoBg').disabled = true; syncSegUi();
   $('#tilt').value = photoTilt; $('#tiltVal').textContent = `${photoTilt}°`;
-  $('#imgBefore').src = p.url; enhance(); renderThumbs();
+  $('#imgBefore').src = p.url; enhance(); renderThumbs(); syncCutLoader();
 }
 function removePhoto(i){
   URL.revokeObjectURL(photos[i].url); photos.splice(i, 1);
@@ -1689,7 +1693,25 @@ function makeCut(){
 const SEG = { model:'https://huggingface.co/onnx-community/ISNet-ONNX/resolve/main/onnx/model_quantized.onnx',
   ort:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/', size:1024, cache:'walltok-ai-v1' };
 let segP = null, segQ = Promise.resolve(), segBusy = 0, segFailed = false;
-function segNote(t){ const el = $('#segNote'); if(!el) return; el.textContent = t || ''; el.hidden = !t; }
+function segNote(t){
+  const dl = /(\d+)%/.exec(t || ''), sm = $('#cutLoad small');
+  if(sm) sm.textContent = dl && /first time/.test(t) ? `Getting the AI ready · ${dl[1]}% (first time only)` : 'A few seconds';
+  const el = $('#segNote'); if(el){ el.textContent = /precise…|first time/.test(t || '') && $('#cutLoad') && !$('#cutLoad').hidden ? '' : (t || ''); el.hidden = !el.textContent; }
+  syncCutLoader();
+}
+/* while the precise cut-out is still working, hide the rough version behind a loader so nobody posts it by mistake */
+let segSince = 0;
+function syncCutLoader(){
+  const box = $('#cutLoad'), fig = box && box.closest('figure'), mk = $('#btnMake');
+  const working = draft.removeBg !== false && !segFailed && segBusy > 0;
+  if(working && !segSince) segSince = Date.now(); if(!working) segSince = 0;
+  const tooLong = segSince && Date.now() - segSince > 60000;      /* never block for more than a minute */
+  const cur = photos[curPhoto], pending = working && !tooLong && cur && !cur.matte;
+  if(box){ box.hidden = !pending; fig.classList.toggle('busy', !!pending); }
+  if(mk && !mk.dataset.label) mk.dataset.label = mk.textContent;
+  if(mk){ const wait = working && !tooLong; mk.disabled = wait; mk.textContent = wait ? 'Finishing your photos…' : mk.dataset.label; }
+  if(working && !tooLong){ clearTimeout(syncCutLoader.t); syncCutLoader.t = setTimeout(syncCutLoader, 61000); }
+}
 function syncSegUi(){ const r = $('#tolRow'); if(r) r.hidden = !!matte; }
 function loadScript(src){ return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error('Could not load ' + src)); document.head.append(el); }); }
 async function segModelBytes(){
@@ -1850,7 +1872,7 @@ let tolTimer;
 $('#tol').oninput = () => { clearTimeout(tolTimer); tolTimer = setTimeout(()=>{ if(srcImage){ runAutoMask(); enhance(); } }, 180); };
 $('#btnUndoBg').onclick = () => { if(!maskHistory.length) return; mask = maskHistory.pop(); $('#btnUndoBg').disabled = !maskHistory.length; makeCut(); enhance(); };
 $('#btnResetBg').onclick = () => { if(!srcImage) return; if(matte){ mask = maskFromMatte(matte); maskHistory = []; $('#btnUndoBg').disabled = true; makeCut(); } else runAutoMask(); enhance(); };
-function syncBgMode(){ $$('#bgMode .chip').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.mode==='remove')===draft.removeBg)); $('#bgTools').hidden = !draft.removeBg; }
+function syncBgMode(){ $$('#bgMode .chip').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.mode==='remove')===draft.removeBg)); $('#bgTools').hidden = !draft.removeBg; syncCutLoader(); }
 $$('#bgMode .chip').forEach(b => b.onclick = () => { draft.removeBg = b.dataset.mode==='remove'; syncBgMode(); enhance(); });
 syncBgMode();
 $('#imgAfter').style.cursor = 'crosshair'; $('#imgBefore').style.cursor = 'crosshair';
