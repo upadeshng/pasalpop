@@ -1416,7 +1416,7 @@ const sizeWrap = $('#sizeChips');
 SIZES.forEach(s => { const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=s; b.onclick=()=>{ draft.sizes = draft.sizes.includes(s) ? draft.sizes.filter(x=>x!==s) : [...draft.sizes, s]; syncSizes(); }; sizeWrap.append(b); });
 function syncSizes(){ [...sizeWrap.children].forEach(b => b.setAttribute('aria-pressed', draft.sizes.includes(b.textContent))); }
 syncSizes();
-BACKDROPS.forEach(([n,c]) => { const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.dataset.c=c; b.onclick=()=>{ draft.backdrop=c; syncBackdrops(); enhance(); }; $('#backdrops').append(b); });
+BACKDROPS.forEach(([n,c]) => { const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.dataset.c=c; b.onclick=()=>{ draft.backdrop=c; draft.plainPicked=true; syncBackdrops(); enhance(); }; $('#backdrops').append(b); });
 function syncBackdrops(){ [...$('#backdrops').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.c===draft.backdrop)); }
 syncBackdrops();
 
@@ -1494,6 +1494,7 @@ function resetPhotos(){
   photos.forEach(p => URL.revokeObjectURL(p.url));
   photos = []; curPhoto = -1; srcImage = null; srcFile = null; mask = null; cut = null; xform = null; matte = null;
   draft.tint = null; draft.matchSeed = 1 + Math.floor(Math.random()*1e6); draft.scenePicked = false; draft.catPicked = false;
+  Object.keys(sceneCache).forEach(k => delete sceneCache[k]);
   $('#compare').hidden = true; $('#backdropRow').hidden = true; $('#thumbs').hidden = true; $('#photoCount').textContent = '';
   drop.querySelector('b').textContent = 'Tap to choose photos';
 }
@@ -2094,8 +2095,9 @@ function matchPalette(t, seed){
 function updateTint(){
   const c = cut && cut.canvas; if(!c) return; const t = productTint(c); if(!t) return;
   const old = draft.tint; draft.tint = t;
+  if(!draft.plainPicked){ draft.backdrop = t.s >= 0.14 ? `hsl(${(t.h + (draft.matchSeed % 2 ? 0 : 180)) % 360} 40% 88%)` : ['#efe9e1', '#e6ebef', '#eef0e8'][draft.matchSeed % 3]; }
   if(!old || Math.abs(old.h - t.h) > 12 || Math.abs(old.s - t.s) > 0.1 || Math.abs(old.l - t.l) > 0.1){
-    Object.keys(sceneCache).filter(k => k.startsWith('match')).forEach(k => delete sceneCache[k]); if($('#scenes')) renderScenePicker(); }
+    Object.keys(sceneCache).forEach(k => delete sceneCache[k]); if($('#scenes')) renderScenePicker(); enhance(); }
 }
 const SCENE_FOR = { 'Kurta':['boutique','studio','linen'], 'Saree':['boutique','studio','linen'], 'Clothes':['boutique','studio','linen'],
   'Shoes':['concrete','studio','wood'], 'Bags':['boutique','concrete','marble'], 'Jewellery':['marble','linen','festive'],
@@ -2103,10 +2105,24 @@ const SCENE_FOR = { 'Kurta':['boutique','studio','linen'], 'Saree':['boutique','
   'Food':['wood','linen','festive'], 'Other':['studio','wood','marble'] };
 const sceneCache = {};
 function sceneCanvas(id, S){
-  const key = id==='plain' ? `plain-${draft.backdrop}-${S}` : id==='match' ? `match-${JSON.stringify(draft.tint)}-${draft.matchSeed}-${S}` : `${id}-${S}`;
+  const seed = draft.matchSeed || 1;
+  const key = id==='plain' ? `plain-${draft.backdrop}-${S}` : `${id}-${JSON.stringify(draft.tint)}-${seed}-${S}`;
   if(sceneCache[key]) return sceneCache[key];
   const c = document.createElement('canvas'); c.width = c.height = S;
-  const g = c.getContext('2d'); SCENES[id].draw(g, S, rng(id === 'match' ? (draft.matchSeed || 1)*31 + 7 : id.length*977 + 13));
+  const g = c.getContext('2d');
+  if(id === 'match' || id === 'plain'){ SCENES[id].draw(g, S, rng(seed*31 + 7)); return sceneCache[key] = c; }
+  /* every product gets its own version of each scene: decorations placed differently, sometimes mirrored,
+     light from a different side, and a soft colour wash that suits the product */
+  const v = rng(seed*131 + id.length*977 + id.charCodeAt(0));
+  const flip = v() < 0.5;
+  g.save(); if(flip){ g.translate(S, 0); g.scale(-1, 1); } SCENES[id].draw(g, S, rng(seed*977 + id.length*13 + id.charCodeAt(1))); g.restore();
+  const t = draft.tint, sc = SCENES[id];
+  const hue = t && t.s >= 0.14 ? (t.h + [0, 0, 30, -30, 180][Math.floor(v()*5)] + 360) % 360 : [30, 40, 200, 340, 150][Math.floor(v()*5)];
+  g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = `hsla(${hue} ${sc.dark ? 60 : 55}% 55% / ${0.3 + v()*0.25})`; g.fillRect(0, 0, S, S); g.restore();
+  const lx = 0.15 + v()*0.7, ly = 0.05 + v()*0.3;
+  glow(g, S, lx, ly, 0.5 + v()*0.4, sc.dark ? `rgba(255,220,170,${0.12 + v()*0.12})` : `rgba(255,255,255,${0.2 + v()*0.25})`);
+  if(v() < 0.45){ g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = sc.dark ? 'rgba(255,230,190,.10)' : 'rgba(255,255,255,.25)';
+    const bx = (0.1 + v()*0.6)*S, top = (sc.surface || 1)*S; g.beginPath(); g.moveTo(bx, 0); g.lineTo(bx + 0.18*S, 0); g.lineTo(bx + 0.38*S, top); g.lineTo(bx + 0.2*S, top); g.closePath(); g.fill(); g.restore(); }
   return sceneCache[key] = c;
 }
 draft.scene = 'match'; draft.scenePicked = false; draft.matchSeed = 1 + Math.floor(Math.random()*1e6);
@@ -2588,7 +2604,8 @@ $('#btnPublish').onclick = () => {
   save();
   // reset studio
   resetPhotos(); slides = []; $('#slidesBox').hidden = true; videoReady = false;
-  draft = {sizes:['M','L'], backdrop:draft.backdrop, removeBg:draft.removeBg, scene:draft.scene, scenePicked:false}; syncSizes(); renderScenePicker();
+  draft = {sizes:['M','L'], backdrop:draft.backdrop, removeBg:draft.removeBg, scene:'match', scenePicked:false, tint:null, matchSeed:1 + Math.floor(Math.random()*1e6)};
+  Object.keys(sceneCache).forEach(k => delete sceneCache[k]); syncSizes(); renderScenePicker();
   $('#fName').placeholder = 'Cotton kurta (AI can fill this)';
   ['#fPrice','#fStock','#fName','#fNotes','#fOldPrice','#fOffer'].forEach(s=>$(s).value=''); fileInput.value='';
   $('#result').hidden = true; $('#btnMake').textContent='Make video and caption';
