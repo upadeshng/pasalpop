@@ -1493,6 +1493,7 @@ function renderThumbs(){
 function resetPhotos(){
   photos.forEach(p => URL.revokeObjectURL(p.url));
   photos = []; curPhoto = -1; srcImage = null; srcFile = null; mask = null; cut = null; xform = null; matte = null;
+  draft.tint = null; draft.matchSeed = 1 + Math.floor(Math.random()*1e6); draft.scenePicked = false; draft.catPicked = false;
   $('#compare').hidden = true; $('#backdropRow').hidden = true; $('#thumbs').hidden = true; $('#photoCount').textContent = '';
   drop.querySelector('b').textContent = 'Tap to choose photos';
 }
@@ -1669,7 +1670,8 @@ function tapRemove(x, y){
 function syncTapMode(){ $$('#tapMode .chip').forEach(b => b.setAttribute('aria-pressed', (b.dataset.tap === 'keep') === tapKeep)); }
 $$('#tapMode .chip').forEach(b => b.onclick = () => { tapKeep = b.dataset.tap === 'keep'; syncTapMode(); });
 syncTapMode();
-function makeCut(){
+function makeCut(){ makeCutInner(); if(curPhoto <= 0 && cut) updateTint(); }
+function makeCutInner(){
   if(matte && srcImage){ const c = preciseCutCanvas(); if(c !== false) return; }
   const {w,h,px} = work;
   let a = new Float32Array(w*h); for(let i=0;i<w*h;i++) a[i] = mask[i]*255;
@@ -2046,49 +2048,98 @@ const SCENES = {
     [[0.08,0.95],[0.92,0.93],[0.15,0.88]].forEach(([x,y])=>{ for(let k=0;k<26;k++){ const a=r()*7, d=r()*S*0.04; g.fillStyle = r()<.5?'#f39a1e':'#f7b733'; g.beginPath(); g.arc(x*S+Math.cos(a)*d, y*S+Math.sin(a)*d*0.6, S*0.007, 0, 7); g.fill(); } });
     vignette(g,S,.35); noise(g,S,8,r);
   }},
-  plain:{name:'Plain colour', tone:null, surface:null, draw(g,S){ g.fillStyle = draft.backdrop; g.fillRect(0,0,S,S); }}
+  plain:{name:'Plain colour', tone:null, surface:null, draw(g,S){ g.fillStyle = draft.backdrop; g.fillRect(0,0,S,S); }},
+  /* made for this product: colours picked from the product itself, and a layout that differs per product */
+  match:{name:'Made for this product', tone:null, surface:0.8, draw(g,S,r){
+    const t = draft.tint || { h:30, s:0.2, l:0.6 }, P = matchPalette(t, draft.matchSeed || 1);
+    vg(g,S,0,0.8,[[0,P.wall0],[1,P.wall1]]);
+    const kind = P.kind;
+    if(kind === 'arch'){ g.fillStyle = P.accent; const w = 0.62*S, x = (S - w)/2, top = 0.12*S; g.beginPath(); g.moveTo(x, 0.8*S); g.lineTo(x, top + w/2); g.arc(S/2, top + w/2, w/2, Math.PI, 0); g.lineTo(x + w, 0.8*S); g.closePath(); g.fill(); }
+    else if(kind === 'disc'){ const gr = g.createRadialGradient(S/2, 0.45*S, 0, S/2, 0.45*S, 0.36*S); gr.addColorStop(0, P.accent); gr.addColorStop(0.97, P.accent); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    else if(kind === 'split'){ g.fillStyle = P.accent; g.beginPath(); g.moveTo(0, 0.8*S); g.lineTo(0, 0.35*S); g.lineTo(S, 0.6*S); g.lineTo(S, 0.8*S); g.closePath(); g.fill(); }
+    else if(kind === 'window'){ g.fillStyle = 'rgba(255,255,255,.22)'; for(let i = 0; i < 2; i++){ const x = (0.12 + i*0.4 + r()*0.05)*S; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 0.2*S, 0); g.lineTo(x + 0.42*S, 0.8*S); g.lineTo(x + 0.22*S, 0.8*S); g.closePath(); g.fill(); } }
+    /* floor */
+    vg(g,S,0.8,1,[[0,P.floor0],[1,P.floor1]]);
+    vg(g,S,0.8,0.84,[[0,'rgba(0,0,0,.10)'],[1,'rgba(0,0,0,0)']]);
+    if(P.plinth){ const cw = 0.56*S, cx = S/2, cy = 0.8*S, ch = 0.06*S; g.fillStyle = P.plinthSide; g.fillRect(cx - cw/2, cy - ch*0.2, cw, ch);
+      g.fillStyle = P.plinthTop; g.beginPath(); g.ellipse(cx, cy - ch*0.2, cw/2, ch*0.45, 0, 0, Math.PI*2); g.fill();
+      g.beginPath(); g.ellipse(cx, cy - ch*0.2 + ch, cw/2, ch*0.45, 0, 0, Math.PI); g.fillStyle = P.plinthSide; g.fill(); }
+    glow(g,S,0.3 + r()*0.4,0.18,0.75,'rgba(255,255,255,.35)'); vignette(g,S,.16); noise(g,S,5,r);
+  }}
 };
+/* the product's main colour, from the cut-out */
+function productTint(c){
+  if(!c) return null; const N = 40, t = document.createElement('canvas'); t.width = N; t.height = Math.max(1, Math.round(N*c.height/c.width));
+  const g = t.getContext('2d', { willReadFrequently:true }); g.drawImage(c, 0, 0, t.width, t.height); const d = g.getImageData(0, 0, t.width, t.height).data;
+  let x = 0, y = 0, sw = 0, ls = 0, n = 0;
+  for(let k = 0; k < d.length; k += 4){ if(d[k+3] < 200) continue; const R = d[k]/255, G = d[k+1]/255, B = d[k+2]/255, mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn)/2, ch = mx - mn;
+    ls += l; n++; if(ch < 0.08) continue; let h = mx === R ? ((G - B)/ch) % 6 : mx === G ? (B - R)/ch + 2 : (R - G)/ch + 4; h *= 60; if(h < 0) h += 360;
+    const sat = ch / (1 - Math.abs(2*l - 1) + 1e-6); x += Math.cos(h*Math.PI/180)*sat; y += Math.sin(h*Math.PI/180)*sat; sw += sat; }
+  if(!n) return null; const h = (Math.atan2(y, x)*180/Math.PI + 360) % 360, s = sw ? Math.min(1, Math.hypot(x, y)/n) : 0;
+  return { h:Math.round(h), s:+s.toFixed(2), l:+(ls/n).toFixed(2) };
+}
+/* soft colours that suit the product: its own hue, a gentle opposite, or warm neutrals for black/white/grey products */
+function matchPalette(t, seed){
+  const r = rng(seed*7919 + 3), pick = a => a[Math.floor(r()*a.length)];
+  const grey = t.s < 0.14, scheme = grey ? 'neutral' : pick(['tone', 'tone', 'opposite', 'near']);
+  const H = scheme === 'opposite' ? (t.h + 180) % 360 : scheme === 'near' ? (t.h + (r() < .5 ? 35 : -35) + 360) % 360 : grey ? pick([30, 35, 200, 150, 340]) : t.h;
+  const S = grey ? 18 + r()*14 : 28 + r()*22, dark = !grey && t.l > 0.82;       /* very light products stand out on a deeper wall */
+  const L0 = dark ? 62 : 93, L1 = dark ? 52 : 85;
+  const c = (l, s2 = S, h = H) => `hsl(${h.toFixed(0)} ${s2.toFixed(0)}% ${l.toFixed(0)}%)`;
+  return { kind:pick(['arch', 'disc', 'split', 'window', 'plain']), plinth:r() < 0.5,
+    wall0:c(L0), wall1:c(L1), accent:c(dark ? L1 - 6 : L1 - 5, S + 6), floor0:c(dark ? 46 : 80, S - 4), floor1:c(dark ? 38 : 72, S - 4),
+    plinthTop:c(dark ? 72 : 96, S - 10), plinthSide:c(dark ? 58 : 86, S - 8), tone:c(L1) };
+}
+/* work out the product's colour once the cut-out is ready, and refresh the 'made for this product' background */
+function updateTint(){
+  const c = cut && cut.canvas; if(!c) return; const t = productTint(c); if(!t) return;
+  const old = draft.tint; draft.tint = t;
+  if(!old || Math.abs(old.h - t.h) > 12 || Math.abs(old.s - t.s) > 0.1 || Math.abs(old.l - t.l) > 0.1){
+    Object.keys(sceneCache).filter(k => k.startsWith('match')).forEach(k => delete sceneCache[k]); if($('#scenes')) renderScenePicker(); }
+}
 const SCENE_FOR = { 'Kurta':['boutique','studio','linen'], 'Saree':['boutique','studio','linen'], 'Clothes':['boutique','studio','linen'],
   'Shoes':['concrete','studio','wood'], 'Bags':['boutique','concrete','marble'], 'Jewellery':['marble','linen','festive'],
   'Cosmetics':['marble','wood','studio'], 'Cups & kitchen':['wood','marble','linen'], 'Plants':['garden','wood','concrete'],
   'Food':['wood','linen','festive'], 'Other':['studio','wood','marble'] };
 const sceneCache = {};
 function sceneCanvas(id, S){
-  const key = id==='plain' ? `plain-${draft.backdrop}-${S}` : `${id}-${S}`;
+  const key = id==='plain' ? `plain-${draft.backdrop}-${S}` : id==='match' ? `match-${JSON.stringify(draft.tint)}-${draft.matchSeed}-${S}` : `${id}-${S}`;
   if(sceneCache[key]) return sceneCache[key];
   const c = document.createElement('canvas'); c.width = c.height = S;
-  const g = c.getContext('2d'); SCENES[id].draw(g, S, rng(id.length*977 + 13));
+  const g = c.getContext('2d'); SCENES[id].draw(g, S, rng(id === 'match' ? (draft.matchSeed || 1)*31 + 7 : id.length*977 + 13));
   return sceneCache[key] = c;
 }
-draft.scene = 'boutique'; draft.scenePicked = false;
+draft.scene = 'match'; draft.scenePicked = false; draft.matchSeed = 1 + Math.floor(Math.random()*1e6);
 const currentScene = () => ({id:draft.scene, ...SCENES[draft.scene]});
 function renderScenePicker(){
-  const rec = SCENE_FOR[$('#fCat').value] || SCENE_FOR.Other;
+  const rec = ['match', ...(SCENE_FOR[$('#fCat').value] || SCENE_FOR.Other)];
   if(!draft.scenePicked) draft.scene = rec[0];
   const wrap = $('#scenes'); wrap.innerHTML = '';
   [...rec, ...Object.keys(SCENES).filter(k=>!rec.includes(k))].forEach(id => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'scene';
     b.setAttribute('aria-pressed', id===draft.scene);
-    b.innerHTML = `<img alt="" src="${sceneCanvas(id,120).toDataURL('image/jpeg',.8)}">${esc(SCENES[id].name)}${id===rec[0]?'<span class="sug">Best</span>':''}`;
+    b.innerHTML = `<img alt="" src="${sceneCanvas(id,120).toDataURL('image/jpeg',.8)}">${esc(id === 'match' ? 'For this product' : SCENES[id].name)}${id===rec[0]?'<span class="sug">Best</span>':''}`;
     b.onclick = () => { draft.scene = id; draft.scenePicked = true; renderScenePicker(); enhance(); };
     wrap.append(b);
   });
   $('#plainRow').hidden = draft.scene !== 'plain';
-  $('#sceneHint').textContent = `· suggested for ${$('#fCat').value.toLowerCase()}`;
+  $('#sceneHint').textContent = draft.tint ? '· colours picked from your product' : '';
 }
-$('#fCat').onchange = () => { draft.scenePicked = false; renderScenePicker(); enhance(); };
+$('#fCat').onchange = () => { draft.catPicked = true; draft.scenePicked = false; renderScenePicker(); enhance(); };
 renderScenePicker();
 
 /* AI suggests the category from the photo, so the right scene is picked */
 async function detectCategory(){
-  const sample = samplePromise ? await samplePromise : null;
-  if(!sample || !srcFile) return;
-  const cats = [...$('#fCat').options].map(o=>o.value);
+  if(!(window.Cloud && Cloud.enabled && Cloud.signedIn()) || !srcImage) return;
+  const cats = [...$('#fCat').options].map(o=>o.value), img = srcImage;
   try{
-    const r = await sample.json(`This is a product photo from a small online shop in Nepal. Reply with only JSON {"category": one of ${JSON.stringify(cats)}, "name": short English product name, max 4 words}.`, {images:[srcFile], modelTier:'quick'});
-    if(r && cats.includes(r.category)){ $('#fCat').value = r.category; if(!draft.scenePicked) renderScenePicker(); enhance(); }
-    if(r && r.name && !$('#fName').value.trim()) $('#fName').placeholder = r.name + ' (suggested)';
-  }catch(e){}
+    const c = document.createElement('canvas'), k = Math.min(1, 512 / Math.max(img.width, img.height)); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const r = await Cloud.aiCall('film', { frames:[c.toDataURL('image/jpeg', 0.8)], info:{ lang:S.lang || 'roman' } }, true);
+    if(srcImage !== img || !r) return;
+    if(cats.includes(r.category) && !draft.catPicked){ $('#fCat').value = r.category; if(!draft.scenePicked) renderScenePicker(); enhance(); }
+    if(r.name && !$('#fName').value.trim()) $('#fName').placeholder = r.name + ' (suggested)';
+  }catch(e){ console.warn('category', e); }
 }
 
 function enhanced(size){
@@ -4261,7 +4312,15 @@ var Film = (() => {
     blur:{ light:false, blur:true, a:'#333', b:'#222', c:'#111', glow:'rgba(255,255,255,.12)', shadow:'rgba(0,0,0,.5)' } };
   const STYLE_DEF = { bg:'auto', look:'natural', layout:'frame', price:'big', pace:'calm', text:'on' };
   F.style = (() => { try{ return { ...STYLE_DEF, ...JSON.parse(localStorage.getItem('wt-film-style') || '{}') }; }catch(e){ return { ...STYLE_DEF }; } })();
-  const pickPal = (st, lum) => st.bg === 'auto' || !PALS[st.bg] ? studioPalette(lum) : PALS[st.bg];
+  const pickPal = (st, lum, tint) => {
+    if(st.bg !== 'auto' && PALS[st.bg]) return PALS[st.bg];
+    if(tint && tint.s >= 0.14){        /* a soft backdrop in the product's own colour family */
+      const h = tint.h, deep = tint.l > 0.8, c = (s2, l) => `hsl(${h} ${s2}% ${l}%)`;
+      return deep ? { light:false, a:c(30, 42), b:c(32, 28), c:c(34, 16), glow:'rgba(255,255,255,.16)', shadow:'rgba(0,0,0,.45)' }
+                  : { light:true, a:c(38, 95), b:c(32, 87), c:c(28, 76), glow:'rgba(255,255,255,.7)', shadow:`hsla(${h} 40% 25% / .28)` };
+    }
+    return studioPalette(lum);
+  };
   /* a soft, darkened blur of a picture, used as the background */
   function blurInto(g, src, sw, sh){
     /* shrink in steps, then stretch back up: a strong, smooth blur that works on every phone */
@@ -4368,12 +4427,16 @@ var Film = (() => {
     g.save(); g.globalCompositeOperation = 'screen'; g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(tmp, 0, 0); g.restore();
   }
   async function renderPremium(info, ai, onPct){
+    info = { ...info };
     const SC = 1.5, W = 1080, H = 1920;
     const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
     const stage = mk(), g = stage.getContext('2d'), base = mk(), bg = base.getContext('2d'), prev = mk(), pg = prev.getContext('2d'), tmp = mk();
     g.setTransform(SC, 0, 0, SC, 0, 0); bg.setTransform(SC, 0, 0, SC, 0, 0);
     const st = { ...STYLE_DEF, ...(F.style || {}) }, sp = st.pace === 'fast' ? 0.72 : 1, words = st.text !== 'off';
-    const lang = info.lang || 'roman', segs = (F.plan || premiumPlan()).slice(0, 3).map(x => ({ ...x, dur:x.dur*sp }));
+    const segs = (F.plan || premiumPlan()).slice(0, 3).map(x => ({ ...x, dur:x.dur*sp }));
+    const wordsText = [(ai && ai.name) || info.name || '', ...((ai && ai.features) || [])].join(' ');
+    const lang = /[\u0900-\u097F]/.test(wordsText) ? 'nepali' : (info.lang === 'nepali' ? (/[a-z]/i.test(wordsText) ? 'english' : 'nepali') : (info.lang || 'roman'));
+    info = { ...info, lang };
     const feats = (ai && ai.features && ai.features.length ? ai.features : []).slice(0, 3);
     const kicker = info.pct >= 1 ? (lang === 'nepali' ? `${info.pct}% छुट` : `${info.pct}% OFF`) : KICK[lang] || KICK.roman;
     const sizes = String(info.sizes || '').split(/,\s*/).filter(Boolean).slice(0, 6);
@@ -4383,10 +4446,17 @@ var Film = (() => {
     const assets = photos.map((_, i) => photoAsset(i));
     /* the cleanest cut-out leads; others only if they are about as clean */
     let hi = 0; assets.forEach((a, i) => { if(a.cutCv && (!assets[hi].cutCv || a.score < assets[hi].score)) hi = i; });
-    const hero = assets[hi] || { cutCv:null, photo:null }, others = assets.filter((a, i) => i !== hi && a.cutCv && a.score <= hero.score*1.2 + 0.2);
-    const pal = pickPal(st, cutLum(hero.cutCv)), backdrop = pal.blur ? null : studioBackdrop(pal);
+    const hero = assets[hi] || { cutCv:null, photo:null };
+    /* only angles that really look different from what's already shown */
+    const shape = c => { const N = 24, t = document.createElement('canvas'); t.width = t.height = N; const g2 = t.getContext('2d', { willReadFrequently:true }); g2.drawImage(c, 0, 0, N, N);
+      const d = g2.getImageData(0, 0, N, N).data, o = new Float32Array(N*N*2); for(let k = 0; k < N*N; k++){ o[k] = d[k*4+3] > 128 ? 1 : 0; o[N*N + k] = (d[k*4]*0.3 + d[k*4+1]*0.59 + d[k*4+2]*0.11)/255 * o[k]; } return { o, ar:c.width/c.height }; };
+    const same = (a, b) => { let i = 0, u = 0, diff = 0; const n = a.o.length/2; for(let k = 0; k < n; k++){ if(a.o[k] && b.o[k]) i++; if(a.o[k] || b.o[k]) u++; diff += Math.abs(a.o[n+k] - b.o[n+k]); }
+      return i/u > 0.86 && diff/n < 0.07 && Math.abs(a.ar - b.ar) < 0.12; };
+    const kept = hero.cutCv ? [shape(hero.cutCv)] : [], others = [];
+    assets.forEach((a, i) => { if(i === hi || !a.cutCv || a.score > hero.score*1.2 + 0.2) return; const sh = shape(a.cutCv); if(kept.some(k => same(k, sh))) return; kept.push(sh); others.push(a); });
+    const pal = pickPal(st, cutLum(hero.cutCv), productTint(hero.cutCv)), backdrop = pal.blur ? null : studioBackdrop(pal);
     const ink = pal.light ? '#1b1d3a' : '#ffffff', ink2 = pal.light ? 'rgba(27,29,58,.62)' : 'rgba(255,255,255,.78)', gold = pal.light ? '#b07a1a' : '#e8b04b';
-    const XF = 0.35, HERO = 2.6*sp, CLIP = segs.map(s => s.dur), ANG = others.length ? 2.4*sp : 0, PRICE = st.pace === 'fast' ? 2.3 : 2.8, END = 2.2;
+    const XF = 0.35, HERO = 2.6*sp, CLIP = segs.map(s => s.dur), ANG = others.length ? Math.min(3.2, 1.3*others.length)*sp : 0, PRICE = st.pace === 'fast' ? 2.3 : 2.8, END = 2.2;
     const total = HERO + CLIP.reduce((a, b) => a + b, 0) + ANG + PRICE + END;
     const enc = await liveEncoder(W, H, 9_000_000);
     let hasPrev = false, acc = 0;
@@ -4399,7 +4469,11 @@ var Film = (() => {
     };
     const keep = () => { pg.clearRect(0, 0, W, H); pg.drawImage(stage, 0, 0); hasPrev = true; };
     const text = (s, x, y, font, color, align = 'left', a = 1, sp = 0) => { g.save(); g.globalAlpha = a; g.textAlign = align; g.font = font; spaced(g, sp); g.fillStyle = color; g.fillText(s, x, y); g.restore(); };
-    const handle = a => { if(info.shop) text(info.shop, 360, 96, '700 24px "Bricolage Grotesque", sans-serif', ink2, 'center', a, 2); };
+    const handle = a => { if(info.shop) text(info.shop, 360, 100, '700 30px "Bricolage Grotesque", sans-serif', ink2, 'center', a, 1.5); };
+    /* small labels sit on a soft pill so they read on any background */
+    const label = (s, y, a) => { if(!s || a <= 0) return; g.save(); g.globalAlpha = a; g.font = '800 30px "Bricolage Grotesque", sans-serif'; spaced(g, 3);
+      const w = g.measureText(s).width + 44; g.fillStyle = pal.light ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.35)'; roundRect(g, 360 - w/2, y - 34, w, 48, 24); g.fill();
+      g.fillStyle = gold; g.textAlign = 'center'; g.fillText(s, 360, y); g.restore(); };
     const timed = async (dur, paint) => { for(let lt = 0; lt < dur - 1e-6; lt += 1/30){ paint(lt); await enc.drain(4); } keep(); acc += dur; onPct(acc / total); };
     try{
       /* 1 · hero */
@@ -4410,7 +4484,7 @@ var Film = (() => {
           if(st.price === 'tag') priceTag(g, 540, 330, info, ease((lt - 0.8)/0.4), 0.95);
           if(!words) return;
           const a = ease((lt - 0.55)/0.5);
-          text(kicker, 360, 1040 + (1-a)*16, '800 24px "Bricolage Grotesque", sans-serif', gold, 'center', a, 5);
+          label(kicker, 1036 + (1-a)*16, a);
           g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = ink; g.font = '800 60px "Bricolage Grotesque", sans-serif';
           wrapText(g, title || info.category, 620, 2).forEach((l, i) => g.fillText(l, 360, 1110 + i*66 + (1-a)*16)); g.restore();
         });
@@ -4446,7 +4520,7 @@ var Film = (() => {
               if(st.price === 'tag') priceTag(g, full ? 560 : 590, full ? 230 : 210, info, ease((local - 0.2)/0.4), 0.75);
               if(!words) return;
               if(f){ const a = ease((local - 0.25)/0.45) * (1 - ease((local - (seg.dur - 0.3))/0.3));
-                text('0' + (si + 1), 360, 1072 + tY*0, '800 22px "Bricolage Grotesque", sans-serif', full ? '#e8b04b' : gold, 'center', a, 4);
+                text('0' + (si + 1), 360, 1072 + tY*0, '800 28px "Bricolage Grotesque", sans-serif', full ? '#e8b04b' : gold, 'center', a, 4);
                 g.save(); g.globalAlpha = a; g.fillStyle = full ? '#e8b04b' : gold; g.fillRect(360 - 30*ease((local - 0.2)/0.5), 1086, 60*ease((local - 0.2)/0.5), 3); g.restore();
                 g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.fillStyle = tInk; g.font = '700 46px "Bricolage Grotesque", sans-serif'; if(full){ g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 14; }
                 wrapText(g, f, 640, 2).forEach((l, i) => g.fillText(l, 360, 1146 + i*54 + (1-a)*14)); g.restore(); }
@@ -4476,10 +4550,11 @@ var Film = (() => {
       } finally { v.pause(); v.remove(); }
       /* 3 · every angle */
       if(ANG) await timed(ANG, lt => {
-        back(); const n = others.length, pos = lt / ANG * n - 0.5;
-        others.forEach((a, i) => { const d = i - pos, x = 360 + d*430, sc = 1 - Math.min(0.3, Math.abs(d)*0.3), al = Math.max(0, 1 - Math.abs(d)*0.7);
-          if(al > 0) drawProduct(bg, a, x, 880, 480, 560, sc, al); });
-        emit(acc + lt, lt, () => { handle(1); if(words) text(lang === 'nepali' ? 'हरेक कोणबाट' : lang === 'english' ? 'EVERY ANGLE' : 'HAREK ANGLE', 360, 1060, '800 24px "Bricolage Grotesque", sans-serif', gold, 'center', ease(lt/0.5), 5); });
+        back(); const n = others.length, per = ANG / n, i = Math.min(n - 1, Math.floor(lt / per)), u = (lt - i*per) / per;
+        /* one at a time: glide in, settle, glide out */
+        const inn = ease(u/0.3), out = ease((u - 0.75)/0.25), x = 360 + (1 - inn)*260 - out*260;
+        drawProduct(bg, others[i], x, 900, 540, 640, 0.92 + 0.06*ease(u), Math.min(inn, 1 - out));
+        emit(acc + lt, lt, () => { handle(1); if(words) label(lang === 'nepali' ? 'हरेक कोणबाट' : lang === 'english' ? 'EVERY ANGLE' : 'HAREK ANGLE', 1070, ease(lt/0.4)); });
       });
       /* 4 · price, 5 · how to order */
       await timed(PRICE + END, lt => {
@@ -4655,7 +4730,7 @@ var Film = (() => {
     const box = $('#fmStyle'); if(!box || !box.open) return;
     const st = { ...STYLE_DEF, ...F.style }, info = filmInfo(), words = st.text !== 'off';
     const assets = photos.map((_, i) => photoAsset(i)); let hi = 0; assets.forEach((a, i) => { if(a.cutCv && (!assets[hi].cutCv || a.score < assets[hi].score)) hi = i; });
-    const hero = assets[hi], pal = pickPal(st, cutLum(hero && hero.cutCv));
+    const hero = assets[hi], pal = pickPal(st, cutLum(hero && hero.cutCv), productTint(hero && hero.cutCv));
     [$('#fmPv1'), $('#fmPv2')].forEach((c, n) => {
       const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
       if(!hero){ g.fillStyle = '#e9e6e0'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#777'; g.font = '600 18px sans-serif'; g.textAlign = 'center'; g.fillText(n ? '' : 'Add your video', c.width/2, c.height/2); return; }
