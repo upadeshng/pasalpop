@@ -3723,6 +3723,9 @@ var Cloud = (() => {
     sb && sb.rpc('record_wa_click', { p_product:id }).then(() => {}, () => {});
   }
   async function slugTaken(slug){
+    /* also sees hidden shops' links (a database check), so nobody picks one by mistake */
+    const r = await sb.rpc('slug_taken', { p_slug:slug }).then(x => x, () => ({ error:1 }));
+    if(!r.error && typeof r.data === 'boolean') return r.data;
     const { data } = await sb.from('shops').select('id').eq('slug', slug).maybeSingle();
     return !!data && data.id !== shopId;
   }
