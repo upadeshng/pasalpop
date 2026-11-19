@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#2f3a8f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e9a21b'/%3E%3Ctext x='32' y='44' font-size='36' font-weight='700' text-anchor='middle' fill='%235a3a00' font-family='sans-serif'%3EW%3C/text%3E%3C/svg%3E">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>WallTok</title>
+<title>WallShop</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Hind:wght@400;500;600&display=swap">
@@ -319,9 +319,9 @@ html:not(.public) .askfab{display:none}
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand"><a class="brand" id="brandLink" href="/"><i>W</i>WallTok</a> <span class="sync" id="syncState" hidden></span></div>
+    <div class="brand"><a class="brand" id="brandLink" href="/"><i>W</i>WallShop</a> <span class="sync" id="syncState" hidden></span></div>
     <div class="topr">
-      <a class="btn small" id="btnSell" href="/?app=1" hidden>Sell on WallTok</a>
+      <a class="btn small" id="btnSell" href="/?app=1" hidden>Sell on WallShop</a>
       <button class="btn icon" id="btnSettings" type="button" aria-label="Shop settings" title="Shop settings">⚙</button>
     </div>
   </header>
@@ -351,7 +351,7 @@ html:not(.public) .askfab{display:none}
       <button class="stat" type="button" data-go="views"><b id="stViews">0</b><span id="stViewsL">Views today</span></button>
     </div>
     <button class="btn primary big" type="button" data-go="studio">+ New product (take photo)</button>
-    <div class="tip" id="inappBar" hidden>You're using WallTok inside <b id="inappBarName">another app</b>. Open it in your phone's browser to save your work properly and make your shop link live. <button class="btn small" type="button" id="inappBarBtn">How?</button></div>
+    <div class="tip" id="inappBar" hidden>You're using WallShop inside <b id="inappBarName">another app</b>. Open it in your phone's browser to save your work properly and make your shop link live. <button class="btn small" type="button" id="inappBarBtn">How?</button></div>
     <div class="card stack claim" id="claimCard" hidden>
       <h3>Put your shop online</h3>
       <p class="small">So customers can open <b id="claimUrl"></b> from TikTok and order.</p>
@@ -865,8 +865,8 @@ html:not(.public) .askfab{display:none}
 <div class="inapp" id="inapp" hidden role="dialog" aria-modal="true" aria-labelledby="inappH">
   <div class="card stack">
     <h3 id="inappH">Open in your browser to sign in</h3>
-    <p class="small">You opened WallTok inside <b id="inappName">another app</b>. Google does not allow signing in here, so open this page in <b id="inappBrowser">Chrome</b> instead.</p>
-    <p class="small muted">Products you make in this built-in browser stay here and do not move to Chrome, so it's best to use WallTok in Chrome from the start.</p>
+    <p class="small">You opened WallShop inside <b id="inappName">another app</b>. Google does not allow signing in here, so open this page in <b id="inappBrowser">Chrome</b> instead.</p>
+    <p class="small muted">Products you make in this built-in browser stay here and do not move to Chrome, so it's best to use WallShop in Chrome from the start.</p>
     <ol class="small" id="inappSteps"></ol>
     <a class="btn primary" id="inappChrome" hidden>Open in Chrome</a>
     <button class="btn" type="button" id="inappCopy">Copy link</button>
@@ -1155,7 +1155,7 @@ function exCard(p, sh){
   return el;
 }
 function paintExplore(rows){ const g = $('#exGrid'); rows.forEach(p => g.append(exCard(p, EX.shops.get(p.shop_id)))); }
-/* a shop link that doesn't exist: say so, suggest look-alikes, and show WallTok's shops page */
+/* a shop link that doesn't exist: say so, suggest look-alikes, and show WallShop's shops page */
 async function showMissing(slug){
   ['home','studio','shop','orders','settings','views'].forEach(v => $('#view-' + v).hidden = true);
   $('#view-explore').hidden = false; document.title = `${DOMAIN}`;
@@ -1185,9 +1185,9 @@ $('#visitForm').onsubmit = e => {
   location.href = '/' + shop + (code ? '/' + code : '');
 };
 
-/* TikTok can't add or pin a comment for sellers, so WallTok hands them the text */
+/* TikTok can't add or pin a comment for sellers, so WallShop hands them the text */
 /* Direct posting needs TikTok's approval. Until it's approved, sellers share the video from their phone instead.
-   When TikTok approves WallTok, change this to true. */
+   When TikTok approves WallShop, change this to true. */
 const TT_DIRECT = false;
 function prodInfo(p){
   const pct = p.oldPrice > p.price ? Math.round((1 - p.price/p.oldPrice)*100) : 0;
@@ -2766,7 +2766,7 @@ function setMode(m){
   $$('.fm').forEach(el => el.hidden = photo || (el.id === 'fmResult' && !(window.Film && Film.started())));
   $('#resultV').hidden = true;
   $('#detailsH').textContent = '2. Price and details';
-  $('#studioSub').textContent = photo ? 'Photo in, TikTok video and caption out.' : 'Film your product once. WallTok makes 4 TikTok videos and product photos from it.';
+  $('#studioSub').textContent = photo ? 'Photo in, TikTok video and caption out.' : 'Film your product once. WallShop makes 4 TikTok videos and product photos from it.';
 }
 $$('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 
@@ -3197,7 +3197,7 @@ function billImage(o){
   g.font = '700 54px "Bricolage Grotesque", sans-serif'; g.fillStyle = ink; g.fillText(npr(orderTotal(o)), 70, 746);
   g.textAlign = 'center'; g.font = '600 28px Hind, sans-serif'; g.fillStyle = ink; g.fillText('Dhanyabad! 🙏', W/2, 850);
   g.font = '500 24px Hind, sans-serif'; g.fillStyle = mute; g.fillText(`Order again: ${shopUrl()}`, W/2, 892);
-  g.font = '500 20px Hind, sans-serif'; g.fillText('Made with WallTok', W/2, 960);
+  g.font = '500 20px Hind, sans-serif'; g.fillText('Made with WallShop', W/2, 960);
   return c;
 }
 function billMessage(o){
@@ -3431,16 +3431,16 @@ var Cloud = (() => {
     S.products = merge(S.products, pr.data, prodLocal, prodRow, S.sync.p);
     S.orders = merge(S.orders, or.data, orderLocal, orderRow, S.sync.o);
     applyViews(pr.data);
-    /* products posted to TikTok before WallTok remembered it: fill in from the post history */
+    /* products posted to TikTok before WallShop remembered it: fill in from the post history */
     try{
       const { data:posts } = await fetchAll(() => sb.from('tiktok_posts').select('id,product_id,status,created_at').eq('shop_id', shopId).eq('status', 'PUBLISH_COMPLETE'));
       (posts || []).forEach(t => { const p = prodById(t.product_id), at = ms(t.created_at); if(p && at && (!p.ttAt || at > p.ttAt)) p.ttAt = at; });
     }catch(e){}
     saveLocal();
   }
-  /* orders the AI assistant took: check every minute while WallTok is open */
+  /* orders the AI assistant took: check every minute while WallShop is open */
   let orderTick = 0;
-  /* customers the AI handed over: tell the seller as soon as WallTok is open */
+  /* customers the AI handed over: tell the seller as soon as WallShop is open */
   async function newHandoffs(){
     if(!shopId || noAI) return;
     let seen = {}; try{ seen = JSON.parse(localStorage.getItem('wt-handoffs') || '{}'); }catch(e){}
@@ -3451,7 +3451,7 @@ var Cloud = (() => {
     if(!fresh.length) return;
     const f = fresh[0];
     toast(`💬 A customer needs you${f.summary ? ': ' + f.summary.slice(0, 80) : ''}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''} · see Home → AI assistant`);
-    try{ if(window.Notification && Notification.permission === 'granted') new Notification('A customer needs you', { body:f.summary || 'Open WallTok to reply', icon:'/favicon.ico' }); }catch(e){}
+    try{ if(window.Notification && Notification.permission === 'granted') new Notification('A customer needs you', { body:f.summary || 'Open WallShop to reply', icon:'/favicon.ico' }); }catch(e){}
     if(curView() === 'home') render('home');
   }
   async function newOrders(){
@@ -3569,7 +3569,7 @@ var Cloud = (() => {
     const wa = `<button class="btn wa-big" type="button" id="waGo">Continue with WhatsApp <span class="freepill">FREE</span></button>`;
     const g = IN_APP ? `<button class="btn g-btn" type="button" id="gGo" style="opacity:.7"><span class="gdot"></span>Google: open in your browser first</button>`
                      : `<button class="btn g-btn" type="button" id="gGo"><span class="gdot"></span>Continue with Google</button>`;
-    $('#waH').textContent = start ? 'Start selling on WallTok' : 'Make your shop link live';
+    $('#waH').textContent = start ? 'Start selling on WallShop' : 'Make your shop link live';
     $('#waBody').innerHTML = `<p class="small">${start ? 'Free. Get your own shop link for your TikTok bio, add products, and get orders on your WhatsApp.' : 'So customers from TikTok can open your shop link and order.'}</p>
       ${IN_APP ? wa + g : g + wa}
       <p class="small muted" style="text-align:center">No password needed.</p>`;
@@ -3578,7 +3578,7 @@ var Cloud = (() => {
     $('#gGo').onclick = () => { if(IN_APP){ $('#waModal').hidden = true; showInApp(); return; } sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + '/?app=1' } }); };
   }
 
-  /* WhatsApp: seller sends "LOGIN 7Q2K" to WallTok's login number; we watch for it */
+  /* WhatsApp: seller sends "LOGIN 7Q2K" to WallShop's login number; we watch for it */
   let waTok = null, waTimer = null, waMode = 'login';
   async function waCall(path, body, auth = false){
     const headers = { 'Content-Type':'application/json', apikey:CLOUD.key };
@@ -3658,7 +3658,7 @@ var Cloud = (() => {
   async function sellerDoor(){
     const b = $('#btnSell'); let signed = false;
     try{ const { data } = await sb.auth.getSession(); signed = !!(data && data.session); }catch(e){}
-    b.textContent = signed ? 'My shop' : 'Sell on WallTok'; b.href = signed ? '/?app=1' : '/?sell=1'; b.onclick = null; b.hidden = false;
+    b.textContent = signed ? 'My shop' : 'Sell on WallShop'; b.href = signed ? '/?app=1' : '/?sell=1'; b.onclick = null; b.hidden = false;
   }
   function cloudCopyOnly(){
     const sy = S.sync || {}, sp = sy.p || {}, so = sy.o || {};
@@ -3759,9 +3759,9 @@ var Cloud = (() => {
     }
     const cur = curView();
     chrome(cur); render(cur);
-    /* came from "Sell on WallTok" on a shop page */
+    /* came from "Sell on WallShop" on a shop page */
     if(QS.has('sell')){ history.replaceState(null, '', location.pathname); if(user) go('home'); else signIn(true); }
-    /* tapped the sign-in link in WallTok's WhatsApp reply */
+    /* tapped the sign-in link in WallShop's WhatsApp reply */
     const wl = QS.get('walogin');
     if(wl){
       history.replaceState(null, '', location.pathname);
@@ -3909,12 +3909,12 @@ var TT = (() => {
     pid = id; vid = null; st = null; const p = prodById(id); if(!p) return;
     $('#ttPost').hidden = false; show('<p class="muted">Checking your TikTok…</p>');
     try{ st = await call('status'); }
-    catch(e){ show(`<p>TikTok posting is not switched on yet.</p><p class="small muted">${e.status === 401 ? 'Sign in to WallTok again, then try.' : 'The WallTok owner needs to finish the TikTok setup.'}</p>`); return; }
-    if(!st.configured){ show('<p>TikTok posting is not switched on yet.</p><p class="small muted">The WallTok owner needs to finish the TikTok setup.</p>'); return; }
+    catch(e){ show(`<p>TikTok posting is not switched on yet.</p><p class="small muted">${e.status === 401 ? 'Sign in to WallShop again, then try.' : 'The WallShop owner needs to finish the TikTok setup.'}</p>`); return; }
+    if(!st.configured){ show('<p>TikTok posting is not switched on yet.</p><p class="small muted">The WallShop owner needs to finish the TikTok setup.</p>'); return; }
     if(!st.connected){
-      show(`${st.reconnect ? '<p><b>Your TikTok connection ended</b> (WallTok was removed in TikTok, or the login expired). Connect again to keep posting.</p>' : '<p>Connect your TikTok account once. After that, WallTok can post your product videos with the caption, straight to your TikTok.</p>'}
+      show(`${st.reconnect ? '<p><b>Your TikTok connection ended</b> (WallShop was removed in TikTok, or the login expired). Connect again to keep posting.</p>' : '<p>Connect your TikTok account once. After that, WallShop can post your product videos with the caption, straight to your TikTok.</p>'}
         <button class="btn ink big" type="button" id="ttConnect"><span class="tt-logo" aria-hidden="true">♪</span> Connect TikTok</button>
-        <p class="ttnote">You'll sign in on TikTok and allow WallTok to post for you. You can disconnect any time.</p>`);
+        <p class="ttnote">You'll sign in on TikTok and allow WallShop to post for you. You can disconnect any time.</p>`);
       $('#ttConnect').onclick = connect; return;
     }
     if(!st.canPost){ show(`<p>TikTok won't take a post from this account right now.</p><p class="small muted">${esc(st.reason?.message || 'You may have posted too often today. Try again later.')}</p>
@@ -3939,7 +3939,7 @@ var TT = (() => {
         <div class="stack" style="gap:6px"><label for="tpCap" style="margin:0">Caption</label><textarea class="ttcap" id="tpCap" maxlength="2200">${esc(cap)}</textarea><span class="ttnote"><span id="ttCnt"></span>/2200</span></div></div>
       <div class="ttopts stack">
         <div><label for="ttPriv">Who can see this video</label><select id="ttPriv"><option value="" selected disabled>Choose…</option>${opts}</select>
-          ${st.pendingApproval ? `<p class="ttnote">TikTok is still reviewing WallTok, so for now posts can only be “Only me”, and your TikTok account must be Private. Everyone, Friends and Followers unlock after approval.</p>` : ''}</div>
+          ${st.pendingApproval ? `<p class="ttnote">TikTok is still reviewing WallShop, so for now posts can only be “Only me”, and your TikTok account must be Private. Everyone, Friends and Followers unlock after approval.</p>` : ''}</div>
         <div class="stack" style="gap:6px"><span class="small"><b>Allow viewers to</b></span>
           ${chk('ttCmt', 'Comment', st.commentDisabled)}${chk('ttDuet', 'Duet', st.duetDisabled)}${chk('ttStitch', 'Stitch', st.stitchDisabled)}</div>
         <div class="stack" style="gap:6px">
@@ -3993,7 +3993,7 @@ var TT = (() => {
       poll(publish_id, 0, meta.privacy_level);
     }catch(e){
       busy = false; $('#ttGo').textContent = 'Post to TikTok'; $('#ttGo').disabled = false;
-      const msg = e.code === 'unaudited_client_can_only_post_to_private_accounts' ? `TikTok refused: while WallTok is waiting for approval, the connected account${st.username ? ' (@' + st.username + ')' : ''} must be Private and the post must be Only me. If you just made it private, wait a few minutes and try again.`
+      const msg = e.code === 'unaudited_client_can_only_post_to_private_accounts' ? `TikTok refused: while WallShop is waiting for approval, the connected account${st.username ? ' (@' + st.username + ')' : ''} must be Private and the post must be Only me. If you just made it private, wait a few minutes and try again.`
         : e.code === 'spam_risk_too_many_posts' ? 'TikTok says you have posted too many times today. Try again tomorrow.'
         : e.code === 'not_connected' || e.code === 'access_token_invalid' || e.status === 401 ? 'Your TikTok connection ended. Close this and tap Post to TikTok to connect again.' : e.message;
       $('#ttWhy').textContent = msg; toast(msg);
@@ -4051,7 +4051,7 @@ var TT = (() => {
     if(box){
       const withLink = rows.filter(r => r.post_url);
       box.innerHTML = withLink.map(r => `<a class="small" href="${esc(r.post_url)}" target="_blank" rel="noopener">♪ Post of ${new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}${r.privacy_level === 'SELF_ONLY' ? ' · Only me' : ''} ›</a>`).join('');
-      if(ok.length && !withLink.length && ok.some(r => r.privacy_level === 'SELF_ONLY')) box.innerHTML = '<span class="small muted">TikTok does not give links for “Only me” posts. Once WallTok is approved and you post publicly, the link appears here and on the product.</span>';
+      if(ok.length && !withLink.length && ok.some(r => r.privacy_level === 'SELF_ONLY')) box.innerHTML = '<span class="small muted">TikTok does not give links for “Only me” posts. Once WallShop is approved and you post publicly, the link appears here and on the product.</span>';
     }
     /* recent posts without a link yet: ask TikTok once per visit */
     if(!linksAsked && ok.some(r => !r.post_url && r.privacy_level !== 'SELF_ONLY')){
@@ -4072,7 +4072,7 @@ var TT = (() => {
 $('#btnSignOut').onclick = () => Cloud.signOut();
 
 /* ================= Film once, sell forever ================= */
-/* the seller films the product once: WallTok finds the best moments, takes product photos with the precise cut-out,
+/* the seller films the product once: WallShop finds the best moments, takes product photos with the precise cut-out,
    lets the AI read the product, and makes 4 different TikTok videos that stay on the product for posting one a day */
 var Film = (() => {
   const F = { url:null, file:null, an:null, clips:[], shots:[], videos:[], ai:null, info:null, started:false, busy:false };
